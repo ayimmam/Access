@@ -1,0 +1,794 @@
+WEBVTT
+
+00:00:12.000 --> 00:00:19.000
+Okay, so let me share my screen and get to the customer slides.
+
+00:00:19.000 --> 00:00:46.000
+etc.
+
+00:00:46.000 --> 00:00:57.000
+So today's session, we're going to talk about, you know, building Drop-in web components and APIs
+
+00:00:57.000 --> 00:00:58.000
+Okay
+
+00:00:58.000 --> 00:01:01.000
+Educe, I'm sorry to interrupt you, but your audio is a bit far, and it's not completely clear. Can you
+
+00:01:01.000 --> 00:01:03.000
+Can you adjust it a little bit
+
+00:01:03.000 --> 00:01:04.000
+What about now?
+
+00:01:04.000 --> 00:01:09.000
+I think it's better now. Is it better for you guys?
+
+00:01:09.000 --> 00:01:15.000
+You can give me thumbs up.
+
+00:01:15.000 --> 00:01:16.000
+Okay, it's better.
+
+00:01:16.000 --> 00:01:25.000
+Amazing. Keep engaging in the live sessions. All right, this is all for you. So interact with the host. Okay, go ahead. Get the story to interrupt you
+
+00:01:25.000 --> 00:01:37.000
+No problem at all, okay? So, today we're going to talk about how we can build drop-in wave components and APIs.
+
+00:01:37.000 --> 00:01:41.000
+So,
+
+00:01:41.000 --> 00:01:49.000
+The problem, let's start with the problem because the solutions only make sense once you see the problem. Let's imagine we
+
+00:01:49.000 --> 00:02:01.000
+Some kind of crystal, it's good. So, teachers like it, students like it. Then, one by one, people start asking us for things. Let's say,
+
+00:02:01.000 --> 00:02:16.000
+A blogger says, can I put your quiz on more websites? A company with its own app says, you know, like, can we get your quizzes inside our mobile app with our own design? The university might ask, can our students use the side of Moodle, where, you know.
+
+00:02:16.000 --> 00:02:19.000
+They already do all their coursework
+
+00:02:19.000 --> 00:02:20.000
+And
+
+00:02:20.000 --> 00:02:31.000
+Every partner uses a different platform. That might be website, that might be mobile apps, Moodle, Canvas, Blackboard, and many more. And
+
+00:02:31.000 --> 00:02:47.000
+The first instinct is, sure, let's build something custom for each one, and that's… that works for the first partner, maybe the second, but the things partner, we're maintaining 10 different integrations, and every time we change our tool, we have to check that all things still work
+
+00:02:47.000 --> 00:02:51.000
+And the kind of does not scale if we really think about it.
+
+00:02:51.000 --> 00:03:07.000
+There's another problem. Our partners have very different skills, right? Some people can only copy and paste a bit of HTML into their websites, some have a full team of developers, some have, like, a university IT department, don't want to write any code at all
+
+00:03:07.000 --> 00:03:15.000
+They just want to, you know, like, install something in their learning systems and switch it on. So, one solution cannot fit everyone
+
+00:03:15.000 --> 00:03:19.000
+So our goal for this is to build
+
+00:03:19.000 --> 00:03:25.000
+The tool once and then offer a few standard ways in.
+
+00:03:25.000 --> 00:03:40.000
+For example, for the person who can only paste, there's… we can prepare… paste a tag option, that's the easiest option. For the developer, we can make it call an API, which is the most flexible, and for the school, we can install it in the LMS
+
+00:03:40.000 --> 00:03:43.000
+which is built for education
+
+00:03:43.000 --> 00:03:57.000
+The key line is build once and offer a few standards PM. When we talk about the three levels of integration, this slide is the whole talk and warm picture. If
+
+00:03:57.000 --> 00:04:12.000
+Think of it as a LiDAR, right? Or a staircase in the sense, and each step gives us a different integration, but also needs more setup. The number… the first label is the wave components, which
+
+00:04:12.000 --> 00:04:24.000
+The partner piece once I can do their webpage, and our, you know, like, our whole quiz, will be, appear there. It takes minutes, but they don't need to understand how it works, because it just works.
+
+00:04:24.000 --> 00:04:42.000
+The second one is for the developer, which is the REST APIs. Here, the partners developers takes our data, let's say the quizzes, the questions, the results, and kind of use it in their own app with their own design. So it doesn't need our implementation on that side. And this takes more work, maybe days or weeks, but
+
+00:04:42.000 --> 00:04:58.000
+they get full control. The third one, which is the third level of integration, 1.3, is this soundrout made specifically for educations. As, you know, like, a school administrator registers our tool in their management system, let's say Moodle
+
+00:04:58.000 --> 00:05:10.000
+Or Canvas. Once… after that, any teacher can add our course to their courses, like any built-in activity, students are logged in automatically, and grades go straight into their gradebook. So.
+
+00:05:10.000 --> 00:05:14.000
+So no code is needed on the school side.
+
+00:05:14.000 --> 00:05:25.000
+Here's the picture that I would like to keep you in your head for the rest of the talk. Imagine our tool is a building, right? And this, these three levels that you see
+
+00:05:25.000 --> 00:05:29.000
+are 3 different doors, and so it's the same building
+
+00:05:29.000 --> 00:05:42.000
+Different visitors use, different doors, and… but they all end up in the same place, and we'll all come back to this at the end. Three doors into the same building, and each step means deeper integration and more settled
+
+00:05:42.000 --> 00:05:51.000
+When we go to, the number one, which is the web components
+
+00:05:51.000 --> 00:06:08.000
+Work Components is simply your own custom HTML tag. I hope you guys know that. And you probably know normal HTML tags, there is, let's say, a tag for photograph, paragraph, a tag for an image, attack for button. The browser knows what to do with them
+
+00:06:08.000 --> 00:06:17.000
+With the web components, we kind of can invent our own tag. For example, a tag called quiz widget
+
+00:06:17.000 --> 00:06:30.000
+When the browser sees that tag on a page, it's known as to show our quiz tool right there. The great thing is that it's built into every modern browser, let's say Chrome, Firefox, Safari, Age
+
+00:06:30.000 --> 00:06:37.000
+The partner doesn't need to install, you know, Rex or Angular or any special framework, it just works
+
+00:06:37.000 --> 00:06:44.000
+It has its own private styling, so the partner websites are also brickled orgomery.
+
+00:06:44.000 --> 00:07:00.000
+When is this matter? Imagine Iona, we have a widget, and we paste it into our website, and your website's colors and fonts leak into it and break the layout sometimes, right? The buttons suddenly hugely unusual, I'll load the text is the wrong color.
+
+00:07:00.000 --> 00:07:15.000
+That happens a lot with normal embedded unaccord. A weave Components protected. It has a kind of invisible role around it, so the partner's website cannot break our design, and our design cannot break their website.
+
+00:07:15.000 --> 00:07:29.000
+When you see here, on the side, you can see it in the picture here, this is the partner website, let's say, with their own content, and our agent sits inside it, and it's safe, in its own box, and
+
+00:07:29.000 --> 00:07:44.000
+It is a standard website, a standard browser feature. It works everywhere. A plain HTML page bundle, a WordPress blog, a React app, even inside a page in an LMS
+
+00:07:44.000 --> 00:07:55.000
+It does work anywhere from the partner sites, I think it's up is like only two lines most of the time, and one line to load our components, and then one line to place attack, that's it.
+
+00:07:55.000 --> 00:08:12.000
+A Wave Components is your own HTML tag, right? So you can paste it anywhere, and it can be broken by the page around it. Think of it like sometimes on an online website or YouTube video. You paste a small piece of code and a
+
+00:08:12.000 --> 00:08:23.000
+Video player appeased on your page. That is a web component. It's the more modern you want to start out with to make that kind of Drop-in thing for any tool
+
+00:08:23.000 --> 00:08:36.000
+When we think about the… talk about the good practices for the Level 1 integration, is that if we build a web component, how do we build a good one? There are four rules that we use on this side
+
+00:08:36.000 --> 00:08:52.000
+Number 1, settings and events out, which means the partner needs to control the components, right? For example.
+
+00:08:52.000 --> 00:08:57.000
+Light or dark timing, those are the settings going in
+
+00:08:57.000 --> 00:09:12.000
+And the partners website often needs to know when something happens. For example, let's say if a student finishes a quiz, maybe saw the website control, let's say, certificate because so our component sends out a message. Let's say it might call an event
+
+00:09:12.000 --> 00:09:20.000
+And saying quiz finishes, and that's the whole relationship, right? It went south, it's a very simple and predictable rule
+
+00:09:20.000 --> 00:09:39.000
+Then the second one is never break partners. Once a partner, union component on their websites, they are basically relying on it. If we change something and their site breaks overnight, union trust model.
+
+00:09:39.000 --> 00:09:51.000
+Every release gets a version number. Partners choose a version, and we never change a version that's already published. In a suite, the Components so if they want the new features, they move to the new version when they're ready
+
+00:09:51.000 --> 00:10:03.000
+Number 3 is no secrets in the browser. This is a security rule and a bad time important to know, especially for opting web components. This is a very important tool.
+
+00:10:03.000 --> 00:10:10.000
+Anything that runs a web browser can be seen by anyone, right? Anyone can press F12, because I'm going to look at the code
+
+00:10:10.000 --> 00:10:20.000
+So we must never put passwords to indemo private keys inside our Wave components as much as possible. The private key stays on the server where nobody can see them.
+
+00:10:20.000 --> 00:10:25.000
+The number 4 is small and accessible. All components live in,
+
+00:10:25.000 --> 00:10:40.000
+on someone else's website, if it's slow, it makes their site slow, right? So, it must work for everyone, so people who use a keyboard instead of a mouse, people who use screen readers, if all part of the page is on the one that is not accessible
+
+00:10:40.000 --> 00:10:45.000
+Then we should basically think about that. The partner website isn't accessible either.
+
+00:10:45.000 --> 00:10:54.000
+So the settings and events out never big partners, no secret in the browser, and then we should make it small and accessible.
+
+00:10:54.000 --> 00:11:00.000
+The second level of integration is the REST APIs, which is basically for
+
+00:11:00.000 --> 00:11:17.000
+For developers, right? Some partners don't want our screens at all. They have yet to show an application, you know, that usually a brand, their own design. What they want is in their app, and that's what an API is for.
+
+00:11:17.000 --> 00:11:25.000
+API, for those who don't know, stands for Application Programming Interface. Again, a simpler way to think about it is an API is a set of web addresses
+
+00:11:25.000 --> 00:11:29.000
+That send and receive data instead of webpage
+
+00:11:29.000 --> 00:11:41.000
+When you visit a normal Wave address, you get the page designed for humans to read, and when an app visits an API address that gets data design is for the computer to read that data.
+
+00:11:41.000 --> 00:11:58.000
+Here's how it goes, right? The partner jobs, this is the partner shop, let's say, it sends a request to our API. For example, please give me the list of quizzes, blended. Our API gets the data from our database, and then send this back in a formal called ZON response on Milakow
+
+00:11:58.000 --> 00:12:06.000
+Which is just a neat structured with right data that's money or minus programming language read model.
+
+00:12:06.000 --> 00:12:25.000
+We can we can also try another example. Think of it a restaurant. You're the customer, which is the partner shop. The kitchen is our database, right? We talk to the waiter, and the waiter is the API. So, you order from the menu, the waiter action with the kitchenheer style
+
+00:12:25.000 --> 00:12:34.000
+The menu is like the APS documentation that tells you exactly what you're allowed to ask for.
+
+00:12:34.000 --> 00:12:36.000
+So, rest
+
+00:12:36.000 --> 00:12:53.000
+Rest Wombe because they usually wrists about something like that. What does rest mean? Risk just means we follow a common set of rules. So, every developer already knows how to use it. There are standard, REST API, which is gate, create, update, and delete.
+
+00:12:53.000 --> 00:13:09.000
+Did something like get me quiz number, and the 5 Leon Schlach, create something, you create, and you send an API request, so create something in our data, or in our API, or in our database, update something, it's like, save this answers.
+
+00:13:09.000 --> 00:13:15.000
+Delete something remote. It's remove statins.
+
+00:13:15.000 --> 00:13:31.000
+And here's the big difference from the Level 1. The partner builds their own screens using our data. So, in your supply manager go, Yanyang data not logic no, like, scoring.
+
+00:13:31.000 --> 00:13:44.000
+They can decide what it looks like. So an API is like a waiter to the key line for this is an API is like a waiter. The partner asks, we answer with data, and they build their own screens
+
+00:13:44.000 --> 00:13:52.000
+When we talk about what makes a good API, right
+
+00:13:52.000 --> 00:14:04.000
+What's utilize your company should need an API if they build on their apps, we've made them a promise, right? So, Amazon API trustworthy in the hoon.
+
+00:14:04.000 --> 00:14:22.000
+Number one is stability. Just like with components, the APM version is the commander, right? V1, V2, Gallon, usually you see it in wave addresses itself like slash V1 slash quizzles. If we need to make a big change, we create version two
+
+00:14:22.000 --> 00:14:25.000
+But also keep version 1 working.
+
+00:14:25.000 --> 00:14:30.000
+Giving Pontorziona plenty of warning before we ever switch it off
+
+00:14:30.000 --> 00:14:40.000
+PartnerSub should never break just because we updated something. So let's no versioning, but on that level on as well as level 2 also. The second one is secure
+
+00:14:40.000 --> 00:14:57.000
+So every partner signs in with OAuth 2.0 and only gets the access they need. What does… what does this say is, for this, we use a standard, called OAuth 2.3 You've used it yourself, even if you didn't know the name
+
+00:14:57.000 --> 00:15:09.000
+Every time you click sign with Google, that's old. And with OAuth, every partner gets their own credentials and exchanges them for a temporary access pass. That access pass is called a token
+
+00:15:09.000 --> 00:15:25.000
+It express after a while, sometimes after 1 hour, and each partner only gets the permission they need, and the partner who only shows reports gets read-only access. So, secure scenarios
+
+00:15:25.000 --> 00:15:33.000
+Based on their permission, not based on their credentials, Muhanu token.
+
+00:15:33.000 --> 00:15:47.000
+So, the third one is clean errors. Things will go wrong, of course. You're an Agentic. Someone asked for a quiz that doesn't exist, or sends incomplete data. When that happens, Yinya API should reply with a clear message.
+
+00:15:47.000 --> 00:16:00.000
+And the same format every single time saying what's what's wrong and how to fix it, not just like ever you want a good error message, save developers hours and saves us from support calls. So
+
+00:16:00.000 --> 00:16:06.000
+Redevil, you wanna format everywhere within the company PLA implements Motocad weapon
+
+00:16:06.000 --> 00:16:08.000
+Number four is documented
+
+00:16:08.000 --> 00:16:25.000
+When we develop an API, we need to create an API with our documentation is basically a restaurant without a menu. Nobody knows what they can order, so get docs with kind of real examples mean partners get started on their own without needing a meeting with us
+
+00:16:25.000 --> 00:16:34.000
+A good API statement, no? Secure monad, clear not documented monolithic, because partners are building their businesses on it.
+
+00:16:34.000 --> 00:16:46.000
+So far, we've covered websites and labs, but there's a whole world with its own special needs, which is education. That's where the ALT1 comes from.
+
+00:16:46.000 --> 00:16:53.000
+Number 3, which is plugging it into any LMS.
+
+00:16:53.000 --> 00:16:59.000
+I think if most of you learned on Alex, Alex Busguise
+
+00:16:59.000 --> 00:17:02.000
+Conversational system. So, we have
+
+00:17:02.000 --> 00:17:18.000
+A lot of apps that LMI such and the service provider, like in the Moodle, Canvas, Blackboard, even Google are also providing. Those systems learning management systems, schools and universities
+
+00:17:18.000 --> 00:17:24.000
+But almost all of their teaching through them, especially online with the technology time
+
+00:17:24.000 --> 00:17:34.000
+So LTM stands for Learning Tools Interoperability, right? It's a long name for a simple idea. It's a standard way
+
+00:17:34.000 --> 00:17:37.000
+to plug an outside tool into an LMS
+
+00:17:37.000 --> 00:17:51.000
+It's managed by organizations management take, which used to be called IMS Global Mibela. That's the group that writes, you know, the technical standards for education
+
+00:17:51.000 --> 00:17:54.000
+The big benefit to Zika is
+
+00:17:54.000 --> 00:18:12.000
+That if we support LTI once, we work in all of the major elements: Canvas, Moodle, Blackboard, D2L, Ethelia, UALU, we don't build you want to say Parity on a Moodle plugin, separate canvas plugin. Understand that cover miracle
+
+00:18:12.000 --> 00:18:14.000
+So
+
+00:18:14.000 --> 00:18:27.000
+Now, here's what it feels like for a student. That's a well moment. Let's say they're in Korsana Moodle because they click on, let's say, photosynthesis quiz and now it will open
+
+00:18:27.000 --> 00:18:42.000
+Already logged in Nacho, so minima inaccounts, minimax password alone, and also already knows who they are, whether they are a student or a teacher, or which courses they're in. So, students see the quiz and teacher
+
+00:18:42.000 --> 00:18:53.000
+Clicking the same link is the teacher dashboard with results, all automatic. So, even minimum mini on a benign side configuration, I know wrong.
+
+00:18:53.000 --> 00:19:11.000
+LMSL at the top. How do we know it's safe? LDTI version 1.3 is in specially plugging into any LMS. It's built on the same security standards used by Google, Microsoft, and Adam Schlame
+
+00:19:11.000 --> 00:19:27.000
+There is this thing called OpenID Connection OAuth 2.0. It's the same OAuth we just saw for APIs. The older version, which is LTI 1.1SI UI2 used weaker security, unlike retired yet Regionell
+
+00:19:27.000 --> 00:19:32.000
+So
+
+00:19:32.000 --> 00:19:49.000
+You know, like, that if… how many websites let you sign with Google? So Elytia is like sign in with your school, but also tells the tool which class you're in and lets you send your grade back to that specific LMS
+
+00:19:49.000 --> 00:19:54.000
+So, how does an LTI lounge works?
+
+00:19:54.000 --> 00:20:11.000
+So what actually happened in that once again between the student clicking and seeing our tool, there are four steps, right? Number one step is student clicks the activity that might be in their course or in the LMS, because step two, LMSU will create a message about the students.
+
+00:20:11.000 --> 00:20:19.000
+It will create their ID, their name, their role, the course, and very importantly, it signs that message digitally sign a call
+
+00:20:19.000 --> 00:20:35.000
+Think of it like an official letter in a seldom developed with a wax seal. So, Skulu would write a letter saying, this is a bubba, he's a student in Biology 101, then they stamp it with their unique seal, right? The unique seal is basically
+
+00:20:35.000 --> 00:20:42.000
+An authentication, progress.
+
+00:20:42.000 --> 00:20:47.000
+So, state three will check if the signature is real
+
+00:20:47.000 --> 00:20:56.000
+Let's say…
+
+00:20:56.000 --> 00:21:14.000
+We'll receive that later, and we check the seal. Is it really just Coolucil now? Has the envelope been opened or changed? Is the laser recent? Technically, the school has published a public key. For anyone to check their seal
+
+00:21:14.000 --> 00:21:22.000
+Without being able to copy it. We kind of use that to verify if the signature that has been sent from the limit is real
+
+00:21:22.000 --> 00:21:38.000
+After that, only if every chick is dress is called Cialuccultano, the student sees the activity, already signed in without needing to sign in again. And here's the rule of Zika. If the cheek fails
+
+00:21:38.000 --> 00:21:55.000
+Launch refusier guy, right? Even if only one check fits under check are also fairly better sign madrigalabat sense. Protect Madra gala bats. If someone tries to send, let's say, a fake message pretending to be a teacher to change grades, for example.
+
+00:21:55.000 --> 00:22:04.000
+Silu, much higher, even though the same public key beyond. So, LME sends a sealed message, we check the seal, if it doesn't launch demo, nobody gets in.
+
+00:22:04.000 --> 00:22:20.000
+I think when I go to technical message, it's a JSON web token, or even local JWT boiler. It's signed with the platform's private keynote. Kaza, we verify it using their public key, right?
+
+00:22:20.000 --> 00:22:36.000
+Verify another column, published as a URL called JWKSmipalala. We also check the issuer, audience ala, and Adam, one-time number called unknowns to stop replace, and the expiry time loss, or replay the moderate.
+
+00:22:36.000 --> 00:22:52.000
+So, LTI Advantage, 9th extra feature of Charlotumab naibagizai. So far, LTI gets the student into our tool, right? Can ELTI Advantage a set of extra features on top that makes the experience feel like we're part of the LMS
+
+00:22:52.000 --> 00:23:05.000
+Deep linking, I imagine a teacher, let's say, building their course for the next week. They click add activity, it chooses our tool, and our tool opens in Epicard
+
+00:23:05.000 --> 00:23:18.000
+So the browsing, kazan bohala. It appears in their course page. So, minimain intake link type saarago.
+
+00:23:18.000 --> 00:23:29.000
+We can create a deep link. They can pick content from our tool and add it straight to their course without needing the specific ID of that specific content.
+
+00:23:29.000 --> 00:23:31.000
+The second one is great
+
+00:23:31.000 --> 00:23:41.000
+As cores go automatically into the Alems Gradebook. When the student finish the quiz, Yingya tool sends the score straight back to the LMS gradebook.
+
+00:23:41.000 --> 00:23:56.000
+So the teacher opens their gradebook and the score is already there in the right column next right to the student. So this reads the class list. Our tool, Genya is a tool can ask their LMS who is enrolled in this course. So
+
+00:23:56.000 --> 00:24:08.000
+They see every student, including those who haven't started the quizlet. That's where the teacher can see who still needs to do it.
+
+00:24:08.000 --> 00:24:22.000
+From experience, the greatest feature is usually what the school wants most. Teachers spend hours, you know, like, copying scores from one system to another. When you tell them, the grades just appear in your gradebook automatically. That's often what makes them say yes.
+
+00:24:22.000 --> 00:24:41.000
+So LETI Advantage adds content picking automatically on a greener class list and grades are what the schools care most about. So we've seen all three doors. Now, let's take back and look at the whole building, let's say.
+
+00:24:41.000 --> 00:24:48.000
+If you remember once life from today, Himyono, this was a focus manager.
+
+00:24:48.000 --> 00:24:59.000
+At the bottom is Yenna course, right? That's where the real work happens. The quizzes, the scoring, the results, the user, there is an source of truth at them. This is one core.
+
+00:24:59.000 --> 00:25:09.000
+One place where the quiz is stored, and one place where score is calculated, right? On top of it's also wave component, REST API, LTI
+
+00:25:09.000 --> 00:25:15.000
+Wave Components API LTI. So,
+
+00:25:15.000 --> 00:25:17.000
+And above them the more
+
+00:25:17.000 --> 00:25:27.000
+There are different visitors, right? With Components
+
+00:25:27.000 --> 00:25:40.000
+Right? Each one comes in through the door that sues them, right? Here's why this design matters. The doors are very thin. They don't contain the important logic. They just translate what already exists in the door.
+
+00:25:40.000 --> 00:25:50.000
+When a student launch, from Moodle through, let's say, Elite Hinta Tag Kemboihon, it becomes… so then takes a starting quiz. Why?
+
+00:25:50.000 --> 00:25:56.000
+When an app calls an API, it's the same thing. A student takes a starting quizz.
+
+00:25:56.000 --> 00:26:02.000
+And the core doesn't care which the door they use. So, naegar.
+
+00:26:02.000 --> 00:26:20.000
+And every door gets it. If we add a new question type, let's say drag and drop, we build it once in the core, and instantly available now to the websites, to the apps, and to the schools. If we fix a bug in the scoring, it's fixed for everyone
+
+00:26:20.000 --> 00:26:38.000
+If we did custom integration instead, we do have to do it 10 times, like 10 you want a partner approach, we have to do it every 10 times. This can expect as a problem on slides through our roads. Build ones offer a few standard ways in, and that's actually how actually you
+
+00:26:38.000 --> 00:26:39.000
+towards
+
+00:26:39.000 --> 00:26:56.000
+And Corino Ronald, multiple treats and Ora. iga core system licenses will go to every other, partners or, websites, or any kind of LMS
+
+00:26:56.000 --> 00:27:00.000
+So, this is… take this as a decision guide
+
+00:27:00.000 --> 00:27:04.000
+Which one should a person use?
+
+00:27:04.000 --> 00:27:08.000
+With Components
+
+00:27:08.000 --> 00:27:23.000
+You should ask these questions, though, before this. What do they need, right? If it's a website editor, let's say, someone who manages a website or a blog or wants our tool in their page, it's with Components, right?
+
+00:27:23.000 --> 00:27:26.000
+So it takes minutes
+
+00:27:26.000 --> 00:27:31.000
+And it's for websites and blogs.
+
+00:27:31.000 --> 00:27:35.000
+If it's a developer team
+
+00:27:35.000 --> 00:27:44.000
+First on, like, yo, since wife coding, this would be lower again, if, if it's a developer that's going to use our intent.
+
+00:27:44.000 --> 00:27:46.000
+One of the
+
+00:27:46.000 --> 00:28:03.000
+doors, they have to use the REST API. So it doesn't need a custom kind of implementation, right?
+
+00:28:03.000 --> 00:28:15.000
+If it's a school or university with an LMS that wants automatic sign-in and grades in the gradebook, LTIWindstream.com 1.3. It's
+
+00:28:15.000 --> 00:28:29.000
+one-time setup, no? And their students see our screens inside dilemmas. And remember, these are not exclusive. A university might use LT1, LET-Ifalaga, not 1.3.
+
+00:28:29.000 --> 00:28:35.000
+To put results into its own reporting system.
+
+00:28:35.000 --> 00:28:42.000
+Because everything is built on the same core, that just works, so we don't need to implement every single garbage.
+
+00:28:42.000 --> 00:28:56.000
+So
+
+00:28:56.000 --> 00:28:59.000
+Thug.
+
+00:28:59.000 --> 00:29:14.000
+REST API gives developers full control as long as we keep them stable and secure. LTI 1.3 is the standard way miss automatic sign-in grades and classlets, and Android needs it all, one core outlet, three doors, so you build it once
+
+00:29:14.000 --> 00:29:44.000
+You can reach every partner. Yeah, so I think that's it. Thank you so much for listening. I'm happy to take any questions if you guys have, but yeah, that's it from me.
+
+00:29:45.000 --> 00:29:55.000
+I guess if you have… you guys have any questions, you can send it through the chat. And Taven, I have finished as well.
+
+00:29:55.000 --> 00:30:05.000
+Yeah, yeah, sure, of course.
+
+00:30:05.000 --> 00:30:08.000
+Turnish them to here, Isama
+
+00:30:08.000 --> 00:30:26.000
+So, assum development.
+
+00:30:26.000 --> 00:30:36.000
+I think you guys need to use a mockup. Can provide me directly, but I'm willing, I believe.
+
+00:30:36.000 --> 00:30:44.000
+Let me check, though.
+
+00:30:44.000 --> 00:30:45.000
+Yeah, yeah.
+
+00:30:45.000 --> 00:31:02.000
+Yes, I'm Mohad
+
+00:31:02.000 --> 00:31:06.000
+Yeah.
+
+00:31:06.000 --> 00:31:12.000
+Yeah, yeah.
+
+00:31:12.000 --> 00:31:35.000
+So, what sponsors is indeed, when you build the products, maybe.
+
+00:31:35.000 --> 00:31:47.000
+Right? We have component token or REST API or standard Under Zone. Then, if you guys have any other idea, or basically try that as well
+
+00:31:47.000 --> 00:31:50.000
+No problem.
+
+00:31:50.000 --> 00:31:56.000
+Okay, Fanrit, did you have a question?
+
+00:31:56.000 --> 00:31:59.000
+Oh, Antonio
+
+00:31:59.000 --> 00:32:05.000
+Thank you.
+
+00:32:05.000 --> 00:32:13.000
+Thank you, Zamanil.
+
+00:32:13.000 --> 00:32:20.000
+If you guys have any more question, you can ask. If not, I think
+
+00:32:20.000 --> 00:32:21.000
+Yes, yes, I did.
+
+00:32:21.000 --> 00:32:40.000
+Have you completed your trainings? Okay, sorry, I had another double session because we have an important session happening tomorrow. Okay, thank you so much. If you guys have any question, make sure to take this chance and ask because it's going to be a very important part of your
+
+00:32:40.000 --> 00:32:49.000
+Solution. Did you understand everything about API and everything that you need to build
+
+00:32:49.000 --> 00:32:53.000
+If you do, you can give me thumbs up or the fire icon
+
+00:32:53.000 --> 00:32:57.000
+How are you, Moji.
+
+00:32:57.000 --> 00:33:04.000
+Cool. So Kittus, thank you so much for sparing this time and
+
+00:33:04.000 --> 00:33:20.000
+Taking this time to train our participants, I think Hylumikal has a question based on what you know about the project we are building, which door do you think is suitable? And if we should
+
+00:33:20.000 --> 00:33:27.000
+We built our parts to be able to handle in Alta E
+
+00:33:27.000 --> 00:33:29.000
+It's a question for me, right?
+
+00:33:29.000 --> 00:33:35.000
+Is it for me? Hi, Lemkel, or is it for him? I don't again. Let me read it.
+
+00:33:35.000 --> 00:33:40.000
+Based on what you know about the project rebuilding, which do you think is
+
+00:33:40.000 --> 00:33:43.000
+Should I want to be able to
+
+00:33:43.000 --> 00:33:45.000
+Okay.
+
+00:33:45.000 --> 00:33:57.000
+Yeah, I think, yeah, it's our core should be built so that it can serve in Dalku. Both
+
+00:33:57.000 --> 00:34:12.000
+would be the best option. Because we don't build all three on day one, because the EK Muhia then, because the other two doors stop on top of it, then we add whichever door our first users actually need
+
+00:34:12.000 --> 00:34:24.000
+That would be the best answer.
+
+00:34:24.000 --> 00:34:29.000
+One of the questions, even all API
+
+00:34:29.000 --> 00:34:35.000
+So, in a simple way, what is API again, Katus?
+
+00:34:35.000 --> 00:34:44.000
+It's basically, request Marago Mutual Uti on a developer to request a call.
+
+00:34:44.000 --> 00:35:01.000
+Okay, so what we're going to share with you guys is Yaelix Savana Muya learning platform. That's property of ALX. So low my vector. Again, what we will give you is
+
+00:35:01.000 --> 00:35:17.000
+static of it, the static page of it, or the static part of it. So Sun Youn already didntana Telegram group, it includes, the HTML and the CSS and the JavaScript
+
+00:35:17.000 --> 00:35:23.000
+Something that you guys will benefit to build your solutions on.
+
+00:35:23.000 --> 00:35:31.000
+Is that clear
+
+00:35:31.000 --> 00:35:49.000
+I think it's… it's… it's, that's why we're having these sessions. Maybe just do is it going to create conflict? Hailemkel is asking won't that create any complications in the back end when we handle the request
+
+00:35:49.000 --> 00:36:00.000
+Yeah, it does create complication because static corner codes just the first one on the web component in OG API at the
+
+00:36:00.000 --> 00:36:03.000
+Highly.
+
+00:36:03.000 --> 00:36:20.000
+So, Mindanao, Inya, we're not asking you to build the curriculum fully for these people, WMW Inyang curriculums that are not true.
+
+00:36:20.000 --> 00:36:36.000
+reading they are good content in a different ways, different kinds of disability, how can these people access this website? How can they use it? So it is something that will be added into our website
+
+00:36:36.000 --> 00:36:48.000
+Okay, it will be added… our website to our learning platform integrity, to make it simpler for these people, so that we can enroll 3,000 disabled peoples
+
+00:36:48.000 --> 00:36:54.000
+Does that make them use APIs?
+
+00:36:54.000 --> 00:36:55.000
+Okay.
+
+00:36:55.000 --> 00:37:06.000
+No, no, not APIs. Can maybe you guys can implement, like, a scrapping mechanism? Because non-terraced the page generate more static content.
+
+00:37:06.000 --> 00:37:10.000
+I think that would be nice
+
+00:37:10.000 --> 00:37:16.000
+Is it clear for all of you?
+
+00:37:16.000 --> 00:37:35.000
+Okay, okay, cool, cool. Thank you so much, Kirtus, for being able to communicate with them technically. I've been struggling with them to communicate this technically, you know, I only know what needs to be delivered, you know.
+
+00:37:35.000 --> 00:37:36.000
+Yeah, yeah.
+
+00:37:36.000 --> 00:37:53.000
+So thank you so much for taking this time to do this. And you guys can say thank you to Cutace as well. And as always, before we close off the sessions, we check if you have any more questions. If you don't have any more questions, we close off by unmuting and saying goodnight
+
+00:37:53.000 --> 00:38:05.000
+And thank you. So we can do that.
+
+00:38:05.000 --> 00:38:06.000
+Yeah, yeah.
+
+00:38:06.000 --> 00:38:07.000
+Yeah, yeah, I can do it.
+
+00:38:07.000 --> 00:38:09.000
+Can we have PD… Yes, Caduce, are you able to share this PDF or this? Okay, you can share it with me on WhatsApp and I can share it with them.
+
+00:38:09.000 --> 00:38:12.000
+Okay, okay, we'll do.
+
+00:38:12.000 --> 00:38:13.000
+Thank you.
+
+00:38:13.000 --> 00:38:14.000
+Okay, thank you
+
+00:38:14.000 --> 00:38:16.000
+Good night, and thank you so much, Kedush.
+
+00:38:16.000 --> 00:38:17.000
+Okay, thank you, Zawan.
+
+00:38:17.000 --> 00:38:19.000
+Thank you, Theo.
+
+00:38:19.000 --> 00:38:20.000
+Okay, good night.
+
+00:38:20.000 --> 00:38:21.000
+Good night
+
+00:38:21.000 --> 00:38:23.000
+Thank you, Katus.
+
+00:38:23.000 --> 00:38:24.000
+Okay.
+
+00:38:24.000 --> 00:38:28.000
+Oh, that's you, okay.
+
+00:38:28.000 --> 00:38:47.000
+Okay, thank you guys, have a good night, and rest well, but also keep working. Like, if we registered as a co-designer, who would make a team? So as a co-designer, join Metaru, so watch how it's going to be is
+
+00:38:47.000 --> 00:39:09.000
+We will have a space where the co-designers will be sitting, and then you can go and ask anything you want, or make them taste anything that you have built so that you can refine your projects. That's how you will be part of the team. You're not going to be sitting with the team and code with them or see what they're building. Or so I mean, you can if you want to, but
+
+00:39:09.000 --> 00:39:37.000
+It will be more beneficial because think of it this way, methot, it's a lot of people. So Nantic hand, too, what will happen to the 99 teams if they want to ask you a certain question? So you'll have a dedicated space where you'll be sitting and these builders will come to ask you a certain question and go back to their space and start building or refining their projects.
+
+00:39:37.000 --> 00:39:55.000
+Abail, I have a question for Evan. Is it mandatory to all of the team members to attend the hackathon in person? Yes, but for example, if you can't make it due to exams or due to urgent things, you can attend on the days that you're available, but your team still needs to attend
+
+00:39:55.000 --> 00:40:14.000
+If you can't attend on Saturday, your team can attend Saturday, and then you can join your team on Sunday. But as I mentioned, attending is mandatory because you will need to interact with these people, you need to understand their need, not what you want to build with them, as you have… if you can remember Hussein's session yesterday
+
+00:40:14.000 --> 00:40:29.000
+He was saying, you don't need to say, here is the website I built for you. You say, I want to build a website for you. What kind of website should I build for you? Okay, so it's hard for us. For example.
+
+00:40:29.000 --> 00:40:44.000
+for people who can't see, there is a Miyanobuppetele. We think it's easy, it will be easy. If you close your eyes and try to read it, I'm pretty sure you can't read it, even if it's alphabet's kohana
+
+00:40:44.000 --> 00:41:01.000
+Because we're not learning it that way. So we need to understand from their perspective on how they see things, how they understand things, so that when you're building the solution, it will be for nothing major when we review your submissions. We know you're talented, we know you can do amazing things, but
+
+00:41:01.000 --> 00:41:20.000
+As I mentioned, you're not here to build beautiful websites, so she always keep that in mind. I hope I answered your question a bit. And Lalisa, what and how work a co-designer is it from our… or Alex is going to assign for us. We will prepare the co-designers. You just need to bring your ideas, your laptops, your team.
+
+00:41:20.000 --> 00:41:35.000
+And your, energy, and then you can build these models. So I think these guys might have a few more questions. Kittus, you can leave the session, it's totally fine. Thank you so much for joining. Okay.
+
+00:41:35.000 --> 00:41:40.000
+The other question is
+
+00:41:40.000 --> 00:41:56.000
+What and how work co-design is, okay, I have already answered that. Do we need to prepare a presentation for Sunday? Not for Sunday. You will be the selected teams will be announced by next week, earliest by Thursday
+
+00:41:56.000 --> 00:42:12.000
+We will announce the selected teams after reviewing your project. We will share where the Google form that you will use to submit your projects. And as I mentioned, no apps. You can't build a mobile application because our learning platform is a website, so you need to build a web
+
+00:42:12.000 --> 00:42:29.000
+an MVP link, MVP link, I don't think… I think Busugi MVP link no sub meeting are good. So functional when we interacted, it needs to be functional, okay? Do we need to prepare a presentation percentage? So for the presentation, you will be preparing
+
+00:42:29.000 --> 00:42:52.000
+for Saturday, November 21st. Yes, you will need to prepare your slides. And good question, by the way, Ethel, for all of you, I will also send this reminder in the group if you're also seeing this recording, great
+
+00:42:52.000 --> 00:43:02.000
+I want to remind you, Yahoo new summit project submit targo at the end. You will need to submit a slide
+
+00:43:02.000 --> 00:43:25.000
+How did you… what kind of solution does your project bring, and what we need to understand a little bit about your project when we're checking your MVP or the website that you have built, we need to understand everything through your slides, because you will not be there to explain it, so please make it clear, add your team members' names and everything we need to understand for
+
+00:43:25.000 --> 00:43:41.000
+From this project to she. So Zarytum sebit metaragut, your MVP link, or isa ratio de website link, your team members' details, same email, contact us, well, I'll still submit tara gala 2.
+
+00:43:41.000 --> 00:43:52.000
+And then a slide. We will share a template for you guys to use, but you can go. You can design it however you want the website small as no the slide mile is now
+
+00:43:52.000 --> 00:44:05.000
+And then last question, condensation records and PDF be shared right away. So as soon as they finish uploading, we'll share it in the group so you can access it.
+
+00:44:05.000 --> 00:44:12.000
+Telegram group poly. Upload Lekunha Lekunan tunnel, first session.
+
+00:44:12.000 --> 00:44:29.000
+Okay, I think those will be the questions for today. If you have more questions, please use the Telegram group. As I said, please, please form teams if you don't have teams, share what you can do and or share what kind of people you're looking for so that you can team up with other people
+
+00:44:29.000 --> 00:44:52.000
+Okay, thank you so much, everybody, and you're all invited for the coffee time tomorrow. So you can come and join. You don't have to be Alex learner to attend the coffee time, but it's a good time to hang out and have coffee if you like coffee, to have tea if you like tea, and to have some popcorn and play some fun games
+
+00:44:52.000 --> 00:44:59.000
+Alright, have a good night. Bye-bye.
+

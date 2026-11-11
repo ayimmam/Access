@@ -8,7 +8,7 @@
 
 ## 1. System Architecture & Trust Boundaries (Mapped to Architecture Diagram)
 
-The platform architecture comprises three primary subsystem boundaries and four cross-boundary integration nodes, as established in the system architecture diagram, `TRACK_2_IMPLEMENTATION_PLAN.md`, `SECURITY_PLAN.md`, and `ALX_Hackathon_Recommendation (1).docx`.
+The platform architecture comprises three primary subsystem boundaries and four cross-boundary integration nodes, as established in the system architecture diagram, `docs/planning/TRACK_2_IMPLEMENTATION_PLAN.md`, `SECURITY_PLAN.md`, and `ALX_Hackathon_Recommendation (1).docx`.
 
 ```
 +---------------------------------------------------------------------------------------------------+
@@ -152,7 +152,7 @@ On a platform built for learners with disabilities, assistive usage patterns (su
 
 ### 4.1 Platform-Wide Data Minimization: Zero Disability-Diagnosis Collection
 
-* **No Medical or Disability Profiling in `Database` or Logs**: As mandated in `TRACK_2_IMPLEMENTATION_PLAN.md`, the platform **never** collects, infers, or stores disability diagnoses or medical classifications in PostgreSQL, cookies, analytics, or server logs.
+* **No Medical or Disability Profiling in `Database` or Logs**: As mandated in `docs/planning/TRACK_2_IMPLEMENTATION_PLAN.md`, the platform **never** collects, infers, or stores disability diagnoses or medical classifications in PostgreSQL, cookies, analytics, or server logs.
 * **Functional Format Preferences Only**: Instead of asking *"What is your disability?"*, the `Accessible lesson Web Component` and `Offline reader` store only functional presentation choices—such as caption font size/color/opacity presets, EthSL sign-window size and docking coordinates, audio-description track selection, or preferred Braille output profile (e.g., English UEB uncontracted vs. reviewed Amharic BRF). By decoupling format selection from identity records, any learner can use any format without generating a sensitive disability record.
 
 ### 4.2 Bilingual, Plain-Language Privacy Controls (`Accessible lesson Web Component` & `Accessible staff console`)
@@ -208,11 +208,11 @@ Before any release or hackathon demonstration, the integrated platform must pass
 
 ## 7. Open Architectural Questions & Unconfirmed Contracts (Requires Your Confirmation)
 
-In keeping with a strict zero-assumption approach, the following open items from `SECURITY_PLAN.md`, `TRACK_2_IMPLEMENTATION_PLAN.md`, and the architecture diagram (`image_5b8663.jpg`) must be confirmed with you (or ALX at kick-off) to lock in the final implementation rules:
+In keeping with a strict zero-assumption approach, the following open items from `SECURITY_PLAN.md`, `docs/planning/TRACK_2_IMPLEMENTATION_PLAN.md`, and the architecture diagram (`image_5b8663.jpg`) must be confirmed with you (or ALX at kick-off) to lock in the final implementation rules:
 
 1. **`ALX identity and enrollment service` Production Contract (Diagram Node 9)**: The diagram labels this node *"Production contract to confirm."* Once the `Savanna adapter` receives the learner's `HttpOnly` Savanna session cookie, how does Savanna expose session validation and enrollment verification to our backend (e.g., an internal introspection endpoint, a shared Redis/database session store, or an LTI 1.3 launch payload)?
 2. **Deployment Topology & Domain Relationship (`SECURITY_PLAN.md` Q2)**: Will `Our accessible media service` (`REST API /api/v1` and `Asset storage`) and the `Accessible staff console` be deployed under a subdomain of Savanna (so the `SameSite=Lax` Savanna cookie is sent automatically to the adapter) or on a separate domain/cloud VM (which requires a server-to-server proxy in the Savanna host or explicit cross-origin token exchange)?
 3. **`Accessible staff console` Identity Provider**: Should staff members (authors, bilingual English/Amharic reviewers, Ethiopian Sign Language interpreters, and Deaf co-designers) authenticate into the React `Accessible staff console` using ALX's existing staff SSO/Identity Provider, or should our FastAPI backend host a dedicated WebAuthn/passkey + magic-link authentication service for the editorial console?
 4. **External AI Transcription/Translation Vendor (`SECURITY_PLAN.md` Q3)**: Have you selected a self-hosted model (e.g., local Whisper) or an external cloud API for draft English transcription and Amharic translation in `Background workers`? Confirming this determines whether we enforce strict zero-egress container policies for transcription workers or configure an egress proxy with vendor data-retention controls.
 5. **Protected Lessons on the `Independent website` vs. Public Demo**: On the `Independent website` (`Same script + Web Component`), will all embedded lessons be public demonstration lessons, or do you also need the short-lived scoped launch token flow implemented for access-controlled lessons outside Savanna?
-6. **Recorded Session Chat Replay Scope**: For the recorded live session viewer mentioned in `TRACK_2_IMPLEMENTATION_PLAN.md`, will chat logs be ingested as static files through the `Accessible staff console` (where reviewers can redact names/PII before approval), or fetched dynamically from an external conference provider API?
+6. **Recorded Session Chat Replay Scope**: For the recorded live session viewer mentioned in `docs/planning/TRACK_2_IMPLEMENTATION_PLAN.md`, will chat logs be ingested as static files through the `Accessible staff console` (where reviewers can redact names/PII before approval), or fetched dynamically from an external conference provider API?

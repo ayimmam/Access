@@ -8,7 +8,7 @@
 
 ## 1. Security Design Re-Evaluation & Threat Model Summary
 
-Following the defensive architecture review (`security_architecture_review.md`), we re-evaluated the v2.0 design against the [OWASP Top 10:2025](https://top10.owasp.org/2025/en/) categories, multi-step attack chains (`C-1` through `C-8`), and assistive-technology privacy inference vectors (`R-01` through `R-15`).
+Following the defensive architecture review (`docs/security/SECURITY_ARCHITECTURE_REVIEW.md`), we re-evaluated the v2.0 design against the [OWASP Top 10:2025](https://top10.owasp.org/2025/en/) categories, multi-step attack chains (`C-1` through `C-8`), and assistive-technology privacy inference vectors (`R-01` through `R-15`).
 
 ### 1.1 Primary Structural Finding: Host-Origin Execution of the Embedded Web Component (`R-01` / `C-1`)
 

@@ -1,6 +1,6 @@
 # Security Implementation Plan — Access / Track 2 Accessible Learning Media
 
-> Based on: `TRACK_2_IMPLEMENTATION_PLAN.md`, architecture diagram, and `Savanna-static-pages` starter code audit.
+> Based on: `docs/planning/TRACK_2_IMPLEMENTATION_PLAN.md`, architecture diagram, and `Savanna-static-pages` starter code audit.
 > Status: **Draft — awaiting answers to open questions at the bottom before full execution.**
 
 ---
@@ -281,15 +281,17 @@ Roles and their enforced API permissions:
 
 ## Answers to Open Questions
 
-**Q1 — Auth credential format: ✅ RESOLVED**
-The host provides an **existing Savanna session cookie** shared from the Savanna domain. Our module must:
+**Q1 — Auth credential format: ⚠️ UNCONFIRMED**
+On 11 November 2026, the user confirmed that ALX has not confirmed the authentication contract. The cookie approach below is a conditional proposal, not an available integration or an approved production requirement. Confirm identity/session validation, enrollment, revocation and deployment topology with ALX before implementation.
+
+If ALX approves a server-mediated cookie approach, the proposed module constraints are:
 - Never read or extract the cookie value client-side (it must be `HttpOnly`)
 - Make all API calls from the **server-side Savanna adapter** using the session cookie as a credential, not from browser JS
 - Validate the session server-side on every API request — never trust a client-supplied role or user ID claim
 - Our backend must accept the Savanna session as proof of identity and not issue a second, independent session token that could drift from Savanna's auth state
 
 > [!IMPORTANT]
-> Since auth depends on a **same-domain Savanna cookie**, our API and the Savanna host must share a domain or be served under a subdomain relationship. Cross-origin requests will not carry the cookie unless CORS is configured with `credentials: true` and an explicit `Allow-Origin` matching the Savanna domain — not a wildcard. Confirm the production domain relationship before wiring up the adapter.
+> If ALX selects a **Savanna-cookie-based integration**, our API and the Savanna host must share a domain or be served under a subdomain relationship. Cross-origin requests will not carry the cookie unless CORS is configured with `credentials: true` and an explicit `Allow-Origin` matching the Savanna domain — not a wildcard. Confirm the production domain relationship before wiring up the adapter.
 
 **Q2 — Deployment target: ⚠️ NOT YET DECIDED**
 Security controls for TLS, reverse proxy, and network isolation are planned for both scenarios (cloud VM and local/organizer infra). See Layer 2 for how this affects the CORS/cookie domain requirement above. Update this answer when decided.

@@ -1,6 +1,6 @@
 # Security Architecture Review — Track 2 Accessible Learning Media Platform
 
-**Reviewed artifact:** `docs/security_architecture_plan.md` (Consolidated Architecture & Security Plan v2.0)
+**Reviewed artifact:** `docs/security/archive/SECURITY_ARCHITECTURE_V2.md` (Consolidated Architecture & Security Plan v2.0)
 **Review type:** Defensive architecture & threat-model review — OWASP Top 10 attack-vector analysis, privacy deep-dive, accessibility-security tension assessment
 **Scope:** Track 2B content publishing pipeline, reference lesson player (Web Component embedded in Savanna), Savanna adapter, offline reader & downloadable packs, career gateway & certificate verifier
 **Standing constraint applied to every mitigation in this review:** no control may introduce cognitive-function tests, timing pressure, split OTP inputs, or visual puzzles, and all error/rate-limit UX must remain operable with NVDA, TalkBack, refreshable Braille displays, 200% zoom, voice control, and EthSL-based workflows.
@@ -521,4 +521,4 @@ The architecture's privacy pillars (zero-diagnosis, functional prefs, zero-PII a
 
 ---
 
-*End of review. Companion artifact: `docs/security_architecture_plan.md` (v2.0) — this review adds §8/§9/§11 items to it rather than replacing any existing control.*
+*End of review. Companion artifact: `docs/security/archive/SECURITY_ARCHITECTURE_V2.md` (v2.0) — this review adds §8/§9/§11 items to it rather than replacing any existing control.*

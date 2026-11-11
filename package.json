@@ -1,0 +1,10 @@
+{
+  "name": "access",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Scaffold only; no application implementation",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
+}

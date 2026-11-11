@@ -1,10 +1,10 @@
 # Track 2 accessible learning media implementation plan
 
-Updated 10 November 2026. This is a build plan, not a completed accessibility audit or a claim of conformance.
+Updated 11 November 2026. This is a build plan, not a completed accessibility audit or a claim of conformance.
 
 ## Decisions from the November 10 co-design session
 
-Source: [Understanding Accessibility Co-Design Nov 10 Recording.vtt](<Understanding Accessibility Co-Design Nov 10 Recording.vtt>). The transcript contains recognition errors; the timestamp references below support paraphrases of clear statements. Unclear wording does not establish a technical specification or legal term. Our final product remains the Web Component and REST API described below.
+Source: [Understanding Accessibility Co-Design Nov 10 Recording.vtt](<../references/recordings/Understanding Accessibility Co-Design Nov 10 Recording.vtt>). The transcript contains recognition errors; the timestamp references below support paraphrases of clear statements. Unclear wording does not establish a technical specification or legal term. Our final product remains the Web Component and REST API described below.
 
 | Session time | Applicable guidance | Implementation or delivery decision |
 |---|---|---|
@@ -20,6 +20,35 @@ Source: [Understanding Accessibility Co-Design Nov 10 Recording.vtt](<Understand
 | 01:14:06–01:16:57 | Use the supplied platform branding and credit the team. | Match the Savanna host with configurable component theme tokens and accessible contrast; include team attribution. Exact licensing/ownership terms still come from written organizer terms. |
 
 Session logistics relevant to planning: the discussion says teams may have three or four members (00:15:45–00:16:07), so the fourth member is not a prerequisite to starting our work. Plan team coverage on both hackathon days; attendance explanations differ between 00:13:03–00:15:45 and 01:09:20–01:09:48, so individual exceptions should be confirmed with organizers. The recording announces awards on November 21 (01:18:39–01:18:52); this does not determine the code/submission freeze. The session does not enumerate the missing 35-feature checklist or provide production API/authentication contracts.
+
+## Decisions from the November 11 drop-in components session
+
+Source: [Building Drop-in Web Components Recording Nov 11 2026.vtt](<../references/recordings/Building Drop-in Web Components Recording Nov 11 2026.vtt>). References below are paraphrases; recognition errors in protocol names and the mixed-language Q&A are not specifications. The quiz examples explain integration architecture, not additional Track 2 quiz requirements.
+
+| Session time | Lesson | Implementation decision |
+|---|---|---|
+| 00:03:15–00:05:42; 00:24:48–00:26:38 | One core, multiple thin integration interfaces. | Put publication, version selection, entitlement and export rules in shared service logic. The custom element, REST routes and any later LTI adapter reuse it; do not duplicate those rules for each host. |
+| 00:05:51–00:10:54 | Custom tag; settings in/events out; immutable releases; no browser secrets; small and accessible. | Ship a prebuilt, framework-independent element with documented configuration/events, an exact release URL, keyboard/screen-reader evidence and measured compressed bundle size. Lazy-load optional media features. Shadow DOM isolates styling, not security. |
+| 00:13:52–00:16:34 | Stable APIs, scoped temporary access, consistent errors and usable examples. | Maintain `/api/v1`, publish migration/deprecation guidance before breaking changes, and provide a working independent API client. Partner credentials remain server-side; finalize production identity with ALX. |
+| 00:19:54–00:24:41 | Validate LTI launches; optional extensions support content selection, grades and rosters. | Keep LTI conditional. A future adapter must validate signature, issuer, audience, expiry and replay protection before trusting claims. Deep Linking, grade services and roster access each need an explicit use case and authorized platform support. Playback is not a grade. |
+| 00:33:45–00:34:24 | Do not build all three interfaces on day one. | Complete the shared core, component and API first; keep an extension boundary for LTI without delaying mandatory accessible media delivery. |
+| 00:34:44–00:37:10 | The supplied platform is static HTML/CSS/JS; enhance existing learning content. Scraping is suggested in Q&A. | Use the supplied fixture and approved content import. If needed, implement a narrow fixture parser with source provenance and review; this suggestion does not authorize authenticated crawling or establish a production API. Do not rebuild the curriculum. |
+| 00:38:28–00:41:35 | Organizers provide shared co-designers; builders visit their dedicated space. | Anteneh arranges two task/retest visits, accessible briefs and interpreter coordination. Do not assume a permanently assigned co-designer or uninterrupted availability. Maintain shared decisions despite the shared-space arrangement. |
+| 00:41:40–00:43:52 | Submit a functional web MVP, team details and explanatory slides; selected teams present November 21. | Package a working hosted URL and self-contained slides for asynchronous review. The session says no Sunday presentation, but slides still accompany submission. Confirm the form and exact deadline separately. A native mobile application is outside scope. |
+
+## Reconciliation with the security documents
+
+Read together: [Security implementation plan](../security/SECURITY_PLAN.md), [original architecture plan](../security/archive/SECURITY_ARCHITECTURE_V2.md), [architecture review](../security/SECURITY_ARCHITECTURE_REVIEW.md), and [revised architecture plan v3.0](<../security/SECURITY_ARCHITECTURE_V3.md>). The review's R-01–R-15 findings and v3.0 controls inform the work below; they are design proposals, not evidence that controls are implemented or audited. This plan uses the following reconciliation where those documents disagree:
+
+- **Identity remains a production dependency.** On 11 November 2026, the user explicitly confirmed ALX has not confirmed authentication. `SECURITY_PLAN.md` previously labeled a Savanna-cookie approach resolved (now corrected), while the architecture documents still request the session-validation contract and this plan previously proposed scoped tokens. Use a server-mediated adapter boundary; obtain ALX's supported identity/enrollment exchange before choosing cookie proxying or scoped browser tokens. Never extract host cookies in JavaScript or assume a shared parent domain grants access. The public fixture demo can proceed independently.
+- **Host-origin execution (R-01):** render captions, transcripts and chat as text; sanitize approved rich content at ingestion and restrict permitted URLs. Treat component JavaScript as trusted host-origin code. Pin immutable releases and verify dependency/build provenance; request compatible host CSP. Test malicious inputs in the real embed, including assistive-technology behavior.
+- **Authorization and assets (R-02/R-04):** enforce role, assignment, lesson and version scope server-side, including job polling. Return a uniform not-found response for inaccessible resources without disclosing drafts. Separate draft/published storage permissions. Job status contains state and safe recovery metadata; retrieve approved download links through the authorized exports endpoint. Short-lived URLs require accessible expiry/retry handling and must not leak into logs or shared caches.
+- **Workers and publication (R-05/R-10/R-14):** restrict fetch destinations, redirects, XML entities and worker egress; isolate non-root conversion jobs with resource limits and pinned dependencies. Staff-authored URLs still need validation. Protect staff mutations against CSRF where cookie authentication is used, and enforce exact-revision approvals server-side. The v3.0 distinct author/reviewer/publisher proposal needs staffing confirmation; do not silently claim separation with one person filling all roles.
+- **Sessions and progress (R-03/R-07):** preserve learner position across expiry and provide accessible recovery. Let the server enforce revocation and session lifetime; client activity cannot extend access indefinitely. Treat the proposed 12-hour cap and refresh policy as deployment parameters to agree with ALX. Asset fetches and client progress events do not prove learning or authorize completion; Savanna owns completion policy.
+- **Offline and privacy (R-08/R-09):** for packs imported into our hosted reader, verify authenticity and file hashes before rendering, reject tampered packs and retain a valid fallback when available. Keep preferences local and exclude assistive-mode usage, tokens and lesson text from telemetry. Define retention/deletion owners for source files, consent, recordings and operational logs before production; the review's retention periods and takedown SLA need operational agreement.
+- **Accessible abuse controls and demo isolation (R-06/R-11/R-12/R-13/R-15):** use account-aware throttling with safe aggregate limits, `Retry-After` and readable recovery; test shared-network learners. Keep independent embeds public for the first demo, isolate demo credentials/data, disable production debug output and retain useful partner API documentation. Staff IdP, recovery, deployment and AI vendor remain configuration decisions, not proven integrations.
+
+Biniyam owns service/storage/worker checks; Hailemichael owns embed, expiry and offline-reader checks; Anteneh coordinates privacy, consent and review evidence, subject to the team assignment confirmation below. Before protected deployment, require negative tests for foreign jobs/drafts, inert malicious text, worker URL restrictions, expiry/logout, throttling recovery and tampered packs. Record results and unresolved risks alongside the accessibility evidence. Do not adopt the security review's residual-risk ratings as achieved outcomes without these checks.
 
 ## Co-design process and evidence
 
@@ -71,7 +100,7 @@ The proposed public element is `<alx-accessible-lesson>`. One element represents
 Proposed installation contract for a public demonstration lesson:
 
 ```html
-<script type="module" src="https://media.example.org/components/v1/lesson.js"></script>
+<script type="module" src="https://media.example.org/components/1.0.0/lesson.js"></script>
 <alx-accessible-lesson
   api-base="https://media.example.org/api/v1"
   lesson-id="demo-va-future"
@@ -82,6 +111,8 @@ Proposed installation contract for a public demonstration lesson:
 ```
 
 The example domain, lesson ID and fallback route are proposed demonstration configuration. The API returns structured data and authorized asset URLs; the script implements the browser UI. Installation therefore needs both the component asset and API access. A REST endpoint alone cannot render the controls inside Savanna.
+
+Publish immutable component releases, a changelog and an upgrade/rollback example. Keep API major versions separate from component releases and lesson content versions; never overwrite a published bundle. Document event payload schemas and dispatch public notifications across the shadow boundary with `bubbles: true` and `composed: true`.
 
 Use open Shadow DOM for component-owned markup and styles, with deliberate CSS custom properties for branding. Validate the selected media library inside that boundary before committing to it. If that library requires document-level selectors or injected global styles, adapt it or select another implementation; preserve a real custom-element public interface. Test accessible names and focus within the shadow root, scalable text, forced colors and fullscreen with the sign window. Do not copy Savanna's Bootstrap, global font bundle or page-level CSS into the component payload.
 
@@ -138,7 +169,7 @@ Level 1: the versioned script registers the custom element; Savanna or the indep
 
 Level 2: implement the `/api/v1` resources and authorization contract defined above. Deliver OpenAPI with error schemas, validation examples and authentication documentation, plus an external client that demonstrates consuming published resources independently of the component.
 
-Level 3: implement schema.org/JobPosting for the job demonstration first, because it can be demonstrated independently of Savanna launch support. Keep visible content and structured data identical. Use a clearly fictional vacancy on a non-indexed demo page. LTI 1.3 is conditional on starter support; Open Badges 3.0 is conditional on issuer authorization and the actual credential infrastructure. Merely adding fields named after either standard is not conformance.
+Level 3: implement schema.org/JobPosting for the job demonstration first, because it can be demonstrated independently of Savanna launch support. Keep visible content and structured data identical. Use a clearly fictional vacancy on a non-indexed demo page. The November 11 training specifically calls LTI 1.3 its third integration level; JobPosting alone is not evidence of that level. LTI 1.3 is conditional on a registered tool and an available LMS test platform/launch contract, which the static starter does not provide; Open Badges 3.0 is conditional on issuer authorization and the actual credential infrastructure. Merely adding fields named after either standard is not conformance.
 
 ## Publishing and review
 
@@ -215,6 +246,10 @@ Suggested ownership based on the recommendation: Biniyam owns pipeline/API/expor
 Deliver source, reproducible Compose setup, fixtures, sample embeds, OpenAPI, data model, installation guide, content publishing guide, test evidence and WCAG conformance report. A fresh installer should demonstrate setup from documentation. Include content review status, known limitations, maintenance owner and an operating-cost estimate based on measured conversion work, storage and review time.
 
 The handover also includes an anonymized co-design decision log showing both cycles and fixes/retests, an inventory of implemented versus unavailable capabilities, replaceable AI-provider configuration and cost assumptions, and a consent check for any identifiable pitch content. Team members should be able to explain a request from component to API to published asset, change a setting or fix a small issue, and demonstrate actual playback/download/verification behavior without presenting generated output they cannot maintain. Keep all mandatory Track 2 capabilities in scope; an honest unavailable state does not count as fulfilling a missing mandatory feature.
+
+Submission package: include the working MVP URL, team names/contact details, and slides explaining the problem, learner journey, installation, architecture, co-design changes, demonstrated capabilities and limitations. Make slides understandable without a live presenter. Anteneh verifies the organizer form, template and submission freeze; prepare the selected-team presentation for November 21 as announced, without treating that date as the submission deadline.
+
+Additional integration evidence: install the pinned bundle on a clean HTML host without a framework build; demonstrate settings and documented events with two independent instances; verify old pinned releases remain available; exercise the API through a separate client with consistent error responses; measure bundle transfer size and slow-network loading; record the security checks above. These supplement the existing 35 checks rather than replacing them.
 
 ## Provisional acceptance inventory
 

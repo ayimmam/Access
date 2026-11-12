@@ -29,6 +29,7 @@ gh api \
   "required_status_checks": {
     "strict": true,
     "contexts": [
+      "GitGuardian Security Checks",
       "Repository checks",
       "Security baseline"
     ]

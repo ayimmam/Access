@@ -90,6 +90,13 @@ Enable the PR/review protections first; add CI requirements as implemented. GitH
 
 The repository includes `.github/workflows/ci.yml` and `scripts/configure_github_protection.sh`. After the workflow has run on GitHub and `gh auth status` succeeds, apply the planned settings with `bash scripts/configure_github_protection.sh ayimmam/Access main`. The script requires `Repository checks` and `Security baseline`, enforces one approval, dismisses stale reviews, requires approval after the latest push, resolves conversations, keeps history linear, applies rules to administrators and blocks force pushes/deletion.
 
+### Current GitHub setup status — 12 November 2026
+
+- [Pull request #1](https://github.com/ayimmam/Access/pull/1) contains the CI workflow, contributor/agent rules and protection script. GitGuardian passes on the PR.
+- Both custom workflow attempts ended in GitHub `BuildFailed` / `startup_failure` before creating a job or log. The workflow jobs therefore have not passed and must not be configured as required checks yet.
+- GitHub's branch-protection and repository-rulesets APIs return `403` for this private repository with the message to upgrade to GitHub Pro or make the repository public. Keep the repository private unless the owner explicitly decides otherwise.
+- To complete enforcement: obtain a plan that supports protection for private repositories (or separately approve public visibility), wait for/fix the Actions startup condition, verify both job names run successfully, then run the protection script and test direct-push/review/check blocking.
+
 Test with a harmless documentation PR: direct updates to `main` must be rejected, an unreviewed PR blocked, and a failing required check must prevent merging once configured. Then obtain a teammate review, pass the checks and verify normal merging works. Record the rule names and actual required check names. Every contributor and agent follows [CONTRIBUTING.md](../../CONTRIBUTING.md); the root [AGENTS.md](../../AGENTS.md) makes the same expectations discoverable to agents.
 
 ## CI/CD implementation checklist for later

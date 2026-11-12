@@ -28,3 +28,5 @@ Start with [the implementation plan](docs/planning/TRACK_2_IMPLEMENTATION_PLAN.m
 ALX has **not confirmed authentication**. Cookie sharing, session validation, token exchange, enrollment and production topology remain unresolved. Public fixtures must not imply production access.
 
 Prepare development machines using the [team setup guides](docs/setup/README.md).
+
+All team members and AI agents follow [CONTRIBUTING.md](CONTRIBUTING.md). Agent-specific entry instructions are in [AGENTS.md](AGENTS.md).

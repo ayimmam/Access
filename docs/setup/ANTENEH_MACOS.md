@@ -37,23 +37,60 @@ If using GitHub, authenticate interactively with `gh auth login`, then `gh auth 
 - Prepare an authorized short lesson and local font files. Keep original Savanna captures intact and plan the integrated page under `examples/savanna/`.
 - After project dependencies exist, install Playwright browsers and run actual keyboard, focus, multi-instance and viewport checks. Automated accessibility scans do not replace VoiceOver/NVDA/TalkBack tests.
 
-## Deployment preparation — accounts and decisions, not deployment yet
+## Render demo deployment — $100 credit available
 
-Prepare access to the code repository and the selected hosting account. Do not purchase or configure multiple providers before choosing one. The deployment needs:
+Confirmed by the user on 12 November 2026: **Render is the demo host and $100 in credit is available.** Anteneh owns deployment and billing tracking. This guide does not provision services or verify the credit in the account.
 
-| Capability | Preparation |
-|---|---|
-| HTTPS static hosting | Component bundle, console and first-party reader |
-| Long-running Python service | API; not just a static-site host |
-| Background execution | Separate conversion worker with resource limits |
-| PostgreSQL | Persistent database and migrations |
-| Object storage | Separate draft/published permissions; approved asset delivery |
-| Configuration/secrets | Runtime injection and CI secrets, never frontend variables |
-| Logs/health/rollback | Operational checks with no tokens, transcripts or learner PII |
+Use one shared demo environment initially, connected to `ayimmam/Access` and protected `main`. Keep local development on Compose. Avoid paid per-PR environments until their cost is justified.
 
-Record provider, region, cost allowance, deployment architecture and image architecture. On an Apple Silicon Mac, an arm64 image is not automatically deployable to an amd64 server; use Buildx for the selected target and test the resulting image. This is especially relevant to media/native-library wheels.
+| Component | Proposed Render placement | Preparation |
+|---|---|---|
+| Component bundle, console, first-party reader | Static site(s) | Define build outputs and immutable component URLs when implemented |
+| FastAPI | Paid web service for the live demo | Bind to Render's assigned port, define a real health endpoint and test restart recovery |
+| Conversion pipeline | Separate background worker | Benchmark memory/CPU with Biniyam; choose queue before provisioning its backing service |
+| Metadata | Render Postgres | Same suitable region as API/worker; migrations and backup/export procedure |
+| Media and exports | Durable object storage, provider still to select | Separate draft/published access; do not rely on service-local temporary files |
+| Secrets | Render environment/secrets configuration | Server-side only; no credentials in static builds, logs or repository |
 
-A public-fixture demo can be deployed before ALX authentication is agreed. Do not promise production SSO, change Savanna cookie settings or enable protected lessons without that contract.
+Render [background workers](https://render.com/docs/background-workers) run continuously and do not receive incoming network traffic. They are distinct from the web service. Biniyam's local NPU is not available to a Render worker. Precompute expensive reviewed media locally where appropriate; demonstrate a real short export job if claiming the hosted pipeline works.
+
+Prefer a paid API instance for demo reliability: [free web services spin down after inactivity](https://render.com/docs/free). The smallest tier is a candidate only after measuring memory and processing time. Store uploads and outputs durably; do not assume two services share a filesystem. The Render credit does not automatically cover an external storage provider.
+
+### Budget preparation
+
+Before creating services, verify credit balance, expiry, eligible charges and any payment-method requirements in the actual workspace. Check current [Render pricing](https://render.com/pricing); no tier prices are fixed in this guide.
+
+Prepare a cost sheet with service name, tier, region, storage, rate, intended running period and projected total. Include workspace charges, database/storage, worker time, bandwidth/build overages and any queue service. Suggested operating target: at most **$70 of planned eligible consumption**, retaining **$30 contingency** within the $100 credit; this is an internal planning allocation, not a Render quote or hard billing limit. Track external costs separately.
+
+Review usage daily and after resizing. Avoid leaving experiments or duplicate environments running. Before the credit expires, export required data and stop/remove services that are no longer needed using the provider's supported controls; document which resources continue billing. Do not assume exhausted credit automatically prevents further charges. Preserve the demo through the agreed judging window before teardown.
+
+### Deployment and rollback
+
+1. Confirm repository access and target Linux image architecture. Apple Silicon builds must target the architecture supported by the selected Render runtime; test native-library compatibility.
+2. Once runnable code exists, define build/start commands, health checks, database migrations, CORS origins, secrets and durable storage. Keep demo content public and synthetic/authorized; ALX production authentication is still unconfirmed.
+3. Connect the GitHub repository and `main`. Use **After CI Checks Pass** after real push-to-main checks exist. Until then, leave automatic deploys **Off**. Do not also trigger a deploy hook for the same commit.
+4. CI must run on pull requests and pushes to `main`, with a final always-evaluated gate that fails when a required implementation check fails, is cancelled or unexpectedly skips. Render accepts neutral/skipped checks, so its setting alone does not establish full test coverage. See [Render deploy behavior](https://render.com/docs/deploys).
+5. Verify the deployed commit, API health, lesson playback, captions, real downloads, offline reader and one worker job. Keep operational evidence without user data. Preserve a known-good release and database-compatible rollback procedure; an application rollback does not reverse a migration.
+6. Rehearse from a phone and a separate browser session before the demo. Freeze risky changes during the presentation window and keep approved offline assets available.
+
+## GitHub branch rules — Anteneh sets up
+
+Repository: `ayimmam/Access`; observed default branch: `main`. These are planned settings, not already-enabled remote protections.
+
+In repository Settings → Rules → Rulesets (or Settings → Branches → branch protection), create an active rule targeting `main`:
+
+- Require a pull request and **one approval from another human teammate**. Agents cannot approve their own work or replace the human review.
+- Dismiss stale approvals when new commits are pushed; require approval of the latest reviewable push by someone other than its author, where supported.
+- Require conversation resolution and block force pushes/deletion of `main`.
+- Apply protections to administrators and avoid routine bypass actors, including automation identities.
+- Require the branch to be up to date before merging once CI is in place. Use squash merges to keep a readable history.
+- Add required status checks **only after their actual jobs have run successfully**. Select their real names and trusted source application; do not invent required check names that will permanently block PRs.
+
+Enable the PR/review protections first; add CI requirements as implemented. GitHub protection availability depends on repository visibility and account plan: see [protected branches](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches). If unavailable, document the gap and use manual PR/review plus manual Render deployment; do not claim equivalent enforcement or change repository visibility just to unlock a feature.
+
+The repository includes `.github/workflows/ci.yml` and `scripts/configure_github_protection.sh`. After the workflow has run on GitHub and `gh auth status` succeeds, apply the planned settings with `bash scripts/configure_github_protection.sh ayimmam/Access main`. The script requires `Repository checks` and `Security baseline`, enforces one approval, dismisses stale reviews, requires approval after the latest push, resolves conversations, keeps history linear, applies rules to administrators and blocks force pushes/deletion.
+
+Test with a harmless documentation PR: direct updates to `main` must be rejected, an unreviewed PR blocked, and a failing required check must prevent merging once configured. Then obtain a teammate review, pass the checks and verify normal merging works. Record the rule names and actual required check names. Every contributor and agent follows [CONTRIBUTING.md](../../CONTRIBUTING.md); the root [AGENTS.md](../../AGENTS.md) makes the same expectations discoverable to agents.
 
 ## CI/CD implementation checklist for later
 
@@ -71,7 +108,9 @@ Use scoped deployment credentials. Keep production credentials away from untrust
 
 - [ ] Common tools, GitHub access (if used), Docker and Buildx work.
 - [ ] VoiceOver and target browsers are ready; Android test access is arranged.
-- [ ] Hosting options and required account access are recorded, with costs understood.
+- [ ] Render credit eligibility/expiry and projected spend are recorded; demo services fit the budget.
+- [ ] `main` branch rules are enabled and tested, or the plan/visibility limitation is documented.
+- [ ] CI-gated deployment is configured only after actual checks exist.
 - [ ] Target image architecture and public-fixture deployment path are agreed.
 - [ ] Component/API contract session is scheduled with Biniyam.
 - [ ] Security gate ownership is agreed with Hailemichael.

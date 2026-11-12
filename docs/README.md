@@ -5,6 +5,10 @@
 - [Track 2 implementation plan](planning/TRACK_2_IMPLEMENTATION_PLAN.md): current scope, recording lessons, delivery sequence and reconciled security decisions.
 - [Codebase structure](architecture/CODEBASE_STRUCTURE.md): scaffold boundaries and implementation status.
 
+## Team setup
+
+Start with the [shared and member-specific setup guides](setup/README.md) for common prerequisites, Windows, macOS and Linux preparation.
+
 ## Security
 
 - [Implementation controls](security/SECURITY_PLAN.md)

@@ -26,3 +26,5 @@ Accessible learning media for Track 2: a drop-in Web Component backed by a share
 Start with [the implementation plan](docs/planning/TRACK_2_IMPLEMENTATION_PLAN.md) and [scaffold boundaries](docs/architecture/CODEBASE_STRUCTURE.md). Browse the [documentation index](docs/README.md). Security guidance is in `docs/security/` and `.agents/rules/security.md`.
 
 ALX has **not confirmed authentication**. Cookie sharing, session validation, token exchange, enrollment and production topology remain unresolved. Public fixtures must not imply production access.
+
+Prepare development machines using the [team setup guides](docs/setup/README.md).

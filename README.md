@@ -2,7 +2,32 @@
 
 Accessible learning media for Track 2: a drop-in Web Component backed by a shared REST service and publishing pipeline.
 
-**Status: scaffold only.** No application, endpoints, authentication, conversion jobs or deployment is implemented. No dependencies are installed. Starter modules contain comments only; there are no run/build commands yet.
+The Savanna-style demo plays the supplied ALX video with draft English captions, searchable timestamped transcript, offline downloads and an optional labeled 3D timing prototype. The [EthSL avatar workflow](docs/architecture/SIGN_AVATAR_WORKFLOW.md) maps the translation and motion-review steps. See the [implementation status](docs/architecture/INITIAL_IMPLEMENTATION.md) and [external preparation list](docs/setup/EXTERNAL_DEPENDENCIES.md).
+
+## Run locally
+
+Use Node 24 or later and Python 3.11 or later, with npm and uv installed. From the repository root, run
+
+```sh
+npm ci
+npm run build
+uv sync --locked
+uv run uvicorn access_api.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+Open `http://127.0.0.1:8000` for the Savanna-style video demo. The same demo is at `/demo/savanna`, the independent text embed is at `/demo/independent`, and API docs are at `/api/docs`. Keep the supplied `example lessons/` folder available to the server. Downloads work without third-party credentials. Configure explicit additional allowed browser origins through `ACCESS_ALLOWED_ORIGINS` when using an external host.
+
+The [avatar implementation runbook](docs/architecture/AVATAR_BLUEPRINT_EVALUATION.md) covers offline capture, the original articulated rig, GLB baking and reviewed delivery. Open `/demo/avatar-review` to load local draft files and collect co-design feedback using the [testing guide](docs/setup/AVATAR_CO_DESIGN_TESTING.md).
+
+Run verification with
+
+```sh
+uv run pytest
+npm run typecheck
+npx playwright install chromium
+npm run test:browser
+python3 scripts/check_repository.py
+```
 
 ## Layout
 

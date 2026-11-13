@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Avatar co-design review · Access</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #edf4f1; color: #153c38; font: 1rem/1.6 Inter, system-ui, sans-serif; }
+    main { max-width: 1200px; margin: auto; padding: 2rem 1.25rem; }
+    h1 { font-size: clamp(1.8rem, 4vw, 2.7rem); line-height: 1.15; margin-bottom: .6rem; }
+    h2 { font-size: 1.2rem; }
+    a { color: #115e59; }
+    .warning { padding: 1rem; background: #fff0cc; border-left: 4px solid #826016; color: #513f16; }
+    .stage { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(260px, 1fr); gap: 1rem; margin-block: 1.5rem; align-items: start; }
+    video { width: 100%; display: block; background: #172f2c; border-radius: .8rem; }
+    #avatar { height: 450px; background: #fff; border: 1px solid #b6cdc6; border-radius: .8rem; }
+    label { display: block; font-weight: 600; margin-block: .8rem .3rem; }
+    input, select, textarea, button { font: inherit; max-width: 100%; }
+    textarea, select { width: 100%; padding: .6rem; background: #fff; border: 1px solid #6a8c82; border-radius: .3rem; color: inherit; }
+    button { padding: .65rem 1rem; background: #165e53; color: white; border: 0; border-radius: .3rem; margin: .7rem .5rem .3rem 0; cursor: pointer; }
+    button:disabled { opacity: .65; cursor: default; }
+    :focus-visible { outline: 3px solid #9b4700; outline-offset: 3px; }
+    .review { max-width: 700px; background: white; padding: 1.25rem; border-radius: .8rem; }
+    #caption { min-height: 3em; }
+    #observations { padding-left: 1.3rem; }
+    @media(max-width: 700px) { .stage { grid-template-columns: 1fr; } #avatar { height: 380px; } }
+  </style>
+</head>
+<body>
+<main>
+  <a href="/">Back to lesson</a>
+  <h1>Avatar co-design review</h1>
+  <p class="warning"><strong>Unreviewed motion study.</strong> The generated sample follows source-presenter gestures. EthSL and ASL translation and comprehension review are pending.</p>
+  <label for="assets">Load a language manifest and its GLB files</label>
+  <input id="assets" type="file" accept=".json,.glb" multiple aria-describedby="file-help">
+  <p id="file-help">Select the language JSON plus the rig and every motion GLB from the generated study folder. Files are processed in this browser session. Feedback downloads to your device.</p>
+  <button id="load" type="button">Load draft performance</button>
+  <p id="status" role="status">Choose the study files to begin.</p>
+  <div class="stage">
+    <section aria-label="Source video">
+      <video id="video" controls playsinline preload="metadata" aria-label="Source lesson video">
+        <source src="/api/v1/lessons/alx-transforming-africa/media/video?version=1" type="video/mp4">
+        <track kind="captions" srclang="en" label="English draft" src="/api/v1/lessons/alx-transforming-africa/media/captions?version=1" default>
+      </video>
+      <p id="caption">The source caption appears here while playing.</p>
+      <label for="cue">Jump to source cue</label>
+      <select id="cue" disabled><option>Load study files first</option></select>
+    </section>
+    <section aria-label="Draft avatar">
+      <div id="avatar"></div>
+      <p id="motion">Language target and motion state appear after loading.</p>
+    </section>
+  </div>
+  <form id="feedback" class="review">
+    <h2>Record an observation</h2>
+    <label for="category">What are you reviewing?</label>
+    <select id="category"><option value="hand-shape">Hand shape and fingers</option><option value="orientation">Palm orientation and contact</option><option value="face">Face and body expression</option><option value="timing">Timing and transitions</option><option value="translation">Language and meaning</option><option value="visibility">Visibility and controls</option></select>
+    <label for="rating">Review result</label>
+    <select id="rating"><option value="needs-work">Needs correction</option><option value="uncertain">Unsure</option><option value="usable-for-study">Usable for this study</option></select>
+    <label for="notes">Observation</label>
+    <textarea id="notes" rows="3" required maxlength="2000" placeholder="Describe what you see and the change needed. Avoid personal information."></textarea>
+    <button id="save" type="submit" disabled>Save observation at current time</button>
+    <button id="download" type="button" disabled>Download feedback JSON</button>
+    <p id="feedback-status" role="status"></p>
+    <ol id="observations"></ol>
+  </form>
+</main>
+<script type="module" src="/components/0.1.0/avatar-review.js"></script>
+</body>
+</html>

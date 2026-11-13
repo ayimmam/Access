@@ -21,3 +21,5 @@ __pycache__/
 .idea/
 *.log
 artifacts/
+test-results/
+playwright-report/

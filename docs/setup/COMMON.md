@@ -40,7 +40,7 @@ Every team member and AI agent follows [CONTRIBUTING.md](../../CONTRIBUTING.md).
 4. Keep `.env`, credentials, private recordings and downloaded model weights out of Git. `.env.example` contains names only. Share configuration through the team's approved secret channel.
 5. Never copy the captured Savanna session fields into an API client. Production identity is still unresolved.
 
-The repository currently has **no runnable build, tests, Compose stack or Python package configuration**. Do not run `npm ci`, `uv sync` or `docker compose up` expecting an application. Those commands become relevant only after manifests, lockfiles and Compose services are implemented. Empty scaffold files are not test coverage.
+The public lesson foundation now has a runnable build, locked Python/npm dependencies and backend/browser tests. Follow the [root README](../../README.md) for `npm ci`, `npm run build`, `uv sync --locked` and API startup. The optional [avatar capture workflow](../architecture/AVATAR_BLUEPRINT_EVALUATION.md) uses a separate dependency group. Compose services, staff console and queued conversion workers still require implementation.
 
 ## Libraries to select and lock during implementation
 

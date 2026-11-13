@@ -4,6 +4,11 @@
 
 - [Track 2 implementation plan](planning/TRACK_2_IMPLEMENTATION_PLAN.md): current scope, recording lessons, delivery sequence and reconciled security decisions.
 - [Codebase structure](architecture/CODEBASE_STRUCTURE.md): scaffold boundaries and implementation status.
+- [Public lesson foundation](architecture/INITIAL_IMPLEMENTATION.md) describes the current API, component and delivery limits.
+- [External preparation](setup/EXTERNAL_DEPENDENCIES.md) lists APIs, accounts, assets and reviewers to collect while implementation proceeds.
+- [Caption and EthSL avatar workflow](architecture/SIGN_AVATAR_WORKFLOW.md) maps source media to reviewed translation, motion authoring, publication and synchronized playback.
+- [Interpreter-recording blueprint evaluation](architecture/AVATAR_BLUEPRINT_EVALUATION.md) records corrections, implemented capture/playback, and the local asset-authoring runbook.
+- [ASL/EthSL consultation brief](architecture/ASL_ETHSL_TRANSLATION_CONSULTATION_BRIEF.md) provides self-contained project context, attempted approaches, sources and questions for external technical consultation.
 
 ## Team setup
 

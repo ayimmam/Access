@@ -1,10 +1,20 @@
 {
   "name": "access",
   "private": true,
+  "type": "module",
   "version": "0.0.0",
-  "description": "Scaffold only; no application implementation",
+  "description": "Accessible learning media component and public fixture API",
+  "scripts": {
+    "build": "npm run build --workspace @access/lesson-component",
+    "typecheck": "npm run typecheck --workspace @access/lesson-component",
+    "test:browser": "playwright test"
+  },
   "workspaces": [
     "apps/*",
     "packages/*"
-  ]
+  ],
+  "devDependencies": {
+    "@playwright/test": "^1.56.0",
+    "@axe-core/playwright": "^4.10.2"
+  }
 }

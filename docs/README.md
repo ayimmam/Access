@@ -22,6 +22,9 @@ These are planning documents, not completed security audits. The implementation 
 
 - [November 10 co-design recording transcript](<references/recordings/Understanding Accessibility Co-Design Nov 10 Recording.vtt>)
 - [November 11 Web Components recording transcript](<references/recordings/Building Drop-in Web Components Recording Nov 11 2026.vtt>)
+- [November 12 WCAG session chat export](<WCAG 2.2 AA Technical Standards Recording Nov 12 2026.txt>): participant messages only.
+- [WCAG 2.2 AA and screen-reader testing slides](<WCAG_2.2_AA_Screen_Reader_Testing (1).pptx>): technical teaching and testing routine incorporated into the implementation plan.
+- [WCAG 2.0 Recommendation PDF](<wcag20-guidelines-20081211-a4 (1).pdf>): historical reference; the implementation target remains WCAG 2.2 AA.
 - [Freelancer Academy certificate reference](<references/certificates/Freelancer Academy Certificate.png>)
 - [Professional Foundations certificate reference](<references/certificates/Professional Foundations Certificate.png>)
 

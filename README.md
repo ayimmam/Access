@@ -9,11 +9,14 @@ The Savanna-style demo plays the supplied ALX video with draft English captions,
 Use Node 24 or later and Python 3.11 or later, with npm and uv installed. From the repository root, run
 
 ```sh
+git submodule update --init
 npm ci
 npm run build
 uv sync --locked
 uv run uvicorn access_api.main:app --reload --host 127.0.0.1 --port 8000
 ```
+
+The Savanna reference is a public Git submodule pinned by this repository. Initialize it before the link checks, API startup or tests so its README and demo logo are available. A new clone can also use `git clone --recurse-submodules https://github.com/ayimmam/Access.git`.
 
 Open `http://127.0.0.1:8000` for the Savanna-style video demo. The same demo is at `/demo/savanna`, the independent text embed is at `/demo/independent`, and API docs are at `/api/docs`. Keep the supplied `example lessons/` folder available to the server. Downloads work without third-party credentials. Configure explicit additional allowed browser origins through `ACCESS_ALLOWED_ORIGINS` when using an external host.
 

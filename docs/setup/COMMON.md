@@ -31,6 +31,9 @@ Python 3.11 is a preparation baseline for the media toolchain, not a promise tha
 
 ## Repository and collaboration
 
+Every team member and AI agent follows [CONTRIBUTING.md](../../CONTRIBUTING.md). Use task branches and human-reviewed PRs into protected `main`. Anteneh configures the branch rules and Render deployment; documented rules are not proof that GitHub settings are enabled.
+
+
 1. Get the actual repository URL and collaborator access from Anteneh; clone using your own account. Do not copy somebody else's authenticated checkout or credentials.
 2. Keep `Savanna-static-pages/` as the supplied reference. Build modified integration examples in `examples/savanna/`.
 3. Work on task branches and coordinate edits to shared contracts. Commit lockfiles once dependencies are selected; record exact runtime versions after the first successful install.

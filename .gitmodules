@@ -1,0 +1,3 @@
+[submodule "Savanna-static-pages"]
+	path = Savanna-static-pages
+	url = https://github.com/ayimmam/Savanna-static-pages.git

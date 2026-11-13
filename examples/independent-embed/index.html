@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Access · Learning at your pace</title>
+  <link rel="stylesheet" href="/demo-assets/demo.css">
+  <script type="module" src="/components/0.1.0/lesson.js"></script>
+</head>
+<body>
+  <header><strong>Access</strong> <span> / Learning media</span></header>
+  <main>
+    <h1>Learning at your pace</h1>
+    <p>Read a short practice lesson and save it to use offline. This public demonstration uses synthetic English content.</p>
+    <alx-accessible-lesson api-base="/api/v1" lesson-id="demo-learning-plan" content-version="1" lang="en">
+      <p><a href="/api/v1/lessons/demo-learning-plan/downloads/html?version=1">Download the accessible lesson</a></p>
+    </alx-accessible-lesson>
+    <p><a href="/demo/savanna">Open the Savanna integration example</a> · <a href="/api/docs">API documentation</a></p>
+    <details>
+      <summary>Independent second component instance</summary>
+      <alx-accessible-lesson api-base="/api/v1" lesson-id="demo-learning-plan" content-version="1" lang="en"></alx-accessible-lesson>
+    </details>
+  </main>
+</body>
+</html>

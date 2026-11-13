@@ -31,13 +31,16 @@ Python 3.11 is a preparation baseline for the media toolchain, not a promise tha
 
 ## Repository and collaboration
 
+Every team member and AI agent follows [CONTRIBUTING.md](../../CONTRIBUTING.md). Use task branches and human-reviewed PRs into protected `main`. Anteneh configures the branch rules and Render deployment; documented rules are not proof that GitHub settings are enabled.
+
+
 1. Get the actual repository URL and collaborator access from Anteneh; clone using your own account. Do not copy somebody else's authenticated checkout or credentials.
 2. Keep `Savanna-static-pages/` as the supplied reference. Build modified integration examples in `examples/savanna/`.
 3. Work on task branches and coordinate edits to shared contracts. Commit lockfiles once dependencies are selected; record exact runtime versions after the first successful install.
 4. Keep `.env`, credentials, private recordings and downloaded model weights out of Git. `.env.example` contains names only. Share configuration through the team's approved secret channel.
 5. Never copy the captured Savanna session fields into an API client. Production identity is still unresolved.
 
-The repository currently has **no runnable build, tests, Compose stack or Python package configuration**. Do not run `npm ci`, `uv sync` or `docker compose up` expecting an application. Those commands become relevant only after manifests, lockfiles and Compose services are implemented. Empty scaffold files are not test coverage.
+The public lesson foundation now has a runnable build, locked Python/npm dependencies and backend/browser tests. Follow the [root README](../../README.md) for `npm ci`, `npm run build`, `uv sync --locked` and API startup. The optional [avatar capture workflow](../architecture/AVATAR_BLUEPRINT_EVALUATION.md) uses a separate dependency group. Compose services, staff console and queued conversion workers still require implementation.
 
 ## Libraries to select and lock during implementation
 

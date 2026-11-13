@@ -1,0 +1,11 @@
+:root { font-family: system-ui, sans-serif; color: #17313b; background: #f1f5f3; }
+body { margin: 0; }
+header { background: #163e46; color: white; padding: 1.5rem max(1.25rem, calc((100vw - 70rem)/2)); }
+header a { color: white; }
+main { max-width: 70rem; margin: 2.5rem auto; padding: 0 1.25rem; }
+h1 { font-size: clamp(2rem, 5vw, 3rem); letter-spacing: -.03em; }
+p { max-width: 65ch; line-height: 1.7; }
+a { color: #155e63; }
+:focus-visible { outline: 3px solid #bd4e19; outline-offset: 4px; }
+.host-navigation { padding: 1rem; background: white; border-bottom: 1px solid #b4c6c2; }
+.host-content { padding: 1.5rem; background: white; border-radius: .5rem; }

@@ -1,6 +1,18 @@
 {
   "name": "@access/lesson-component",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "scripts": {
+    "build": "npm run typecheck && esbuild lesson=src/index.ts avatar-review=src/avatar-review.ts --bundle --splitting --minify --format=esm --target=es2022 --outdir=dist",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "three": "^0.181.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.181.0",
+    "typescript": "^5.9.3",
+    "esbuild": "^0.25.12"
+  }
 }

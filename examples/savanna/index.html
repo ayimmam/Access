@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>We Are Transforming Africa · Savanna learning demo</title>
+  <link rel="stylesheet" href="/demo-assets/savanna.css">
+  <script type="module" src="/components/0.1.0/lesson.js"></script>
+  <script type="module" src="/demo-assets/savanna.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#curriculum_navigation_content">Skip to lesson</a>
+  <header class="topbar">
+    <button type="button" class="menu-button" aria-expanded="true" aria-controls="site-navigation">Menu</button>
+    <a href="/demo/savanna" aria-label="ALX learning demo home"><img class="brand" src="/savanna-reference/img/holberton-logo-full-alx.png" alt="ALX"></a>
+    <span class="topbar-label">Learning</span>
+    <span class="demo-label">Access demo</span>
+  </header>
+  <nav class="site-navigation" id="site-navigation" aria-label="Main navigation">
+    <p class="nav-heading">MY LEARNING</p>
+    <a class="active" href="#curriculum_navigation_content" aria-current="page">Access my learning</a>
+    <a href="#course-outline">Course outline</a>
+    <a href="#lesson-resources">Lesson downloads</a>
+    <a href="/demo/independent">Independent embed</a>
+    <div class="sidebar-footer"><strong>Learning without barriers</strong><p>Read, watch and revisit at your own pace.</p></div>
+  </nav>
+  <div class="workspace">
+    <section class="course-header" aria-label="Current course">
+      <div><p class="eyebrow">PROFESSIONAL FOUNDATIONS</p><h1>Welcome to ALX</h1><p>Your learning journey starts here.</p></div>
+      <div class="course-meta"><span>Self-paced learning</span><strong>Module 1 of 1</strong></div>
+    </section>
+    <div class="curriculum-bar"><span>Introduction</span><span class="progress-track" aria-hidden="true"><span class="progress-fill"></span></span><span id="progress-text">0 of 1 lessons completed in this demo</span></div>
+    <div class="lesson-layout">
+      <nav id="course-outline" class="course-outline" aria-label="Lesson outline">
+        <h2>Course content</h2><p>Module 1 · Your community</p>
+        <a href="#curriculum_navigation_content" class="current" aria-current="page">We Are Transforming Africa <span>2 min video</span></a>
+        <a href="#lesson-resources">Accessible formats <span>Text and offline pack</span></a>
+        <a href="#reflection">Your reflection <span>Personal learning notes</span></a>
+      </nav>
+      <main id="curriculum_navigation_content" tabindex="-1">
+        <div class="breadcrumb">Introduction / Your community</div>
+        <div class="formatted-content">
+          <div class="savanna-styles"><h2 class="lesson-heading">We Are Transforming Africa</h2><p>Meet the learners and community behind ALX. Watch the introduction, follow the captions, or jump to a passage in the transcript.</p></div>
+        </div>
+        <alx-accessible-lesson api-base="/api/v1" lesson-id="alx-transforming-africa" content-version="1" lang="en">
+          <a href="/api/v1/lessons/alx-transforming-africa/downloads/html?version=1">Download the lesson transcript</a>
+        </alx-accessible-lesson>
+        <section id="lesson-resources" class="resource-note"><h2>Keep learning offline</h2><p>The lesson’s download controls save the transcript and caption file. Save the source video separately when you need video playback offline.</p><a href="/api/v1/lessons/alx-transforming-africa/media/video?version=1" download>Save lesson video · 20.4 MB</a></section>
+        <section id="reflection" class="reflection"><h2>Pause and reflect</h2><label for="reflection-note">What would you like to learn with this community?</label><textarea id="reflection-note" rows="3" placeholder="Write a note for this session"></textarea><p>Your note stays in this page session.</p></section>
+        <section class="completion" aria-label="Demo lesson completion"><p id="completion-status" role="status">Completion here applies to this demo session.</p><button type="button" id="mark-complete">Mark demo lesson complete</button></section>
+      </main>
+    </div>
+    <footer class="workspace-footer">ALX learning interface demonstration · Access team</footer>
+  </div>
+</body>
+</html>

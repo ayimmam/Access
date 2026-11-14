@@ -2,6 +2,8 @@
 
 Updated 14 November 2026. Anteneh owns deployment and the $100 Render credit. This guide covers the current public-fixture service and optional first-party privacy/session demonstration. The [co-designer task guide](../testing/CO_DESIGN_SECURITY_TESTING.md) supplies the testing sequence.
 
+The assigned public plug-in origin is `https://access-plugin.onrender.com`. External hosts use `https://access-plugin.onrender.com/api/v1` as their API base and load versioned component files from `https://access-plugin.onrender.com/components/0.1.0/`.
+
 ## Local demonstration
 
 From the Access repository root, use the existing environment and build:
@@ -158,10 +160,14 @@ Choose a fictional alias and a passphrase through the hidden prompt. The configu
 
 ## Smoke-test the deployment
 
-Replace the sample origin in this command with your real service URL:
+Run these smoke checks against the assigned public service after deploying the reviewed shared release:
 
 ```sh
-curl --fail --silent --show-error https://access-demo.onrender.com/healthz
+curl --fail --silent --show-error https://access-plugin.onrender.com/healthz
+curl --fail --silent --show-error https://access-plugin.onrender.com/components/0.1.0/integrity.json
+curl --fail --silent --show-error https://access-plugin.onrender.com/components/0.1.0/lesson.js --output /dev/null
+curl --fail --silent --show-error https://access-plugin.onrender.com/components/0.1.0/jobs.js --output /dev/null
+curl --fail --silent --show-error https://access-plugin.onrender.com/api/v1/jobs --output /dev/null
 ```
 
 Then test the service through a browser:

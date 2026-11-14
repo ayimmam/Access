@@ -22,6 +22,24 @@ Open `http://127.0.0.1:8000` for the Savanna-style video demo. The same demo is 
 
 The [avatar implementation runbook](docs/architecture/AVATAR_BLUEPRINT_EVALUATION.md) covers offline capture, the original articulated rig, GLB baking and reviewed delivery. Open `/demo/avatar-review` to load local draft files and collect co-design feedback using the [testing guide](docs/setup/AVATAR_CO_DESIGN_TESTING.md).
 
+## Run with Docker Compose
+
+Install Docker with the Compose plugin, then run these commands from the repository root:
+
+```sh
+git submodule update --init
+docker compose up --build --detach --wait
+curl --fail http://127.0.0.1:8000/healthz
+```
+
+Open `http://127.0.0.1:8000/demo/savanna` or `http://127.0.0.1:8000/api/docs`. Compose builds the component in Node 24, installs the locked Python runtime on Python 3.11, and runs Uvicorn as a non-root user. It mounts `example lessons/` and the pinned `Savanna-static-pages/` checkout read-only so fixture changes on the host are visible without rebuilding the image.
+
+Stop the local stack with:
+
+```sh
+docker compose down
+```
+
 Run verification with
 
 ```sh

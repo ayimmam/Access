@@ -1,0 +1,4 @@
+@media (max-width: 680px) {
+  .site-header { align-items: flex-start; flex-direction: column; }
+  .site-header nav { width: 100%; gap: .7rem; }
+}

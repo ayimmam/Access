@@ -7,7 +7,8 @@
   "scripts": {
     "build": "npm run build --workspace @access/lesson-component && node scripts/write-component-integrity.mjs",
     "typecheck": "npm run typecheck --workspace @access/lesson-component",
-    "test:browser": "playwright test"
+    "test:browser": "playwright test",
+    "test:vercel-demos": "playwright test --config playwright.vercel.config.ts"
   },
   "workspaces": [
     "apps/*",

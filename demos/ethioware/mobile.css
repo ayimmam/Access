@@ -1,0 +1,4 @@
+@media (max-width: 760px) {
+  .host-controls label { min-width: 0; }
+  .host-controls select { width: 100%; }
+}

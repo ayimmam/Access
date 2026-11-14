@@ -15,6 +15,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.staticfiles import StaticFiles
 
 from access_core.lessons import EXAMPLE_VIDEO, Lesson, captions_vtt, export_lesson, get_lesson
+from access_core.jobs import JOBS, DemoVerification, Job, verify_demo
 from access_core.signing import Language, load_manifest, public_manifest
 
 
@@ -114,6 +115,32 @@ def health():
     return {"status": "ok", "mode": "public-fixtures"}
 
 
+@app.get("/api/v1/jobs", response_model=list[Job])
+def jobs():
+    return list(JOBS)
+
+
+@app.get("/api/v1/jobs/{job_id}/structured-data")
+def job_structured_data(job_id: str):
+    job = next((item for item in JOBS if item.id == job_id), None)
+    if job is None:
+        raise HTTPException(404)
+    return {
+        "@context": "https://schema.org", "@type": "JobPosting",
+        "identifier": job.id, "title": job.title, "description": job.summary,
+        "hiringOrganization": {"@type": "Organization", "name": job.organization},
+        "datePosted": "2026-11-14", "validThrough": job.deadline.isoformat(),
+        "employmentType": {"Full-time": "FULL_TIME", "Part-time": "PART_TIME", "Freelance": "CONTRACTOR"}[job.employment_type],
+        "jobLocation": {"@type": "Place", "address": {"@type": "PostalAddress", "addressLocality": "Addis Ababa", "addressCountry": "ET"}},
+        **({"jobLocationType": "TELECOMMUTE"} if job.workplace == "Remote" else {}),
+    }
+
+
+@app.get("/api/v1/demo-certificates/{identifier}", response_model=DemoVerification)
+def demo_certificate(identifier: str):
+    return JSONResponse(verify_demo(identifier).model_dump(mode="json"), headers={"Cache-Control": "no-store"})
+
+
 @app.get("/api/v1/lessons/{lesson_id}/manifest", response_model=Lesson)
 def manifest(request: Request, lesson_id: str, version: int = Query(1, ge=1)):
     lesson = resolve(lesson_id, version)
@@ -167,6 +194,21 @@ def demo():
 @app.get("/demo/independent", include_in_schema=False)
 def independent():
     return FileResponse(ROOT / "examples/independent-embed/index.html")
+
+
+@app.get("/demo/careers", include_in_schema=False)
+def career_demo():
+    return FileResponse(ROOT / "examples/career-gateway/index.html")
+
+
+@app.get("/demo/ethioware", include_in_schema=False)
+def ethioware_demo():
+    return FileResponse(ROOT / "examples/ethioware/index.html")
+
+
+@app.get("/demo/certificates/{identifier}", include_in_schema=False)
+def certificate_demo(identifier: str):
+    return FileResponse(ROOT / "examples/career-gateway/certificate.html")
 
 
 @app.get("/demo/avatar-review", include_in_schema=False)

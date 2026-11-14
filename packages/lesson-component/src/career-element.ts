@@ -50,7 +50,7 @@ function options(label: string, values: string[]) {
 }
 
 export class CareerGateway extends HTMLElement {
-  static observedAttributes = ['api-base'];
+  static observedAttributes = ['api-base', 'certificate-base'];
   private root = this.attachShadow({ mode: 'open' });
   private controller?: AbortController;
   private saved = new Set<string>();
@@ -153,7 +153,12 @@ export class CareerGateway extends HTMLElement {
       const title = el('h2', job.title); title.id = 'job-dialog-title';
       const tasks = el('ul'); job.responsibilities.forEach(task => tasks.append(el('li', task)));
       const supports = el('ul'); job.support.forEach(item => supports.append(el('li', item)));
-      const verify = el('a', 'Open fictional certificate verification'); verify.href = new URL('/demo/certificates/DEMO-LEARNING-001', base).href;
+      const certificateValue = this.getAttribute('certificate-base');
+      const certificateBase = certificateValue
+        ? new URL(certificateValue.replace(/\/?$/, '/'), document.baseURI)
+        : new URL('/demo/certificates/', base);
+      if (!['http:', 'https:'].includes(certificateBase.protocol) || certificateBase.username || certificateBase.password) throw new Error('Invalid certificate address');
+      const verify = el('a', 'Open fictional certificate verification'); verify.href = new URL('DEMO-LEARNING-001', certificateBase).href;
       const schema = el('a', 'Inspect this demo job’s JobPosting data'); schema.href = new URL(`jobs/${job.id}/structured-data`, base).href;
       const steps = el('ol');
       ['Read the responsibilities and support offered.', 'Prepare a short introduction and examples of relevant work.', 'Check the issuer verification link before sharing a certificate.'].forEach(step => steps.append(el('li', step)));

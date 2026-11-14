@@ -1,0 +1,23 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      ACCESS_ALLOWED_ORIGINS: "${ACCESS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}"
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    volumes:
+      - type: bind
+        source: ./example lessons
+        target: /app/example lessons
+        read_only: true
+      - type: bind
+        source: ./Savanna-static-pages
+        target: /app/Savanna-static-pages
+        read_only: true
+    restart: unless-stopped

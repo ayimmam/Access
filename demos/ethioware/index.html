@@ -53,6 +53,12 @@
 
     <p class="provider-notice">This page is an integration study informed by Ethioware’s public course structure. It uses Access fixtures—not Ethioware course content, accounts, completion, or certificates.</p>
 
+    <section class="comparison-bar" aria-labelledby="comparison-heading">
+      <div><p class="eyebrow">COMPARE THE INTEGRATION</p><h2 id="comparison-heading">See the same lesson before and after Access</h2><p>The baseline is a reconstructed standard course reader using the same fictional lesson. Switch views to compare the learning tools—not the course content.</p></div>
+      <div class="comparison-controls" role="group" aria-label="Lesson experience"><button type="button" data-mode="before" aria-pressed="false"><span>Before</span> Standard reader</button><button type="button" data-mode="after" aria-pressed="true"><span>After</span> With Access</button></div>
+      <p class="comparison-status" role="status" aria-live="polite">Showing the lesson with Access learning tools.</p>
+    </section>
+
     <div class="learning-layout">
       <aside class="module-panel" id="modules" aria-labelledby="module-heading">
         <div class="panel-heading"><p>COURSE OUTLINE</p><h2 id="module-heading">4 modules</h2></div>
@@ -65,26 +71,24 @@
         <div class="help-card"><span aria-hidden="true">?</span><div><strong>Need another format?</strong><p>Use the lesson’s text sizing, search, transcript, and offline options.</p></div></div>
       </aside>
 
-      <section class="lesson-shell" id="lesson-workspace" aria-labelledby="lesson-heading">
-        <div class="lesson-header">
-          <div><p class="eyebrow">Module 1 · Learning readiness</p><h2 id="lesson-heading">Practice with Access learning tools</h2></div>
-          <span class="integration-chip"><i aria-hidden="true"></i> Plug-in connected</span>
+      <section class="lesson-shell" id="lesson-workspace" aria-label="Lesson workspace">
+        <div data-experience-view="before" hidden>
+          <div class="lesson-header"><div><p class="eyebrow">Module 1 · Learning readiness</p><h2 id="lesson-heading">Make a learning plan</h2></div><span class="baseline-chip">Standard course reader</span></div>
+          <p class="baseline-note"><strong>Reconstructed baseline:</strong> a readable lesson page with the host’s usual navigation and a single HTML download. It does not include Access search, text controls, equivalent formats, or media tools.</p>
+          <article class="baseline-lesson">
+            <section><span>01</span><div><h3>Choose one goal</h3><p>Choose a skill you want to practise. Write one small goal you can complete this week.</p></div></section>
+            <section><span>02</span><div><h3>Choose a time</h3><p>Choose a time and place that work for you. Start with a short session and take breaks when you need them.</p></div></section>
+            <section><span>03</span><div><h3>Review your progress</h3><p>After practising, write what you learned and what you want to try next. Ask for help when you need it.</p></div></section>
+          </article>
+          <a class="baseline-download" href="https://access-plugin.onrender.com/api/v1/lessons/demo-learning-plan/downloads/html?version=1">Download the standard HTML lesson</a>
         </div>
-        <p>Choose a short text lesson or the supplied ALX sample video. The same versioned component provides reading, transcript search, text sizing, media controls, and offline downloads.</p>
-        <div class="host-controls" aria-label="Host page controls">
-          <label for="host-lesson">Practice content
-            <select id="host-lesson">
-              <option value="demo-learning-plan">Make a learning plan</option>
-              <option value="alx-transforming-africa">We Are Transforming Africa · sample video</option>
-            </select>
-          </label>
-          <button type="button" id="toggle-access" aria-expanded="true" aria-controls="access-panel">Hide learning tools</button>
-        </div>
-        <p class="release-status" id="release-status" role="status">Connecting to the Access public-fixture service…</p>
-        <div id="access-panel">
-          <alx-accessible-lesson api-base="https://access-plugin.onrender.com/api/v1" lesson-id="demo-learning-plan" content-version="1" lang="en">
-            <p class="fallback"><a href="https://access-plugin.onrender.com/api/v1/lessons/demo-learning-plan/downloads/html?version=1">Open the offline lesson fallback</a></p>
-          </alx-accessible-lesson>
+        <div data-experience-view="after">
+          <div class="lesson-header"><div><p class="eyebrow">Module 1 · Learning readiness</p><h2>Practice with Access learning tools</h2></div><span class="integration-chip"><i aria-hidden="true"></i> Plug-in connected</span></div>
+          <p>Choose a short text lesson or the supplied ALX sample video. The same versioned component provides reading, transcript search, text sizing, media controls, and offline downloads.</p>
+          <div class="host-controls" aria-label="Host page controls"><label for="host-lesson">Practice content<select id="host-lesson"><option value="demo-learning-plan">Make a learning plan</option><option value="alx-transforming-africa">We Are Transforming Africa · sample video</option></select></label><button type="button" id="toggle-access" aria-expanded="true" aria-controls="access-panel">Hide learning tools</button></div>
+          <p class="release-status" id="release-status" role="status">Connecting to the Access public-fixture service…</p>
+          <div id="access-panel"><alx-accessible-lesson api-base="https://access-plugin.onrender.com/api/v1" lesson-id="demo-learning-plan" content-version="1" lang="en"><p class="fallback"><a href="https://access-plugin.onrender.com/api/v1/lessons/demo-learning-plan/downloads/html?version=1">Open the offline lesson fallback</a></p></alx-accessible-lesson></div>
+          <aside class="change-summary" aria-label="What Access adds"><strong>What changed</strong><ul><li>Search and text-size controls</li><li>Equivalent HTML, text, and offline-pack downloads</li><li>Video transcript and prototype media tools when available</li></ul></aside>
         </div>
       </section>
 

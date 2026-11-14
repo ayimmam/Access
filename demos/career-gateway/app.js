@@ -6,6 +6,54 @@ const certificateBase = local ? 'http://127.0.0.1:5174/certificates/' : `${locat
 const status = document.querySelector('#release-status');
 const gateway = document.querySelector('access-career-gateway');
 
+function setExperience(mode, announce = true) {
+  const selected = mode === 'before' ? 'before' : 'after';
+  document.querySelectorAll('[data-experience-view]').forEach(view => { view.hidden = view.dataset.experienceView !== selected; });
+  document.querySelectorAll('[data-mode]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.mode === selected)));
+  if (announce) document.querySelector('.comparison-status').textContent = selected === 'before'
+    ? 'Showing the reconstructed standard vacancy listings.'
+    : 'Showing vacancies with Access career tools.';
+  return selected;
+}
+
+const initialMode = new URLSearchParams(location.search).get('mode');
+setExperience(initialMode === 'before' ? 'before' : 'after');
+document.querySelectorAll('[data-mode]').forEach(button => button.addEventListener('click', () => {
+  const mode = setExperience(button.dataset.mode); const url = new URL(location.href);
+  url.searchParams.set('mode', mode); history.pushState({ mode }, '', url);
+}));
+addEventListener('popstate', () => setExperience(new URLSearchParams(location.search).get('mode')));
+
+async function loadBaselineJobs() {
+  const count = document.querySelector('#baseline-count');
+  const list = document.querySelector('#baseline-jobs');
+  const search = document.querySelector('#baseline-search');
+  const sector = document.querySelector('#baseline-sector');
+  if (!count || !list || !search || !sector) return;
+  try {
+    const response = await fetch(`${apiBase}/jobs`, { credentials: 'omit' });
+    if (!response.ok) throw new Error('Jobs unavailable');
+    const jobs = await response.json();
+    if (!Array.isArray(jobs) || jobs.length > 100 || !jobs.every(job => job?.demo === true && typeof job.id === 'string' && typeof job.title === 'string' && typeof job.organization === 'string' && typeof job.summary === 'string' && typeof job.sector === 'string')) throw new Error('Invalid jobs');
+    [...new Set(jobs.map(job => job.sector))].sort().forEach(value => { const option = document.createElement('option'); option.value = value; option.textContent = value; sector.append(option); });
+    const render = () => {
+      const query = search.value.trim().toLocaleLowerCase();
+      const matches = jobs.filter(job => (!query || `${job.title} ${job.organization} ${job.summary}`.toLocaleLowerCase().includes(query)) && (!sector.value || sector.value === job.sector));
+      count.textContent = `${matches.length} ${matches.length === 1 ? 'vacancy' : 'vacancies'} found.`;
+      list.replaceChildren(...matches.map(job => {
+        const article = document.createElement('article'); const heading = document.createElement('h3'); const company = document.createElement('p'); const summary = document.createElement('p'); const meta = document.createElement('p');
+        heading.textContent = job.title; company.textContent = `${job.organization} · ${job.location}`; company.className = 'baseline-company'; summary.textContent = job.summary; meta.textContent = `${job.sector} · ${job.workplace} · ${job.employment_type}`; meta.className = 'baseline-meta';
+        article.append(heading, company, summary, meta); return article;
+      }));
+    };
+    search.addEventListener('input', render); sector.addEventListener('change', render); render();
+  } catch {
+    count.textContent = 'The fictional vacancy fixture could not load. Try again shortly.';
+  }
+}
+
+void loadBaselineJobs();
+
 if (gateway) {
   gateway.setAttribute('api-base', apiBase);
   gateway.setAttribute('certificate-base', certificateBase);

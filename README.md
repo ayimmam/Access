@@ -22,16 +22,6 @@ Open `http://127.0.0.1:8000` for the Savanna-style video demo. The same demo is 
 
 The [avatar implementation runbook](docs/architecture/AVATAR_BLUEPRINT_EVALUATION.md) covers offline capture, the original articulated rig, GLB baking and reviewed delivery. Open `/demo/avatar-review` to load local draft files and collect co-design feedback using the [testing guide](docs/setup/AVATAR_CO_DESIGN_TESTING.md).
 
-Additional integration demonstrations share the same build and API:
-
-- `/demo/plug-in` demonstrates installation, removal, host theming, generated SRI embed code and actual component events.
-- `/demo/ethioware` places the learning component in a layout based on Ethioware's public course page. The live provider site is unchanged.
-- `/demo/careers` is an Afriwork-inspired fictional job board using the reusable `access-career-gateway` component. Search/support filters remain local, job details support keyboard interaction, and demo certificate status comes from server records. Read-aloud needs an installed on-device English voice; recorded audio and manual accessibility review remain pending.
-
-See the [career and provider demo guide](docs/architecture/CAREER_AND_PROVIDER_DEMOS.md) and the [judging pivot plan](docs/planning/JUDGING_PIVOT_PLAN.md) for status, limits and the two-day implementation handoff.
-
-For the first-party privacy/session demonstration, run `uv run python scripts/setup_security_demo.py` to create a fictional account, restart the API, and open `/demo/privacy`. Its controls include encrypted optional preferences, data export/deletion, session extension/revocation and accessible passphrase confirmation. Setup and the OWASP mapping are in the [security/privacy architecture](docs/security/SECURITY_PRIVACY_ARCHITECTURE.md). Follow the [co-designer test steps](docs/testing/CO_DESIGN_SECURITY_TESTING.md) for the learning, careers and security flows.
-
 Run verification with
 
 ```sh

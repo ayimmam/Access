@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "npm run typecheck && esbuild lesson=src/index.ts jobs=src/jobs.ts avatar-review=src/avatar-review.ts --bundle --splitting --minify --format=esm --target=es2022 --outdir=dist",
+    "build": "npm run typecheck && esbuild lesson=src/index.ts avatar-review=src/avatar-review.ts --bundle --splitting --minify --format=esm --target=es2022 --outdir=dist",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

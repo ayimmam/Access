@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Access · Plug into your learning platform</title>
+  <link rel="stylesheet" href="/demo-assets/plug-in.css">
+  <script type="module" src="/demo-assets/plug-in.js"></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header><a href="/demo/savanna">Access learning media</a><span>Integration demonstration</span></header>
+  <main id="main">
+    <p class="eyebrow">Your platform. An accessible lesson inside it.</p>
+    <h1>A small addition to the place learners already use.</h1>
+    <p>Install the working Access component in this fictional training provider’s page. The lesson and downloads come from the public fixture API.</p>
+    <p>This demonstrates integration. Reviewed Amharic, Ethiopian Sign Language, audio description and tagged PDF remain delivery work. No production LMS connection is claimed.</p>
+    <section class="installation" aria-labelledby="install-title">
+      <h2 id="install-title">Try the plug-in</h2>
+      <div class="controls">
+        <label>Lesson<select id="lesson"><option value="demo-learning-plan">Short text lesson</option><option value="alx-transforming-africa">ALX video with source captions</option></select></label>
+        <label>Host appearance<select id="theme"><option value="teal">Training institute</option><option value="plum">Partner learning portal</option></select></label>
+        <button id="install" type="button" disabled>Install component</button>
+        <button id="remove" type="button" disabled>Remove component</button>
+      </div>
+      <p id="install-status" role="status">Preparing the component release…</p>
+      <details><summary>Embed code for another website</summary>
+        <p>Use this code on a site you control. Add its exact origin to <code>ACCESS_ALLOWED_ORIGINS</code> on the API and allow the component and API in the host’s content security policy. Use HTTPS for a hosted installation. This development release can change between builds; freeze the bundle and all chunks before publishing a production release.</p>
+        <label for="snippet">Copyable embed code</label><textarea id="snippet" rows="9" readonly spellcheck="false"></textarea>
+        <button id="copy" type="button" disabled>Copy embed code</button>
+      </details>
+    </section>
+    <section class="partner" aria-labelledby="partner-title">
+      <div class="partner-bar">Example Training Institute <span>Course / Learning foundations</span></div>
+      <div class="partner-content">
+        <p class="eyebrow">Host page preview</p><h2 id="partner-title">Build your learning routine</h2>
+        <p>This page belongs to the training provider. Its navigation and lesson introduction stay in place when Access is installed or removed.</p>
+        <div id="mount"><p class="empty">The component will appear here after you select Install component.</p></div>
+      </div>
+    </section>
+    <section aria-labelledby="events-title"><h2 id="events-title">Events received by the host</h2>
+      <p>These are real component events, kept only on this page. A download event records a request, not completed learning or a completed download.</p>
+      <ol id="events"><li>No component events yet.</li></ol>
+    </section>
+    <p><a href="/demo/savanna">See the Savanna-style host</a> · <a href="/demo/ethioware">Try the Ethioware-style host</a> · <a href="/demo/careers">Explore the career gateway</a> · <a href="/demo/independent">Try two independent instances</a> · <a href="/api/docs">Explore the REST API</a></p>
+  </main>
+</body>
+</html>

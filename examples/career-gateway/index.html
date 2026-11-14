@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex"><title>Access Careers · Accessible job-site demo</title>
+  <link rel="stylesheet" href="/demo-assets/careers.css">
+  <script type="module" src="/demo-assets/embed-demo.js"></script>
+</head>
+<body>
+  <a class="skip" href="#jobs">Skip to jobs</a>
+  <div class="announcement">A career gateway for everyone. <a href="#accessibility">Explore the accessibility tools</a></div>
+  <header><a class="brand" href="/demo/careers">afriwork<span> × Access demo</span></a>
+    <nav aria-label="Demo navigation"><a href="#jobs" aria-current="page">Explore jobs</a><a href="/demo/ethioware">Learning</a><a href="/demo/plug-in">Install Access</a><a href="/demo/privacy">Privacy and sessions</a></nav>
+  </header>
+  <main id="jobs">
+    <h1>Find your next opportunity</h1>
+    <p class="disclosure">Afriwork-inspired layout study · Fictional employers and vacancies · No affiliation or live applications</p>
+    <p id="release-status" role="status">Preparing Access career tools…</p>
+    <access-career-gateway api-base="/api/v1"><p>Job search needs JavaScript. <a href="/api/v1/jobs">Read the public fictional job data</a>.</p></access-career-gateway>
+    <section id="accessibility" class="accessibility"><h2>Choose how you explore</h2>
+      <p>Search and filter using your keyboard. Open a job for responsibilities and application preparation. Save jobs for this page session and read their equivalent text summaries. On devices with an installed English voice, Read summary speaks locally.</p>
+      <p>Support filters stay in your browser. No disability disclosure, sign-in, uploads or application transmission are required. Recorded downloadable audio and co-designer testing remain pending.</p>
+      <p><a href="/demo/certificates/DEMO-LEARNING-001">Try a fictional certificate verification link</a></p>
+    </section>
+  </main>
+  <footer>Built for the Digital Bridge demonstration. <a href="/demo/plug-in">One component, different platforms.</a></footer>
+</body>
+</html>

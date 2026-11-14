@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex"><title>Ethioware-style course · Access integration demo</title>
+  <link rel="stylesheet" href="/demo-assets/ethioware.css">
+  <script type="module" src="/demo-assets/embed-demo.js"></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to course</a>
+  <header><a class="brand" href="/demo/ethioware">Ethioware<span>EdTech Initiative · local demo</span></a>
+    <nav aria-label="Demo navigation"><a href="/demo/savanna">Savanna</a><a href="/demo/careers">Career gateway</a><a href="/demo/plug-in">Installation demo</a><a href="/demo/privacy">Privacy and sessions</a></nav>
+  </header>
+  <main id="main">
+    <p class="notice">Independent-provider integration demonstration. The live Ethioware site is unchanged. This page uses Access fixtures, not Ethioware course content or learner accounts.</p>
+    <h1>Software Engineering Basics</h1>
+    <div class="course-layout">
+      <div class="course-main">
+        <div class="course-banner"><p>FOUNDATION / LEARNING READINESS</p><h2>A place to begin.<br>A path to keep learning.</h2><p>The same accessible lesson module, in another provider’s course layout.</p></div>
+        <section class="lesson"><h2>Practice lesson</h2>
+          <p>The public course page inspired this layout. The short lesson below is synthetic Access content so the integration can be tried without a provider account.</p>
+          <button type="button" id="toggle-access" aria-expanded="true" aria-controls="access-panel">Hide Access learning tools</button>
+          <label class="lesson-choice" for="host-lesson">Demo lesson content</label>
+          <select id="host-lesson"><option value="demo-learning-plan">Short practice lesson</option><option value="alx-transforming-africa">Supplied ALX sample video</option></select>
+          <p id="release-status" role="status">Preparing Access learning tools…</p>
+          <div id="access-panel"><alx-accessible-lesson api-base="/api/v1" lesson-id="demo-learning-plan" content-version="1" lang="en">
+            <p><a href="/api/v1/lessons/demo-learning-plan/downloads/html?version=1">Read the practice lesson offline</a></p>
+          </alx-accessible-lesson></div>
+        </section>
+        <section class="about"><h2>About this integration</h2><p>Ethioware’s public Software Engineering Basics page presents a course overview, expandable modules and a course-information sidebar. Here, Access supplies lesson reading, search, text sizing and offline downloads within a corresponding host layout.</p>
+          <details><summary>Module 1 · Learning foundations</summary><p>Read the practice lesson above, search for a passage, change its text size and download the offline pack. Host enrollment and completion remain the provider’s responsibility.</p></details>
+          <p><a href="https://ethioware.jiret.site/course/a7ae0c9b-d104-459d-a67a-a7580d833b0e" rel="noreferrer">Visit the original public Ethioware course page</a></p>
+        </section>
+      </div>
+      <aside aria-labelledby="course-information"><h2 id="course-information">Course information</h2>
+        <a class="start" href="#access-panel">Try the practice lesson</a>
+        <dl><dt>Level</dt><dd>Beginners</dd><dt>Demo language</dt><dd>English</dd><dt>Access</dt><dd>Mobile and desktop</dd><dt>Offline</dt><dd>Text and light HTML</dd><dt>Integration</dt><dd>The same Access component</dd></dl>
+        <p><a href="/demo/careers">Explore the career gateway</a></p>
+        <p class="notice">Reviewed Amharic and media alternatives are still pending. This is not a live course enrollment or a provider certificate.</p>
+      </aside>
+    </div>
+  </main>
+  <footer>Access × Ethioware-style demonstration · <a href="/demo/plug-in">Try installation on your platform</a></footer>
+</body>
+</html>

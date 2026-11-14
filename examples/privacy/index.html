@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex"><title>Your privacy and sessions · Access</title>
+  <link rel="stylesheet" href="/demo-assets/privacy.css">
+  <script type="module" src="/demo-assets/privacy.js"></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to privacy controls</a>
+  <header><a href="/demo/savanna">Access</a><nav aria-label="Demo navigation"><a href="/demo/ethioware">Learning</a><a href="/demo/careers">Careers</a></nav></header>
+  <main id="main">
+    <h1>Your privacy and sessions</h1>
+    <p>This local demonstration uses a fictional account prepared by your facilitator. Use your password manager or paste the demo passphrase.</p>
+    <p id="status" role="status">Checking your session…</p>
+    <div id="error" role="alert" tabindex="-1" hidden></div>
+    <section id="sign-in" aria-labelledby="sign-in-heading">
+      <h2 id="sign-in-heading">Sign in to the security demo</h2>
+      <form id="login-form" method="post" action="/api/v1/security/login">
+        <label for="alias">Demo alias</label><input id="alias" name="username" autocomplete="username" maxlength="80" required>
+        <label for="password">Passphrase</label><input id="password" type="password" name="password" autocomplete="current-password" maxlength="256" aria-describedby="password-help" required>
+        <p id="password-help">Your facilitator supplies a fictional account. Paste and password-manager completion are supported.</p>
+        <label class="check"><input type="checkbox" id="show-password">Show passphrase</label>
+        <button type="submit">Sign in</button>
+      </form>
+    </section>
+    <div id="console" hidden>
+      <section aria-labelledby="session-heading">
+        <h2 id="session-heading">Your session</h2><p id="session-time"></p>
+        <div id="expiry-warning" hidden><p id="warning-text" role="status"></p><button type="button" id="extend">Keep me signed in</button><button type="button" id="confirm-again">Confirm passphrase</button></div>
+        <div class="actions"><button type="button" id="logout">Sign out of this browser</button><button type="button" id="refresh-session">Check session</button></div>
+      </section>
+      <section aria-labelledby="preferences-heading">
+        <h2 id="preferences-heading">Choose what to save</h2>
+        <form id="preferences-form" method="post" action="/api/v1/security/privacy">
+          <label class="check"><input type="checkbox" id="remember">Save my language and caption-size preferences on this account</label>
+          <label for="language">Preferred language</label><select id="language"><option value="en">English</option><option value="am">Amharic / አማርኛ</option></select>
+          <label for="caption-size">Caption size</label><select id="caption-size"><option value="standard">Standard</option><option value="large">Large</option><option value="extra-large">Extra large</option></select>
+          <p>These choices are encrypted when saved. Clearing the checkbox removes saved preferences. Lesson controls remain available while you decide.</p>
+          <button type="submit">Save privacy choice</button>
+        </form>
+      </section>
+      <section aria-labelledby="data-heading"><h2 id="data-heading">Understand your data</h2><ul id="stored-data"></ul>
+        <p>Job searches and support filters stay in the job page. Local read-aloud uses an installed device voice. Participation and interpreter recording consent are handled separately with your facilitator.</p>
+        <button type="button" id="export">Download my demo data</button>
+      </section>
+      <section aria-labelledby="devices-heading"><h2 id="devices-heading">Manage signed-in browsers</h2>
+        <p>End a session if you used a shared device. Browser sessions are shown by their start time.</p><ul id="devices"></ul>
+        <button type="button" id="revoke-all">End all my sessions</button>
+      </section>
+      <section aria-labelledby="delete-heading"><h2 id="delete-heading">Delete this demo account</h2>
+        <p>Deletion removes the account, saved preferences and active sessions. Ask the facilitator to create another fictional account if you want to test again.</p>
+        <button type="button" id="delete">Review account deletion</button>
+      </section>
+    </div>
+    <dialog id="reauth" aria-labelledby="reauth-heading">
+      <h2 id="reauth-heading">Confirm it is you</h2><p id="reauth-help">Confirm your passphrase to continue. Your choices remain on this page.</p>
+      <p id="reauth-error" role="alert"></p>
+      <form id="reauth-form" method="post" action="/api/v1/security/reauthenticate"><label for="reauth-password">Passphrase</label><input id="reauth-password" name="password" type="password" autocomplete="current-password" aria-describedby="reauth-help reauth-error" maxlength="256" required>
+        <label class="check"><input id="show-reauth" type="checkbox">Show passphrase</label>
+        <div class="actions"><button type="submit">Confirm and continue</button><button type="button" id="cancel-reauth">Cancel</button></div>
+      </form>
+    </dialog>
+    <dialog id="delete-confirm" aria-labelledby="delete-confirm-heading"><h2 id="delete-confirm-heading">Delete your demo account?</h2><p>This removes your saved preferences and ends every session for this fictional account.</p><div class="actions"><button type="button" id="cancel-delete">Keep account</button><button type="button" id="confirm-delete">Delete my demo account</button></div></dialog>
+  </main>
+</body>
+</html>

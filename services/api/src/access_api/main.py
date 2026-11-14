@@ -2,6 +2,9 @@
 
 import hashlib
 import os
+import json
+import logging
+import time
 import uuid
 from pathlib import Path
 from typing import Literal
@@ -16,6 +19,10 @@ from starlette.staticfiles import StaticFiles
 
 from access_core.lessons import EXAMPLE_VIDEO, Lesson, captions_vtt, export_lesson, get_lesson
 from access_core.signing import Language, load_manifest, public_manifest
+from access_core.jobs import JOBS, Job, DemoVerification, verify_demo
+from access_api.security import router as security_router, configured_store, origin as security_origin, clear_cookie
+from access_api.security_store import SecurityError
+from access_api.body_limit import SecurityBodyLimit
 
 
 class ErrorDetail(BaseModel):
@@ -37,6 +44,15 @@ origins = [origin.strip() for origin in os.environ.get("ACCESS_ALLOWED_ORIGINS",
 if "*" in origins:
     raise RuntimeError("ACCESS_ALLOWED_ORIGINS must contain explicit origins")
 app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=False, allow_methods=["GET"], allow_headers=["If-None-Match"], expose_headers=["ETag", "X-Correlation-ID"])
+app.state.security_store = configured_store(ROOT)
+app.include_router(security_router)
+app.add_middleware(SecurityBodyLimit)
+security_log = logging.getLogger("access.security")
+security_log.setLevel(logging.INFO)
+if not security_log.handlers:
+    security_handler = logging.StreamHandler()
+    security_handler.setFormatter(logging.Formatter("%(message)s"))
+    security_log.addHandler(security_handler)
 
 
 def signing_directory() -> Path:
@@ -76,10 +92,40 @@ def signing_asset(lesson_id: str, filename: str, lang: Language = "ethsl", versi
 @app.middleware("http")
 async def headers(request: Request, call_next):
     request.state.correlation_id = str(uuid.uuid4())
-    response = await call_next(request)
+    started = time.monotonic()
+    private = request.url.path.startswith("/api/v1/security/")
+    if private and request.headers.get("host") != security_origin(request).split("://", 1)[1]:
+        response = error_response(request, 403, "origin_rejected", "Open the privacy console using its configured site address.")
+    elif private and security_origin(request).startswith("https://") and request.url.scheme != "https":
+        response = error_response(request, 400, "https_required", "Open the secure HTTPS address to continue.")
+    else:
+        response = await call_next(request)
     response.headers["X-Correlation-ID"] = request.state.correlation_id
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    if request.url.scheme == "https":
+        response.headers["Strict-Transport-Security"] = "max-age=31536000"
+    if private or request.url.path == "/demo/privacy":
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["Vary"] = "Cookie"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+        route = request.scope.get("route")
+        security_log.info(json.dumps({"timestamp": time.time(), "correlation_id": request.state.correlation_id,
+                                     "role": getattr(request.state, "user_role", "anonymous"),
+                                     "endpoint": getattr(route, "path", "unmatched"), "status": response.status_code,
+                                     "duration_ms": round((time.monotonic() - started) * 1000, 2)}))
+    return response
+
+
+@app.exception_handler(SecurityError)
+async def security_error(request: Request, exc: SecurityError):
+    response = error_response(request, exc.status, exc.code, exc.message)
+    if exc.code == "sign_in_required":
+        clear_cookie(response)
+    if exc.retry_after:
+        response.headers["Retry-After"] = str(exc.retry_after)
     return response
 
 
@@ -94,7 +140,10 @@ async def http_error(request: Request, exc: StarletteHTTPException):
 
 @app.exception_handler(RequestValidationError)
 async def validation_error(request: Request, exc: RequestValidationError):
-    return error_response(request, 422, "invalid_request", "Check the lesson version and requested format.")
+    message = "Check the lesson version and requested format."
+    if request.url.path.startswith("/api/v1/security/"):
+        message = "Check the form fields and selected choices, then try again."
+    return error_response(request, 422, "invalid_request", message)
 
 
 @app.exception_handler(Exception)
@@ -112,6 +161,32 @@ def resolve(lesson_id: str, version: int) -> Lesson:
 @app.get("/healthz")
 def health():
     return {"status": "ok", "mode": "public-fixtures"}
+
+
+@app.get("/api/v1/jobs", response_model=list[Job])
+def jobs():
+    return list(JOBS)
+
+
+@app.get("/api/v1/jobs/{job_id}/structured-data")
+def job_structured_data(job_id: str):
+    job = next((item for item in JOBS if item.id == job_id), None)
+    if job is None:
+        raise HTTPException(404)
+    return {
+        "@context": "https://schema.org", "@type": "JobPosting",
+        "identifier": job.id, "title": job.title, "description": job.summary,
+        "hiringOrganization": {"@type": "Organization", "name": job.organization},
+        "datePosted": "2026-11-14", "validThrough": job.deadline.isoformat(),
+        "employmentType": {"Full-time": "FULL_TIME", "Part-time": "PART_TIME", "Freelance": "CONTRACTOR"}[job.employment_type],
+        "jobLocation": {"@type": "Place", "address": {"@type": "PostalAddress", "addressLocality": "Addis Ababa", "addressCountry": "ET"}},
+        **({"jobLocationType": "TELECOMMUTE"} if job.workplace == "Remote" else {}),
+    }
+
+
+@app.get("/api/v1/demo-certificates/{identifier}", response_model=DemoVerification)
+def demo_certificate(identifier: str):
+    return JSONResponse(verify_demo(identifier).model_dump(mode="json"), headers={"Cache-Control": "no-store"})
 
 
 @app.get("/api/v1/lessons/{lesson_id}/manifest", response_model=Lesson)
@@ -167,6 +242,31 @@ def demo():
 @app.get("/demo/independent", include_in_schema=False)
 def independent():
     return FileResponse(ROOT / "examples/independent-embed/index.html")
+
+
+@app.get("/demo/plug-in", include_in_schema=False)
+def plug_in():
+    return FileResponse(ROOT / "examples/plug-in-demo/index.html")
+
+
+@app.get("/demo/privacy", include_in_schema=False)
+def privacy_console():
+    return FileResponse(ROOT / "examples/privacy/index.html")
+
+
+@app.get("/demo/careers", include_in_schema=False)
+def career_demo():
+    return FileResponse(ROOT / "examples/career-gateway/index.html")
+
+
+@app.get("/demo/ethioware", include_in_schema=False)
+def ethioware_demo():
+    return FileResponse(ROOT / "examples/ethioware/index.html")
+
+
+@app.get("/demo/certificates/{identifier}", include_in_schema=False)
+def certificate_demo(identifier: str):
+    return FileResponse(ROOT / "examples/career-gateway/certificate.html")
 
 
 @app.get("/demo/avatar-review", include_in_schema=False)

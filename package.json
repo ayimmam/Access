@@ -5,7 +5,7 @@
   "version": "0.0.0",
   "description": "Accessible learning media component and public fixture API",
   "scripts": {
-    "build": "npm run build --workspace @access/lesson-component",
+    "build": "npm run build --workspace @access/lesson-component && node scripts/write-component-integrity.mjs",
     "typecheck": "npm run typecheck --workspace @access/lesson-component",
     "test:browser": "playwright test"
   },

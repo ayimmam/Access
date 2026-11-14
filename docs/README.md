@@ -3,6 +3,9 @@
 ## Start here
 
 - [Track 2 implementation plan](planning/TRACK_2_IMPLEMENTATION_PLAN.md): current scope, recording lessons, delivery sequence and reconciled security decisions.
+- [Judging pivot and two-day delivery plan](planning/JUDGING_PIVOT_PLAN.md): November 14 scoring/gate reconciliation, portable installation, mandatory media, 3,000-concurrent capacity design and GPT Astra work packages.
+- [Plug-in demonstration](../examples/plug-in-demo/README.md): real install/remove, host theme, copyable embed and component events.
+- [Career gateway and Ethioware demo guide](architecture/CAREER_AND_PROVIDER_DEMOS.md): reusable fictional job site, second-provider learning host, local data boundaries and remaining acceptance evidence.
 - [Codebase structure](architecture/CODEBASE_STRUCTURE.md): scaffold boundaries and implementation status.
 - [Public lesson foundation](architecture/INITIAL_IMPLEMENTATION.md) describes the current API, component and delivery limits.
 - [External preparation](setup/EXTERNAL_DEPENDENCIES.md) lists APIs, accounts, assets and reviewers to collect while implementation proceeds.
@@ -14,8 +17,12 @@
 
 Start with the [shared and member-specific setup guides](setup/README.md) for common prerequisites, Windows, macOS and Linux preparation.
 
+Use the [local co-design and Render deployment guide](setup/DEPLOYMENT_AND_LOCAL_DEMO.md) for current commands, hosted privacy configuration, smoke tests and rollback.
+
 ## Security
 
+- [Implemented session/privacy architecture and OWASP mapping](security/SECURITY_PRIVACY_ARCHITECTURE.md)
+- [Co-designer testing steps](testing/CO_DESIGN_SECURITY_TESTING.md)
 - [Implementation controls](security/SECURITY_PLAN.md)
 - [Revised architecture v3](security/SECURITY_ARCHITECTURE_V3.md)
 - [Architecture review](security/SECURITY_ARCHITECTURE_REVIEW.md)

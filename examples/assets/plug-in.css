@@ -1,0 +1,31 @@
+:root { font: 1rem/1.65 system-ui, sans-serif; color: #183731; background: #f7f7f1; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1rem; padding: 1.2rem max(1.25rem, calc((100vw - 72rem)/2)); background: #143f36; color: white; }
+header a { color: white; font-weight: 700; }
+main { max-width: 72rem; margin: 3rem auto; padding: 0 1.25rem; }
+h1 { max-width: 23ch; font-size: clamp(2rem, 5vw, 3.5rem); line-height: 1.12; letter-spacing: -.035em; }
+h2 { line-height: 1.3; }
+p { max-width: 75ch; }
+a { color: #185d4c; text-underline-offset: .2em; }
+.eyebrow { font-size: .85rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.installation { border-block: 1px solid #9cac9f; padding-block: 1rem 1.5rem; margin-block: 2rem; }
+.controls { display: flex; flex-wrap: wrap; gap: 1rem; align-items: end; }
+label { display: grid; gap: .35rem; font-weight: 600; }
+select, button, textarea { font: inherit; padding: .6rem .8rem; border: 1px solid #59766b; border-radius: .3rem; max-width: 100%; color: inherit; background: white; min-height: 44px; }
+button { cursor: pointer; }
+button:disabled { cursor: default; color: #516259; background: #e1e6e1; }
+#install { background: #194f40; color: white; }
+#install:disabled { background: #52695e; }
+textarea { width: 100%; font: .85rem/1.5 ui-monospace, monospace; margin-block: .75rem; }
+summary { cursor: pointer; min-height: 44px; padding-block: .6rem; font-weight: 600; }
+.partner { border: 2px solid #285d4b; margin-block: 2rem; background: white; --access-link: #185d4c; }
+.partner-bar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .5rem; background: #285d4b; color: white; padding: 1rem 1.5rem; font-weight: 600; }
+.partner-content { padding: clamp(1rem, 3vw, 2rem); }
+.partner.plum { border-color: #563766; --access-link: #633f76; }
+.plum .partner-bar { background: #563766; }
+.empty { border: 2px dashed #718a7c; padding: 2rem 1rem; }
+#events { padding-left: 1.5rem; overflow-wrap: anywhere; }
+:focus-visible { outline: 3px solid #b84612; outline-offset: 4px; }
+.skip { position: absolute; left: 1rem; top: -5rem; padding: .6rem 1rem; background: white; }
+.skip:focus { top: .5rem; }

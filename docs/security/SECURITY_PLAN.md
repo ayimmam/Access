@@ -1,7 +1,7 @@
 # Security Implementation Plan — Access / Track 2 Accessible Learning Media
 
 > Based on: `docs/planning/TRACK_2_IMPLEMENTATION_PLAN.md`, architecture diagram, and `Savanna-static-pages` starter code audit.
-> Status: **Draft — awaiting answers to open questions at the bottom before full execution.**
+> Updated 14 November 2026. The [implemented session/privacy architecture](SECURITY_PRIVACY_ARCHITECTURE.md) describes the working local demonstration and current OWASP mapping. The [co-designer test guide](../testing/CO_DESIGN_SECURITY_TESTING.md) supplies the human test sequence. Historical proposals below are reconciled by the implementation plan. Production partner identity/enrollment remains an external contract.
 
 ---
 

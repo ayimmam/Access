@@ -1,6 +1,22 @@
 # Track 2 accessible learning media implementation plan
 
-Updated 13 November 2026. This is a build plan, not a completed accessibility audit or a claim of conformance.
+Updated 14 November 2026. This is a build plan, not a completed accessibility audit or a claim of conformance.
+
+## November 14 judging and delivery priority
+
+The [judging pivot plan](JUDGING_PIVOT_PLAN.md) is the current execution order and scope reconciliation for the November 14–15 build and subsequent hardening. It incorporates the opening presentation's written gate, scoring and Track 2 requirements. Earlier session notes below remain historical evidence; where their scope or schedule differs, this section and the pivot plan take precedence.
+
+- Pass the co-designer/keyboard/NVDA/TalkBack/200%-zoom/sound-off task gate, zero serious/critical axe findings and WCAG 2.2 AA report before optimizing score. Continue 400% reflow testing for applicable WCAG criteria.
+- Panel weights are usability 30, adoption 25, Ethiopia 15, quality/security/privacy 15 and sustainability 15. Demonstrate the same embeddable module in Savanna and another host, plus REST/OpenAPI and a documented installation achievable by a judge within one hour.
+- Required Track 2 deliverables include reviewed English/Amharic captions with size/color controls, movable/resizable EthSL, audio description, offline audio/text/light HTML, tagged PDF/HTML with descriptions and the accessible career card/audio/certificate-link flow. BRF and recorded-session captions/chat are extra credit. Inventory items 23–26 below are therefore optional for the weekend rather than mandatory release blockers.
+- Prioritize one complete reviewed lesson. The user will arrange interpreter time. Use synchronized human interpreter video as the primary EthSL route; retain 3D/ASL work as experimental follow-on, without treating unreviewed motion as translation.
+- Retain the existing custom element/API architecture and use the demo shell to show installation. ALX production authentication, script/CSP approval and staging access remain unconfirmed. The requested installation demo does not confirm those contracts.
+- The opening deck specifies 3,000 learners. The user additionally requires a design for 3,000 concurrent learners. Precompute assets and plan CDN/media delivery and measured load tests; no such capacity is currently verified.
+- Submission is November 15 at 16:30 EAT, including code, README, Docker Compose and conformance report. The opening deck describes a two-week paid hardening sprint after winner selection, with three rounds and at least 30 testers with disabilities, followed by live deployment. The user's accelerated deployment goal remains conditional on production contracts and release evidence.
+
+Detailed work packages, source references, library tradeoffs, capacity arithmetic, budget assumptions, risk gates and the GPT Astra handoff are in the pivot plan. This update does not mark any manual accessibility gate or production feature passed.
+
+Security implementation now includes a first-party local-account privacy console, server-side hashed opaque sessions, session rotation/revocation, encrypted optional preferences, account-aware throttling, CSRF/Origin checks and accessible recovery. See the [current security/privacy architecture](../security/SECURITY_PRIVACY_ARCHITECTURE.md) for OWASP 2021/2025/API mappings, configuration and deployment gaps. Use the [co-designer test steps](../testing/CO_DESIGN_SECURITY_TESTING.md) for both learning/career tasks and expiry, reauthentication, privacy and shared-device exercises. Partner identity, distributed storage and production capacity still require the agreed hardening work.
 
 ## Decisions from the November 10 co-design session
 

@@ -19,6 +19,19 @@ test('EthioWare host loads the lesson tools and reflows at 320px', async ({ page
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
+test('EthioWare comparison preserves a realistic baseline and shareable mode', async ({ page }) => {
+  await page.goto('http://127.0.0.1:5173/?mode=before');
+  await expect(page.locator('.comparison-status')).toHaveText('Showing the reconstructed standard course reader.');
+  await expect(page.getByText('Reconstructed baseline:', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Choose one goal' })).toBeVisible();
+  await expect(page.locator('alx-accessible-lesson')).toBeHidden();
+  await page.getByRole('button', { name: 'After With Access' }).click();
+  await expect(page).toHaveURL(/mode=after/);
+  await expect(page.locator('alx-accessible-lesson')).toBeVisible();
+  const scan = await new AxeBuilder({ page }).withTags(tags).analyze();
+  expect(scan.violations).toEqual([]);
+});
+
 test('Career Gateway filters jobs and restores dialog focus', async ({ page }) => {
   await page.goto('http://127.0.0.1:5174/');
   await expect(page.getByText('4 jobs found.')).toBeVisible();
@@ -36,6 +49,23 @@ test('Career Gateway filters jobs and restores dialog focus', async ({ page }) =
   expect(scan.violations).toEqual([]);
   await page.setViewportSize({ width: 320, height: 800 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('Career Gateway comparison filters the baseline and switches to Access', async ({ page }) => {
+  await page.goto('http://127.0.0.1:5174/?mode=before');
+  await expect(page.locator('.comparison-status')).toHaveText('Showing the reconstructed standard vacancy listings.');
+  await expect(page.getByText('4 vacancies found.')).toBeVisible();
+  await page.getByLabel('Search vacancies').fill('developer');
+  await expect(page.getByText('1 vacancy found.')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Junior web developer' })).toBeVisible();
+  await expect(page.locator('access-career-gateway')).toBeHidden();
+  const scan = await new AxeBuilder({ page }).withTags(tags).analyze();
+  expect(scan.violations).toEqual([]);
+  await page.setViewportSize({ width: 320, height: 800 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.getByRole('button', { name: 'After With Access' }).click();
+  await expect(page).toHaveURL(/mode=after/);
+  await expect(page.getByText('4 jobs found.')).toBeVisible();
 });
 
 test('fictional certificate page exposes only the public record fields', async ({ page }) => {

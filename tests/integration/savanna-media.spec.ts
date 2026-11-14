@@ -41,6 +41,22 @@ test('Savanna demo plays the supplied video with caption and transcript controls
   await expect.poll(() => video.evaluate(element => element.paused)).toBe(true);
 });
 
+test('Savanna comparison shows the reconstructed baseline and returns to Access', async ({ page }) => {
+  await page.goto('/demo/savanna?mode=before');
+  await expect(page.locator('.comparison-status')).toHaveText('Showing the reconstructed standard Savanna video lesson.');
+  await expect(page.getByText('Reconstructed baseline:', { exact: true })).toBeVisible();
+  await expect(page.locator('.baseline-video video')).toBeVisible();
+  await expect(page.locator('.baseline-video track')).toHaveAttribute('srclang', 'en');
+  await expect(page.locator('alx-accessible-lesson')).toBeHidden();
+  const scan = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze();
+  expect(scan.violations).toEqual([]);
+  await page.setViewportSize({ width: 320, height: 800 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.getByRole('button', { name: 'After With Access' }).click();
+  await expect(page).toHaveURL(/mode=after/);
+  await expect(page.locator('alx-accessible-lesson')).toBeVisible();
+});
+
 test('3D timing prototype is explicitly labeled and follows seek/pause and docking', async ({ page }) => {
   await page.goto('/');
   const lesson = page.locator('alx-accessible-lesson');

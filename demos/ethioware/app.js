@@ -6,6 +6,30 @@ const status = document.querySelector('#release-status');
 const lesson = document.querySelector('alx-accessible-lesson');
 const fallback = lesson?.querySelector('a');
 
+function setExperience(mode, announce = true) {
+  const selected = mode === 'before' ? 'before' : 'after';
+  document.querySelectorAll('[data-experience-view]').forEach(view => {
+    view.hidden = view.dataset.experienceView !== selected;
+  });
+  document.querySelectorAll('[data-mode]').forEach(button => {
+    button.setAttribute('aria-pressed', String(button.dataset.mode === selected));
+  });
+  if (announce) {
+    document.querySelector('.comparison-status').textContent = selected === 'before'
+      ? 'Showing the reconstructed standard course reader.'
+      : 'Showing the lesson with Access learning tools.';
+  }
+  return selected;
+}
+
+const initialMode = new URLSearchParams(location.search).get('mode');
+setExperience(initialMode === 'before' ? 'before' : 'after');
+document.querySelectorAll('[data-mode]').forEach(button => button.addEventListener('click', () => {
+  const mode = setExperience(button.dataset.mode);
+  const url = new URL(location.href); url.searchParams.set('mode', mode); history.pushState({ mode }, '', url);
+}));
+addEventListener('popstate', () => setExperience(new URLSearchParams(location.search).get('mode')));
+
 if (lesson) lesson.setAttribute('api-base', apiBase);
 
 try {

@@ -40,7 +40,7 @@ Every team member and AI agent follows [CONTRIBUTING.md](../../CONTRIBUTING.md).
 4. Keep `.env`, credentials, private recordings and downloaded model weights out of Git. `.env.example` contains names only. Share configuration through the team's approved secret channel.
 5. Never copy the captured Savanna session fields into an API client. Production identity is still unresolved.
 
-The public lesson foundation now has a runnable build, locked Python/npm dependencies and backend/browser tests. Follow the [root README](../../README.md) for `npm ci`, `npm run build`, `uv sync --locked` and API startup. The optional [avatar capture workflow](../architecture/AVATAR_BLUEPRINT_EVALUATION.md) uses a separate dependency group. Compose services, staff console and queued conversion workers still require implementation.
+The public lesson foundation now has a runnable Docker Compose path, locked Python/npm dependencies and backend/browser tests. Follow the [root README](../../README.md) for the Docker-first installation or the native `npm`/`uv` workflow. The optional [avatar capture workflow](../architecture/AVATAR_BLUEPRINT_EVALUATION.md) uses a separate dependency group. The staff console, hosted offline reader and queued conversion workers still require implementation.
 
 ## Libraries to select and lock during implementation
 
@@ -107,4 +107,4 @@ Cached tools, images and samples:
 Blockers:
 ```
 
-This verifies tools only. Application, security and accessibility tests remain pending implementation.
+This verifies tools only. The repository has automated application and security checks, but they still need to be run for the selected revision. Manual assistive-technology, content-review and co-design evidence remains separate and may be pending.

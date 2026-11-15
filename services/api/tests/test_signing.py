@@ -5,13 +5,29 @@ from pydantic import ValidationError
 from fastapi.testclient import TestClient
 
 from access_api.main import app
-from access_core.lessons import EXAMPLE_ID, get_lesson
+from access_core.lessons import EXAMPLE_ID, captions_vtt, get_lesson
+from access_core.review import file_hash, source_files
 from access_core.signing import Asset, SigningManifest, prepare_manifest, render_revision, sha256, text_hash, validate_binding
 
 
 REVIEW_FIXTURE = dict(review_ref='private-review-reference', consent_ref='private-consent-reference',
                      deaf_review_ref='test-deaf-review', interpreter_review_ref='test-interpreter-review',
                      reference_recording_id='test-recording')
+
+
+@pytest.fixture(autouse=True)
+def test_only_reviewed_source_captions(tmp_path, monkeypatch):
+    lesson = get_lesson(EXAMPLE_ID, 1)
+    path = tmp_path / 'test-only-caption-review.vtt'
+    path.write_text(captions_vtt(lesson))
+    video, captions = source_files(lesson)
+    record = dict(schema_version='1.0', lesson_id=EXAMPLE_ID, content_version=1,
+                  course_version_id=lesson.course_version_id, edition='standard', language='en',
+                  format='vtt', filename=path.name, sha256=file_hash(path),
+                  video_sha256=file_hash(video), source_captions_sha256=file_hash(captions),
+                  status='human-reviewed', review_ref='test-only-caption-review', publication_ref='test-only-publication')
+    (tmp_path / f'{EXAMPLE_ID}-v1-standard-en-vtt.json').write_text(json.dumps(record))
+    monkeypatch.setenv('ACCESS_REVIEW_DIR', str(tmp_path))
 
 
 def approved_manifest(tmp_path):

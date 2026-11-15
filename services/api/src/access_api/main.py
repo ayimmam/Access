@@ -18,13 +18,15 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.staticfiles import StaticFiles
 
 from access_core.lessons import (
-    EXAMPLE_VIDEO, W3C_DIRECTORY, W3C_ID, Lesson, captions_vtt, export_lesson, get_lesson,
+    EXAMPLE_VIDEO, W3C_DIRECTORY, W3C_ID, Lesson, get_lesson,
 )
 from access_core.offline_video import Edition, offline_video_path
+from access_core.review import approved_caption, file_hash, published_lesson
+from access_core.exports import export_directory, export_metadata
 from access_core.jobs import JOBS, DemoVerification, Job, verify_demo
 from access_core.speech_transport import SpeechFailure
 from access_api.career_speech import router as career_speech_router
-from access_core.signing import Language, load_manifest, public_manifest
+from access_core.signing import Language, load_manifest, public_manifest, whole_lesson_video
 from access_api.body_limit import SecurityBodyLimit
 from access_api.security import configured_store, origin as security_origin, router as security_router
 from access_api.security_store import SecurityError
@@ -116,6 +118,10 @@ async def headers(request: Request, call_next):
     response.headers["X-Correlation-ID"] = request.state.correlation_id
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "no-referrer"
+    if request.url.path.startswith("/components/releases/") and response.status_code == 200:
+        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+    elif request.url.path.startswith("/components/0.1.0/"):
+        response.headers["Cache-Control"] = "no-store"
     if is_security:
         add_security_headers(response)
         security_log.info(json.dumps({"event": "security_request", "role": getattr(request.state, "user_role", "anonymous"), "status": response.status_code}))
@@ -166,9 +172,34 @@ def resolve(lesson_id: str, version: int) -> Lesson:
         raise HTTPException(404) from None
 
 
+def learner_lesson(lesson: Lesson) -> Lesson:
+    published = published_lesson(lesson)
+    if not published.media:
+        return published
+    try:
+        asset = whole_lesson_video(load_manifest(lesson, "ethsl", signing_directory()), lesson)
+    except (OSError, ValueError):
+        asset = None
+    if asset:
+        published = published.model_copy(update={"media": published.media.model_copy(update={
+            "sign_src": f"/api/v1/lessons/{lesson.lesson_id}/media/sign-video?version={lesson.content_version}",
+            "sign_status": "reviewed",
+        })})
+    return published
+
+
 @app.get("/healthz")
 def health():
     return {"status": "ok", "mode": "public-fixtures"}
+
+
+@app.get("/api/v1/release")
+def release_metadata():
+    try:
+        data = json.loads((ROOT / "packages/lesson-component/dist/release.json").read_bytes())
+    except (OSError, ValueError):
+        raise HTTPException(503) from None
+    return JSONResponse(data, headers={"Cache-Control": "no-store"})
 
 
 @app.get("/api/v1/jobs", response_model=list[Job])
@@ -199,15 +230,17 @@ def demo_certificate(identifier: str):
 
 @app.get("/api/v1/lessons/{lesson_id}/manifest", response_model=Lesson)
 def manifest(request: Request, lesson_id: str, version: int = Query(1, ge=1)):
-    lesson = resolve(lesson_id, version)
+    lesson = learner_lesson(resolve(lesson_id, version))
     if lesson.media:
         downloads = {}
+        sizes = dict(lesson.media.download_bytes)
         for edition, field in (("standard", "offline_video_src"), ("described", "offline_described_src")):
             path = offline_video_path(lesson_id, version, edition)
             if path and path.is_file():
                 downloads[field] = f"/api/v1/lessons/{lesson_id}/offline-video/{edition}?version={version}"
+                sizes[field] = path.stat().st_size
         if downloads:
-            lesson = lesson.model_copy(update={"media": lesson.media.model_copy(update=downloads)})
+            lesson = lesson.model_copy(update={"media": lesson.media.model_copy(update={**downloads, "download_bytes": sizes})})
     body = lesson.model_dump_json().encode()
     tag = '"' + hashlib.sha256(body).hexdigest() + '"'
     cache_headers = {"ETag": tag, "Cache-Control": "public, max-age=0, must-revalidate"}
@@ -218,10 +251,11 @@ def manifest(request: Request, lesson_id: str, version: int = Query(1, ge=1)):
 
 @app.get("/api/v1/lessons/{lesson_id}/transcripts/{language}")
 def transcript(lesson_id: str, language: str, version: int = Query(1, ge=1)):
-    lesson = resolve(lesson_id, version)
+    lesson = published_lesson(resolve(lesson_id, version))
     if language != lesson.language:
         raise HTTPException(404)
-    return {"lesson_id": lesson.lesson_id, "content_version": version, "language": language, "timing": "source-draft" if lesson.media else "untimed-text", "segments": lesson.segments}
+    return {"lesson_id": lesson.lesson_id, "content_version": version, "language": language,
+            "timing": lesson.media.caption_status if lesson.media else "untimed-text", "segments": lesson.segments}
 
 
 @app.get("/api/v1/lessons/{lesson_id}/media/{kind}")
@@ -229,17 +263,26 @@ def media(lesson_id: str, kind: Literal["video", "captions", "captions-am", "cap
     lesson = resolve(lesson_id, version)
     if lesson.media is None:
         raise HTTPException(404)
+    if kind in ("captions", "captions-am", "captions-ti", "described-captions"):
+        language = "am" if kind == "captions-am" else "ti" if kind == "captions-ti" else "en"
+        asset = approved_caption(lesson, language, "described" if kind == "described-captions" else "standard")
+        if not asset:
+            raise HTTPException(404)
+        return FileResponse(asset.path, media_type="text/vtt", headers={"Cache-Control": "no-store"})
+    if kind == "sign-video":
+        try:
+            asset = whole_lesson_video(load_manifest(lesson, "ethsl", signing_directory()), lesson)
+        except (OSError, ValueError):
+            asset = None
+        if not asset:
+            raise HTTPException(404)
+        return FileResponse(signing_directory() / asset.filename, media_type="video/mp4", headers={"Cache-Control": "no-store"})
     if lesson_id == W3C_ID:
         assets = {
             "video": (W3C_DIRECTORY / "standard.mp4", "video/mp4"),
-            "captions": (W3C_DIRECTORY / "captions.en.vtt", "text/vtt"),
-            "captions-am": (W3C_DIRECTORY / "captions.am.vtt", "text/vtt"),
-            "captions-ti": (W3C_DIRECTORY / "captions.ti.vtt", "text/vtt"),
             "described-video": (W3C_DIRECTORY / "described.mp4", "video/mp4"),
-            "described-captions": (W3C_DIRECTORY / "captions-described.en.vtt", "text/vtt"),
             "audio": (W3C_DIRECTORY / "audio.mp3", "audio/mpeg"),
             "described-audio": (W3C_DIRECTORY / "audio-described.mp3", "audio/mpeg"),
-            "sign-video": (W3C_DIRECTORY / "ethsl.mp4", "video/mp4"),
         }
         path, media_type = assets[kind]
         if not path.is_file():
@@ -247,8 +290,6 @@ def media(lesson_id: str, kind: Literal["video", "captions", "captions-am", "cap
         return FileResponse(path, media_type=media_type, headers={"Cache-Control": "public, max-age=0, must-revalidate"})
     if kind == "video":
         return FileResponse(EXAMPLE_VIDEO, media_type="video/mp4", headers={"Cache-Control": "public, max-age=0, must-revalidate"})
-    if kind == "captions":
-        return Response(captions_vtt(lesson), media_type="text/vtt", headers={"Cache-Control": "public, max-age=0, must-revalidate"})
     raise HTTPException(404)
 
 
@@ -265,26 +306,27 @@ def offline_video(lesson_id: str, edition: Edition, version: int = Query(1, ge=1
 @app.get("/api/v1/lessons/{lesson_id}/exports")
 def exports(lesson_id: str, version: int = Query(1, ge=1)):
     lesson = resolve(lesson_id, version)
-    items = []
-    formats = [("html", "Read offline HTML"), ("txt", "Download text"), ("zip", "Download offline pack")]
-    if lesson_id == W3C_ID:
-        formats.extend([
-            ("pdf", "Download tagged PDF prototype · verification pending"),
-            ("brf", "Download uncontracted English BRF prototype · transcriber review pending"),
-        ])
-    for format, label in formats:
-        data, media_type, _ = export_lesson(lesson, format)
-        items.append({"format": format, "label": label, "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest(), "media_type": media_type, "href": f"/api/v1/lessons/{lesson_id}/downloads/{format}?version={version}"})
-    return {"lesson_id": lesson_id, "content_version": version, "language": lesson.language, "items": items}
+    try:
+        metadata = export_metadata(lesson)
+    except ValueError:
+        raise HTTPException(503) from None
+    return {"lesson_id": lesson_id, "content_version": version, "language": lesson.language,
+            "items": [{key: value for key, value in item.items() if key != "filename"} for item in metadata["items"]]}
 
 
 @app.get("/api/v1/lessons/{lesson_id}/downloads/{format}")
-def download(lesson_id: str, format: Literal["html", "txt", "zip", "pdf", "brf"], version: int = Query(1, ge=1)):
+def download(lesson_id: str, format: Literal["html", "txt", "zip", "pdf", "brf"], version: int = Query(1, ge=1), revision: str | None = Query(None, pattern=r"^[0-9a-f]{64}$")):
     try:
-        data, media_type, suffix = export_lesson(resolve(lesson_id, version), format)
-    except KeyError:
+        metadata = export_metadata(resolve(lesson_id, version))
+    except ValueError:
+        raise HTTPException(503) from None
+    item = next((item for item in metadata["items"] if item["format"] == format and (revision is None or item["sha256"] == revision)), None)
+    if not item:
         raise HTTPException(404)
-    return Response(data, media_type=media_type, headers={"Content-Disposition": f'attachment; filename="{lesson_id}-v{version}.{suffix}"', "Cache-Control": "public, max-age=0, must-revalidate"})
+    path = export_directory() / f"{lesson_id}-v{version}" / item["filename"]
+    if file_hash(path) != item["sha256"]:
+        raise HTTPException(503)
+    return FileResponse(path, media_type=item["media_type"], filename=f"{lesson_id}-v{version}.{format}", headers={"Cache-Control": "no-store"})
 
 
 @app.get("/", include_in_schema=False)
@@ -332,6 +374,7 @@ def savanna():
     return FileResponse(ROOT / "examples/savanna/index.html")
 
 
-app.mount("/components/0.1.0", StaticFiles(directory=ROOT / "packages/lesson-component/dist", check_dir=False), name="component")
+app.mount("/components/releases", StaticFiles(directory=Path(os.environ.get("ACCESS_COMPONENT_RELEASE_DIR", str(ROOT / "packages/lesson-component/dist/releases"))), check_dir=False), name="component-releases")
+app.mount("/components/0.1.0", StaticFiles(directory=ROOT / "packages/lesson-component/dist", check_dir=False), name="component-development")
 app.mount("/demo-assets", StaticFiles(directory=ROOT / "examples/assets"), name="demo-assets")
 app.mount("/savanna-reference/img", StaticFiles(directory=ROOT / "Savanna-static-pages/assets/img"), name="savanna-images")

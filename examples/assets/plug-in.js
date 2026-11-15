@@ -1,6 +1,6 @@
 const origin = new URL(import.meta.url).origin;
 const base = `${origin}/api/v1`;
-const bundle = `${origin}/components/0.1.0/lesson.js`;
+let bundle;
 const lesson = document.querySelector('#lesson');
 const install = document.querySelector('#install');
 const remove = document.querySelector('#remove');
@@ -14,7 +14,7 @@ let count = 0;
 
 function updateSnippet() {
   if (!integrity) return;
-  snippet.value = `<script type="module" src="${bundle}" integrity="${integrity}" crossorigin="anonymous"></script>\n<alx-accessible-lesson api-base="${base}" lesson-id="${lesson.value}" content-version="1" lang="en">\n  <p><a href="${base}/lessons/${lesson.value}/downloads/html?version=1">Download the accessible lesson</a></p>\n</alx-accessible-lesson>`;
+  snippet.value = `<script type="module" src="${bundle}" integrity="${integrity}" crossorigin="anonymous"></script>\n<alx-accessible-lesson api-base="${base}" lesson-id="${lesson.value}" content-version="1" instance-id="primary-lesson" lang="en">\n  <p><a href="${base}/lessons/${lesson.value}/downloads/html?version=1">Download the accessible lesson</a></p>\n</alx-accessible-lesson>`;
 }
 
 for (const name of ['alx-media-ready', 'alx-media-error', 'alx-media-download']) {
@@ -35,6 +35,7 @@ install.addEventListener('click', () => {
   element.setAttribute('lesson-id', lesson.value);
   element.setAttribute('content-version', '1');
   element.setAttribute('lang', 'en');
+  element.setAttribute('instance-id', 'installer-primary');
   const fallback = document.createElement('a');
   fallback.href = `${base}/lessons/${lesson.value}/downloads/html?version=1`;
   fallback.textContent = 'Download the accessible lesson';
@@ -68,9 +69,14 @@ copy.addEventListener('click', async () => {
 });
 
 try {
-  const response = await fetch(`${origin}/components/0.1.0/integrity.json`, { credentials: 'omit' });
+  const response = await fetch(`${origin}/api/v1/release`, { credentials: 'omit', cache: 'no-store' });
   if (!response.ok) throw new Error('Release unavailable');
-  integrity = (await response.json())['lesson.js'];
+  const release = await response.json();
+  if (!/^[0-9a-f]{64}$/.test(release.release_id) || release.base_path !== `/components/releases/${release.release_id}/`) throw new Error('Invalid release');
+  bundle = `${origin}${release.base_path}lesson.js`;
+  const metadata = await fetch(`${origin}${release.base_path}integrity.json`, { credentials: 'omit' });
+  if (!metadata.ok) throw new Error('Integrity unavailable');
+  integrity = (await metadata.json())['lesson.js'];
   if (typeof integrity !== 'string' || !/^sha384-[A-Za-z0-9+/]{64}$/.test(integrity)) throw new Error('Invalid integrity');
   updateSnippet();
   const script = document.createElement('script');

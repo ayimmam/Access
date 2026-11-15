@@ -1,6 +1,12 @@
 const productionOrigin = document.documentElement.dataset.pluginOrigin;
 const local = ['localhost', '127.0.0.1'].includes(location.hostname);
 const pluginOrigin = local ? 'http://127.0.0.1:8000' : productionOrigin;
+document.querySelectorAll('dl div').forEach(group => {
+  if (/duration/i.test(group.querySelector('dt')?.textContent || '')) {
+    const value = group.querySelector('dd');
+    if (value && /^\d+$/.test(value.textContent.trim())) value.textContent += ' · unit unconfirmed';
+  }
+});
 const apiBase = `${pluginOrigin}/api/v1`;
 const status = document.querySelector('#release-status');
 const lesson = document.querySelector('alx-accessible-lesson');
@@ -66,13 +72,17 @@ if (local) {
 }
 
 try {
-  const response = await fetch(`${pluginOrigin}/components/0.1.0/integrity.json`, { credentials: 'omit' });
+  const response = await fetch(`${pluginOrigin}/api/v1/release`, { credentials: 'omit', cache: 'no-store' });
   if (!response.ok) throw new Error('Release unavailable');
-  const manifest = await response.json();
+  const release = await response.json();
+  if (!/^[0-9a-f]{64}$/.test(release.release_id) || release.base_path !== `/components/releases/${release.release_id}/`) throw new Error('Invalid release');
+  const metadata = await fetch(`${pluginOrigin}${release.base_path}integrity.json`, { credentials: 'omit' });
+  if (!metadata.ok) throw new Error('Integrity unavailable');
+  const manifest = await metadata.json();
   const integrity = manifest['lesson.js'];
   if (typeof integrity !== 'string' || !/^sha384-[A-Za-z0-9+/]{64}$/.test(integrity)) throw new Error('Invalid release integrity');
   const script = document.createElement('script');
-  script.type = 'module'; script.src = `${pluginOrigin}/components/0.1.0/lesson.js`;
+  script.type = 'module'; script.src = `${pluginOrigin}${release.base_path}lesson.js`;
   script.integrity = integrity; script.crossOrigin = 'anonymous';
   await new Promise((resolve, reject) => { script.onload = resolve; script.onerror = reject; document.head.append(script); });
   status.textContent = 'Access learning tools connected to the public-fixture service.';

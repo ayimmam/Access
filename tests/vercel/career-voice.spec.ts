@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { mockCareerSpeech, typedCommand, voiceCommand } from '../helpers/career-speech';
-import { useDemoApi } from '../helpers/demo-api';
+import { careerOrigin, useDemoApi } from '../helpers/demo-api';
 
 test.use({ video: process.env.ACCESS_RECORD_DEMO ? { mode: 'on', size: { width: 1280, height: 900 } } : 'off', viewport: { width: 1280, height: 900 } });
 
@@ -10,7 +10,7 @@ test.beforeEach(async ({ page, baseURL }) => {
 });
 
 test('Without Access stays unchanged and leaving With Access cancels microphone and discards drafts', async ({ page }) => {
-  await page.goto('http://127.0.0.1:5174/?mode=before');
+  await page.goto(`${careerOrigin}/?mode=before`);
   await expect(page.getByText('11 vacancies found.', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Start voice search', exact: true })).toBeHidden();
   expect(await page.evaluate(() => window.__careerSpeech.starts)).toBe(0);
@@ -37,7 +37,7 @@ test('Without Access stays unchanged and leaving With Access cancels microphone 
 
 test.describe('short demo recording', () => {
   test('captioned simulated voice walkthrough on the Afriwork-style host', async ({ page }) => {
-    await page.goto('http://127.0.0.1:5174/');
+    await page.goto(`${careerOrigin}/`);
     const guide = page.getByRole('region', { name: 'Optional voice navigation' });
     await expect(guide).toBeVisible();
     const caption = async (text: string) => {

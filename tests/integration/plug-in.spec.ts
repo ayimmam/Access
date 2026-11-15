@@ -6,6 +6,7 @@ test('installer mounts, themes and removes the real component with host events',
   await page.goto('/demo/plug-in');
   const install = page.getByRole('button', { name: 'Install component', exact: true });
   await expect(install).toBeEnabled();
+  await page.getByRole('combobox', { name: 'Lesson', exact: true }).selectOption('demo-learning-plan');
   await install.click();
   await expect(page.getByRole('heading', { name: 'Make a learning plan' })).toBeVisible();
   await expect(page.locator('#events')).toContainText('alx-media-ready');
@@ -26,6 +27,7 @@ test('installer mounts, themes and removes the real component with host events',
 test('generated snippet works on a distinct allowed host origin', async ({ page, context }) => {
   await page.goto('/demo/plug-in');
   await expect(page.getByRole('button', { name: 'Install component', exact: true })).toBeEnabled();
+  await page.getByRole('combobox', { name: 'Lesson', exact: true }).selectOption('demo-learning-plan');
   const snippet = await page.locator('#snippet').inputValue();
   expect(snippet).toContain('integrity="sha384-');
   const host = await context.newPage();
@@ -42,10 +44,12 @@ test('generated snippet works on a distinct allowed host origin', async ({ page,
     server.listen(5173, '127.0.0.1', resolve);
   });
   try {
+    const manifest = host.waitForResponse(response => response.url().includes('/lessons/demo-learning-plan/manifest?version=1'));
     await host.goto('http://127.0.0.1:5173/');
+    expect((await manifest).status()).toBe(200);
     await expect(host.getByRole('heading', { name: 'Make a learning plan' })).toBeVisible();
     await host.getByRole('searchbox').fill('breaks');
-    await expect(host.getByRole('status')).toHaveText('1 of 3 sections found.');
+    await expect(host.getByRole('status').filter({ hasText: '1 of 3 sections found.' })).toBeVisible();
   } catch (error) {
     throw new Error(`${error}\nBrowser errors: ${errors.join('\n')}`);
   } finally {

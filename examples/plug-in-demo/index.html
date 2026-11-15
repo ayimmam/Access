@@ -15,18 +15,18 @@
     <p class="eyebrow">Your platform. An accessible lesson inside it.</p>
     <h1>A small addition to the place learners already use.</h1>
     <p>Install the working Access component in this fictional training provider’s page. The lesson and downloads come from the public fixture API.</p>
-    <p>This demonstrates integration. Reviewed Amharic, Ethiopian Sign Language, audio description and tagged PDF remain delivery work. No production LMS connection is claimed.</p>
+    <p>This demonstrates integration. The W3C practice fixture includes English captions, described video and audio. Reviewed Amharic, Ethiopian Sign Language and descriptive HTML/PDF remain delivery work. No production LMS connection is claimed.</p>
     <section class="installation" aria-labelledby="install-title">
       <h2 id="install-title">Try the plug-in</h2>
       <div class="controls">
-        <label>Lesson<select id="lesson"><option value="demo-learning-plan">Short text lesson</option><option value="alx-transforming-africa">ALX video with source captions</option></select></label>
+        <label>Lesson<select id="lesson"><option value="w3c-colors-with-good-contrast">W3C contrast practice · reviewed English, description and audio</option><option value="demo-learning-plan">Short text lesson</option><option value="alx-transforming-africa">ALX source video · captions awaiting review</option></select></label>
         <label>Host appearance<select id="theme"><option value="teal">Training institute</option><option value="plum">Partner learning portal</option></select></label>
         <button id="install" type="button" disabled>Install component</button>
         <button id="remove" type="button" disabled>Remove component</button>
       </div>
       <p id="install-status" role="status">Preparing the component release…</p>
       <details><summary>Embed code for another website</summary>
-        <p>Use this code on a site you control. Add its exact origin to <code>ACCESS_ALLOWED_ORIGINS</code> on the API and allow the component and API in the host’s content security policy. Use HTTPS for a hosted installation. This development release can change between builds; freeze the bundle and all chunks before publishing a production release.</p>
+        <p>Use this code on a site you control. Add its exact origin to <code>ACCESS_ALLOWED_ORIGINS</code> on the API and allow the component and API in the host’s content security policy. Use HTTPS for a hosted installation. The snippet pins a content-hashed directory and concrete SRI; retain that directory and its chunks across releases. Human review and deployment approval remain required.</p>
         <label for="snippet">Copyable embed code</label><textarea id="snippet" rows="9" readonly spellcheck="false"></textarea>
         <button id="copy" type="button" disabled>Copy embed code</button>
       </details>

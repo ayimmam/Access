@@ -1,8 +1,8 @@
 # Run the co-designer demo and deploy on Render
 
-Updated 14 November 2026. Anteneh owns deployment and the $100 Render credit. This guide covers the current public-fixture service and optional first-party privacy/session demonstration. The [co-designer task guide](../testing/CO_DESIGN_SECURITY_TESTING.md) supplies the testing sequence.
+Updated 16 November 2026. Anteneh owns deployment and the $100 Render credit. This guide covers the current public-fixture service and optional first-party privacy/session demonstration. The [co-designer task guide](../testing/CO_DESIGN_SECURITY_TESTING.md) supplies the testing sequence.
 
-The assigned public plug-in origin is `https://access-plugin.onrender.com`. External hosts use `https://access-plugin.onrender.com/api/v1` as their API base and load versioned component files from `https://access-plugin.onrender.com/components/0.1.0/`.
+The assigned public plug-in origin is `https://access-plugin.onrender.com`. External hosts use `/api/v1` as their API base. After deploying this change through human review, pin the content-hashed component path and SRI advertised by `/api/v1/release`. `/components/0.1.0/` remains a mutable development alias. No deployment is performed or claimed by this code change. Follow the [content/release runbook](CONTENT_PUBLICATION.md) to retain old release directories.
 
 ## Local demonstration
 
@@ -13,6 +13,8 @@ git submodule update --init
 uv sync --locked --python 3.11
 npm ci
 npm run build
+uv run python -m access_core.exports
+uv run python -m access_core.offline_video
 uv run uvicorn access_api.main:app --host 127.0.0.1 --port 8000 --no-access-log
 ```
 
@@ -48,7 +50,7 @@ Choose a fictional alias and a passphrase of at least 15 characters. Enter it lo
 5. Use the privacy console after preparing a fictional account and the participant agrees to that exercise.
 6. Record unaided, assisted, blocked and skipped outcomes, agree fixes, then retest.
 
-Draft source captions, signing prototypes, unavailable reviewed media and recorded-audio gaps are visible in the interfaces. Device speech depends on an installed local English voice. Capture these limitations in the test record.
+Draft captions and signing media are not learner-published. Required unavailable formats are labeled next to their controls; research tools require an explicit reviewer host. Prerecorded synthetic English summaries are distinct from optional on-device voice-search reading, which depends on an installed local voice. Capture these limitations in the test record.
 
 ## Prepare the source for Render
 
@@ -164,9 +166,15 @@ Run these smoke checks against the assigned public service after deploying the r
 
 ```sh
 curl --fail --silent --show-error https://access-plugin.onrender.com/healthz
-curl --fail --silent --show-error https://access-plugin.onrender.com/components/0.1.0/integrity.json
-curl --fail --silent --show-error https://access-plugin.onrender.com/components/0.1.0/lesson.js --output /dev/null
-curl --fail --silent --show-error https://access-plugin.onrender.com/components/0.1.0/jobs.js --output /dev/null
+curl --fail --silent --show-error https://access-plugin.onrender.com/api/v1/release
+```
+
+Compare the advertised source revision, dirty state and release ID with the human-reviewed release record. Set `RELEASE_ID` to that recorded 64-character content hash, not an unreviewed value from live discovery, then check its frozen artifacts:
+
+```sh
+curl --fail --silent --show-error "https://access-plugin.onrender.com/components/releases/${RELEASE_ID}/integrity.json"
+curl --fail --silent --show-error "https://access-plugin.onrender.com/components/releases/${RELEASE_ID}/lesson.js" --output /dev/null
+curl --fail --silent --show-error "https://access-plugin.onrender.com/components/releases/${RELEASE_ID}/jobs.js" --output /dev/null
 curl --fail --silent --show-error https://access-plugin.onrender.com/api/v1/jobs --output /dev/null
 ```
 

@@ -10,7 +10,13 @@ let directory: string;
 let calibration: Record<string, any>;
 let bytes: Buffer;
 let videoBytes: Buffer;
+let reviewFixture: Record<string, any>;
+let fixtureCaptions: string;
 test.beforeAll(async () => {
+  const fixture = JSON.parse(execFileSync('.venv/bin/python', ['-c', 'from access_core.lessons import EXAMPLE_ID,get_lesson,captions_vtt; import json; lesson=get_lesson(EXAMPLE_ID,1); print(json.dumps(dict(lesson=lesson.model_dump(),captions=captions_vtt(lesson))))'], {
+    env: { ...process.env, PYTHONPATH: 'services/core/src:services/api/src:services/worker/src' }, encoding: 'utf8',
+  }));
+  reviewFixture = fixture.lesson; reviewFixture.media.caption_status = 'human-reviewed'; fixtureCaptions = fixture.captions;
   directory = await mkdtemp(join(process.cwd(), 'artifacts/hands-test-'));
   const builder = join(directory, 'builder.mjs');
   buildSync({ entryPoints: ['tests/fixtures/hands-calibration.mjs'], outfile: builder, bundle: true, platform: 'node', format: 'esm', packages: 'external' });
@@ -22,6 +28,17 @@ test.beforeAll(async () => {
   videoBytes = await readFile(join(directory, 'calibration.mp4'));
 });
 test.afterAll(async () => { if (directory) await rm(directory, { recursive: true, force: true }); });
+test.beforeEach(async ({ page }) => {
+  await page.route('**/alx-transforming-africa/manifest?version=1', route => route.fulfill({ json: reviewFixture }));
+  await page.route('**/alx-transforming-africa/media/captions?version=1', route => route.fulfill({ contentType: 'text/vtt', body: fixtureCaptions }));
+  await page.addInitScript(() => {
+    const observer = new MutationObserver(() => document.querySelectorAll('alx-accessible-lesson:not([data-calibration])').forEach(element => {
+      element.setAttribute('data-calibration', 'test-only-review-fixture');
+      element.setAttribute('review-tools', ''); element.setAttribute('lesson-id', 'alx-transforming-africa');
+    }));
+    observer.observe(document, { childList: true, subtree: true });
+  });
+});
 
 test('source playback, caption and transcript controls remain independent', async ({ page }) => {
   await page.goto('/');
@@ -128,13 +145,13 @@ test('upstream caption controls survive and extended timelines clear the hands p
   await expect(lesson.locator('.media-view')).toBeVisible();
   await lesson.evaluate(element => element.setAttribute('lesson-id', 'w3c-colors-with-good-contrast'));
   await expect(lesson.getByRole('heading', { name: 'Colors with Good Contrast', exact: true })).toBeVisible();
-  await lesson.getByRole('combobox', { name: 'Captions', exact: true }).selectOption('am');
-  await expect(lesson.getByRole('status').filter({ hasText: 'Amharic · review pending. Human review is pending.' })).toBeVisible();
+  await expect(lesson.locator('option[value="am"]')).toBeDisabled();
+  await lesson.getByRole('combobox', { name: 'Captions', exact: true }).selectOption('en');
   await lesson.getByRole('combobox', { name: 'Caption appearance', exact: true }).selectOption('yellow');
   await lesson.getByRole('button', { name: 'Reset caption preferences', exact: true }).click();
   await expect(lesson.getByRole('combobox', { name: 'Caption appearance', exact: true })).toHaveValue('default');
   await lesson.getByText('Low-data audio and offline media', { exact: true }).click();
-  await expect(lesson.getByRole('link', { name: 'Download audio only · 48 kbps', exact: true })).toHaveAttribute('href', /\/media\/audio\?version=1$/);
+  await expect(lesson.getByRole('link', { name: /^Download audio only · 48 kbps/ })).toHaveAttribute('href', /\/media\/audio\?version=1$/);
   await lesson.getByRole('button', { name: 'Show 3D hands preview', exact: true }).click();
   await expect(lesson.locator('.avatar-panel canvas')).toBeVisible();
   await lesson.getByRole('button', { name: 'Use audio-described video', exact: true }).click();
@@ -180,6 +197,7 @@ test('changed hashes or legacy rigs fail closed without losing captions', async 
   await page.route('**/signing-manifest?**', route => route.fulfill({ json: changed }));
   await page.goto('/');
   const lesson = page.locator('alx-accessible-lesson');
+  await lesson.getByRole('combobox', { name: 'Captions', exact: true }).selectOption('on');
   await lesson.getByRole('button', { name: 'Show 3D hands preview' }).click();
   await expect(lesson.locator('.avatar-panel').getByRole('status')).toContainText('assets unavailable');
   await lesson.getByRole('button', { name: 'Jump to 0:41', exact: true }).click();
@@ -240,6 +258,7 @@ test('missing interpreter video pauses playback and retains text fallback', asyn
   await page.route('**/api/v1/missing.mp4', route => route.fulfill({ status: 404 }));
   await page.goto('/');
   const lesson = page.locator('alx-accessible-lesson');
+  await lesson.getByRole('combobox', { name: 'Captions', exact: true }).selectOption('on');
   const source = lesson.locator('.video-column video');
   await lesson.getByRole('button', { name: 'Show 3D hands preview' }).click();
   await expect(lesson.locator('.avatar-panel').getByRole('status')).toContainText('unavailable');

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import { chooseAmharic, mockAddisSpeech, recordAmharic, typeAmharic } from '../helpers/career-addis-speech';
-import { useDemoApi } from '../helpers/demo-api';
+import { careerOrigin, useDemoApi } from '../helpers/demo-api';
 import { mockCareerSpeech, typedCommand } from '../helpers/career-speech';
 
 test.use({ video: process.env.ACCESS_RECORD_DEMO ? { mode: 'on', size: { width: 1280, height: 900 } } : 'off', viewport: { width: 1280, height: 900 } });
@@ -9,7 +9,7 @@ test.use({ video: process.env.ACCESS_RECORD_DEMO ? { mode: 'on', size: { width: 
 test('Amharic remains With Access only and hiding it stops capture', async ({ page, baseURL }) => {
   await useDemoApi(page, baseURL);
   const requests = await mockAddisSpeech(page, { apiBase: baseURL });
-  await page.goto('http://127.0.0.1:5174/?mode=before');
+  await page.goto(`${careerOrigin}/?mode=before`);
   const guide = page.locator('.voice-guide');
   await expect(page.getByText('11 vacancies found.', { exact: true })).toBeVisible();
   await expect(guide).toBeHidden();
@@ -30,10 +30,10 @@ test('checked-in career policy permits only same-origin microphone and bounded b
   expect(headers['Permissions-Policy']).toBe('camera=(), microphone=(self), geolocation=()');
   expect(headers['Content-Security-Policy']).toContain('media-src blob: https://access-plugin.onrender.com;');
   expect(headers['Content-Security-Policy']).not.toContain('addisassistant.com');
-  await page.route('http://127.0.0.1:5174/policy-check', route => route.fulfill({
+  await page.route(`${careerOrigin}/policy-check`, route => route.fulfill({
     contentType: 'text/html', headers, body: '<!doctype html><html lang="en"><title>Policy check</title><p>Policy check</p></html>',
   }));
-  await page.goto('http://127.0.0.1:5174/policy-check');
+  await page.goto(`${careerOrigin}/policy-check`);
   expect(await page.evaluate(() => (document as Document & { featurePolicy: { allowsFeature(name: string): boolean } }).featurePolicy.allowsFeature('microphone'))).toBe(true);
   expect(await page.evaluate(() => (document as Document & { featurePolicy: { allowsFeature(name: string): boolean } }).featurePolicy.allowsFeature('camera'))).toBe(false);
 });
@@ -42,7 +42,7 @@ test('pending language changes cannot start the previous microphone or leave a m
   await useDemoApi(page, baseURL);
   await mockCareerSpeech(page);
   await mockAddisSpeech(page, { apiBase: baseURL, catalogDelay: 1000 });
-  await page.goto('http://127.0.0.1:5174/');
+  await page.goto(`${careerOrigin}/`);
   const guide = page.locator('.voice-guide');
   await guide.getByRole('combobox').selectOption('am');
   await expect(guide).toHaveAttribute('aria-busy', 'true');
@@ -59,7 +59,7 @@ test('pending language changes cannot start the previous microphone or leave a m
 test('captioned simulated Amharic walkthrough on the Afriwork-style host', async ({ page, baseURL }) => {
   await useDemoApi(page, baseURL);
   await mockAddisSpeech(page, { apiBase: baseURL });
-  await page.goto('http://127.0.0.1:5174/');
+  await page.goto(`${careerOrigin}/`);
   const guide = page.locator('.voice-guide');
   await guide.scrollIntoViewIfNeeded();
   const caption = async (text: string) => {

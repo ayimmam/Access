@@ -19,14 +19,14 @@ Add the partner site's exact origin (scheme, hostname and port) to the Access se
 
 ### Embed in an e-learning page
 
-Replace the integrity placeholder with the full `lesson.js` value from the [release integrity manifest](https://access-plugin.onrender.com/components/0.1.0/integrity.json). Load the script once per page. Set `lesson-id` and `content-version` to the desired published lesson revision and keep the fallback on that revision.
+After an authorized deployment, obtain `release_id`, `base_path` and the concrete `lesson.js` SRI from `/api/v1/release` and its frozen `integrity.json`. The installer produces that pinned snippet. Replace both placeholders below; `/components/0.1.0/` is a mutable development alias, not a production pin. Load the script once per page and keep the fallback on the same lesson revision. These new routes are not claimed to be deployed yet.
 
 ```html
 <script type="module"
-  src="https://access-plugin.onrender.com/components/0.1.0/lesson.js"
+  src="https://access-plugin.onrender.com/components/releases/REPLACE_WITH_RELEASE_ID/lesson.js"
   integrity="REPLACE_WITH_LESSON_JS_SRI" crossorigin="anonymous"></script>
 <alx-accessible-lesson api-base="https://access-plugin.onrender.com/api/v1"
-  lesson-id="w3c-colors-with-good-contrast" content-version="1" lang="en">
+  lesson-id="w3c-colors-with-good-contrast" content-version="1" instance-id="primary-lesson" lang="en">
   <a href="https://access-plugin.onrender.com/api/v1/lessons/w3c-colors-with-good-contrast/downloads/html?version=1">
     Download the lesson transcript
   </a>
@@ -34,6 +34,8 @@ Replace the integrity placeholder with the full `lesson.js` value from the [rele
 ```
 
 See the component on an [independent learning platform](https://access-ethioware.vercel.app/) or generate a snippet in the [interactive installer](https://access-plugin.onrender.com/demo/plug-in).
+
+Preferences are session-local by default. A stable, unique `instance-id` allows the learner to opt into remembering on the host device, scoped by API, lesson, version and instance. Turning off remember or resetting removes only that instance's values. Without `instance-id`, remembering is disabled. Do not reuse an ID for two same-lesson instances or treat preferences as analytics. Research controls are absent unless a reviewer host explicitly adds `review-tools`.
 
 ### Savanna static page example
 
@@ -43,8 +45,8 @@ For this sample, use the e-learning script above with the following element. The
 
 ```html
 <alx-accessible-lesson api-base="/api/v1"
-  lesson-id="alx-transforming-africa" content-version="1" lang="en">
-  <a href="/api/v1/lessons/alx-transforming-africa/downloads/html?version=1">
+  lesson-id="w3c-colors-with-good-contrast" content-version="1" instance-id="savanna-primary" lang="en">
+  <a href="/api/v1/lessons/w3c-colors-with-good-contrast/downloads/html?version=1">
     Download the lesson transcript
   </a>
 </alx-accessible-lesson>
@@ -52,10 +54,10 @@ For this sample, use the e-learning script above with the following element. The
 
 | Request from the Savanna sample | Purpose |
 | --- | --- |
-| `GET /api/v1/lessons/alx-transforming-africa/manifest?version=1` | Load the lesson, transcript segments and media references |
-| `GET /api/v1/lessons/alx-transforming-africa/exports?version=1` | List the download formats and sizes |
-| `GET /api/v1/lessons/alx-transforming-africa/media/video?version=1` | Play the sample lesson video |
-| `GET /api/v1/lessons/alx-transforming-africa/downloads/html?version=1` | Open the HTML transcript fallback |
+| `GET /api/v1/lessons/w3c-colors-with-good-contrast/manifest?version=1` | Load reviewed transcript segments, edition timelines and media references |
+| `GET /api/v1/lessons/w3c-colors-with-good-contrast/exports?version=1` | List prebuilt downloads and sizes without generating them |
+| `GET /api/v1/lessons/w3c-colors-with-good-contrast/media/video?version=1` | Play the primary practice fixture |
+| `GET /api/v1/lessons/w3c-colors-with-good-contrast/downloads/html?version=1` | Open the HTML transcript fallback |
 
 These routes belong to the Access public fixture API. The Savanna sample demonstrates the component mount and leaves enrollment and completion with the host platform.
 
@@ -65,7 +67,7 @@ Use the `jobs.js` integrity value from the same manifest. The component provides
 
 ```html
 <script type="module"
-  src="https://access-plugin.onrender.com/components/0.1.0/jobs.js"
+  src="https://access-plugin.onrender.com/components/releases/REPLACE_WITH_RELEASE_ID/jobs.js"
   integrity="REPLACE_WITH_JOBS_JS_SRI" crossorigin="anonymous"></script>
 <access-career-gateway api-base="https://access-plugin.onrender.com/api/v1">
   <a href="https://access-plugin.onrender.com/api/v1/jobs">View the fictional job data</a>
@@ -130,19 +132,19 @@ The Compose service is read-only apart from a temporary `/tmp`, mounts the sourc
 |---|---|---|
 | Accessible lessons | Native video controls, caption selection and sizing, searchable timestamped transcripts, seek actions, audio-only and audio-described alternatives, plus explicit unavailable states | The ALX caption source remains draft; the W3C English captions are source-reviewed while Amharic and Tigrigna translations await human review |
 | Sign-language path | A synchronized interpretation-video slot, language-scoped asset manifests, hash/version binding, a local review viewer and a clearly labeled 3D timing prototype | No EthSL recording is shipped; interpreter and Deaf review are still required before calling an asset interpretation |
-| Offline and low-data access | Self-contained HTML and text, deterministic ZIP packs with SHA-256 manifests, audio downloads, and PDF/BRF prototypes for the complete-media fixture | PDF/UA, screen-reader and Braille-transcriber verification remain pending; the prototypes are not presented as approved exports |
+| Offline and low-data access | Prebuilt HTML/text and ZIP with local audio controls, both edition transcripts, file inventory and hashes; media byte sizes are shown | Unreviewed PDF/BRF and translated captions are excluded; descriptive-document and real-phone verification remain pending |
 | Drop-in integration | A reusable `<alx-accessible-lesson>` element, independent-host installer, two-instance isolation, host events, generated SRI metadata, explicit CORS and a versioned `/api/v1` API with OpenAPI docs | Production Savanna identity, enrollment, CSP and course-version contracts are not confirmed |
 | Career access | Fictional searchable jobs, local preference filters, keyboard-accessible details, equivalent visible summaries, local read-aloud, matching `schema.org/JobPosting` data and demo certificate states | There are no real employers, applications, learner credentials or Open Badges claims |
 | Privacy and recovery | A first-party demo of opaque revocable sessions, CSRF protection, expiry recovery, saved-choice opt-out, data export and account deletion | This is an isolated local demo, not ALX authentication; it requires the separate local setup described in the security documentation |
 | Evidence | API, security and browser tests cover failure/retry, lifecycle cleanup, cross-origin installation, keyboard focus, automated axe scans and 320 CSS-pixel reflow | NVDA, TalkBack, co-design approval, full WCAG evaluation and production capacity evidence must still be completed by people |
 
-The media assets and their review state are documented in [the complete-media fixture README](example%20lessons/w3c-contrast/README.md). Current accessibility evidence and gaps are recorded in [WCAG_CONFORMANCE.md](docs/WCAG_CONFORMANCE.md); neither document is a blanket conformance claim.
+The media assets and their source review state are documented in [the W3C fixture README](example%20lessons/w3c-contrast/README.md); learner publication follows [the content review gates](docs/setup/CONTENT_PUBLICATION.md), which omit unapproved formats. Current accessibility evidence and gaps are recorded in [WCAG_CONFORMANCE.md](docs/WCAG_CONFORMANCE.md); neither document is a blanket conformance claim.
 
 ## Demonstration routes
 
 | Route | Purpose |
 |---|---|
-| `/demo/savanna` | Savanna-style host with the supplied ALX video, draft captions, transcript, downloads and optional timing prototype |
+| `/demo/savanna` | Savanna-style host with the W3C practice fixture; older ALX draft source appears only in the reconstructed baseline |
 | `/demo/independent` | Two independent lesson-component instances and fallback behavior |
 | `/demo/plug-in` | Install, theme, remove and copy a pinned independent-host embed |
 | `/demo/ethioware` | A second provider-style host using the same component and API |
@@ -191,11 +193,12 @@ git submodule update --init
 npm ci
 npm run build
 uv sync --locked
+uv run python -m access_core.exports
 uv run python -m access_core.offline_video
 uv run uvicorn access_api.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-The offline video build uses FFmpeg to create MP4s with language-tagged selectable subtitles under `artifacts/offline-video/`. The Docker build generates these automatically.
+Prebuild exports after fixture/review changes; the API never regenerates them per request. FFmpeg produces offline MP4s with only approved subtitle tracks under `artifacts/offline-video/`. Sidecars bind them to the publication hash. The Docker build generates both artifact sets automatically. See the [content and release runbook](docs/setup/CONTENT_PUBLICATION.md) for approvals, immutable release retention, rollback and measurements.
 
 Keep `example lessons/` beside the service because the public fixture repository reads those approved local assets. The [avatar runbook](docs/architecture/AVATAR_BLUEPRINT_EVALUATION.md) documents the optional capture dependency group and local review flow.
 

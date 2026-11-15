@@ -2,7 +2,7 @@ const productionOrigin = document.documentElement.dataset.pluginOrigin;
 const local = ['localhost', '127.0.0.1'].includes(location.hostname);
 const pluginOrigin = local ? 'http://127.0.0.1:8000' : productionOrigin;
 const apiBase = `${pluginOrigin}/api/v1`;
-const certificateBase = local ? 'http://127.0.0.1:5174/certificates/' : `${location.origin}/certificates/`;
+const certificateBase = `${location.origin}/certificates/`;
 const status = document.querySelector('#release-status');
 const gateway = document.querySelector('access-career-gateway');
 
@@ -65,13 +65,17 @@ if (gateway) {
 }
 
 try {
-  const response = await fetch(`${pluginOrigin}/components/0.1.0/integrity.json`, { credentials: 'omit' });
+  const response = await fetch(`${pluginOrigin}/api/v1/release`, { credentials: 'omit', cache: 'no-store' });
   if (!response.ok) throw new Error('Release unavailable');
-  const manifest = await response.json();
+  const release = await response.json();
+  if (!/^[0-9a-f]{64}$/.test(release.release_id) || release.base_path !== `/components/releases/${release.release_id}/`) throw new Error('Invalid release');
+  const metadata = await fetch(`${pluginOrigin}${release.base_path}integrity.json`, { credentials: 'omit' });
+  if (!metadata.ok) throw new Error('Integrity unavailable');
+  const manifest = await metadata.json();
   const integrity = manifest['jobs.js'];
   if (typeof integrity !== 'string' || !/^sha384-[A-Za-z0-9+/]{64}$/.test(integrity)) throw new Error('Invalid release integrity');
   const script = document.createElement('script');
-  script.type = 'module'; script.src = `${pluginOrigin}/components/0.1.0/jobs.js`;
+  script.type = 'module'; script.src = `${pluginOrigin}${release.base_path}jobs.js`;
   script.integrity = integrity; script.crossOrigin = 'anonymous';
   await new Promise((resolve, reject) => { script.onload = resolve; script.onerror = reject; document.head.append(script); });
   status.textContent = 'Career tools connected. All vacancies on this page are fictional public fixtures.';

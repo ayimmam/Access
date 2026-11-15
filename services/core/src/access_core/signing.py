@@ -6,7 +6,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from access_core.lessons import EXAMPLE_CAPTIONS, EXAMPLE_VIDEO, Lesson
+from access_core.lessons import Lesson, parse_vtt
+from access_core.review import approved_caption, file_hash, source_files
 
 Language = Literal["ethsl", "asl"]
 
@@ -133,13 +134,18 @@ def render_revision(manifest: SigningManifest, segment: SigningSegment) -> str:
 def prepare_manifest(lesson: Lesson, language: Language) -> SigningManifest:
     if not lesson.media:
         raise ValueError("Signing requires a source media item")
+    video, captions = source_files(lesson)
+    reviewed = approved_caption(lesson)
+    source_segments = parse_vtt(reviewed.path.read_text(encoding="utf-8"), lesson.media.duration) if reviewed else lesson.segments
+    if reviewed:
+        captions = reviewed.path
     return SigningManifest(
         lesson_id=lesson.lesson_id, media_id=lesson.media.id, content_version=lesson.content_version,
         course_version_id=lesson.course_version_id, language=language,
-        video_sha256=sha256(EXAMPLE_VIDEO), captions_sha256=sha256(EXAMPLE_CAPTIONS),
+        video_sha256=file_hash(video), captions_sha256=file_hash(captions),
         segments=[SigningSegment(id=s.id, cue_ids=[s.id], start=s.start, end=s.end,
                                  source_text=s.text, text_sha256=text_hash(s.text))
-                  for s in lesson.segments if s.start is not None and s.end is not None],
+                  for s in source_segments if s.start is not None and s.end is not None],
     )
 
 
@@ -150,9 +156,9 @@ def validate_binding(manifest: SigningManifest, lesson: Lesson, directory: Path)
         expected.lesson_id, expected.media_id, expected.content_version, expected.course_version_id
     ):
         raise ValueError("Signing manifest identity differs from source lesson")
-    source_changed = manifest.video_sha256 != expected.video_sha256 or manifest.captions_sha256 != expected.captions_sha256
+    source_changed = approved_caption(lesson) is None or manifest.video_sha256 != expected.video_sha256 or manifest.captions_sha256 != expected.captions_sha256
     rig_changed = bool(manifest.rig and not valid_asset(directory, manifest.rig))
-    source_cues = {segment.id: segment for segment in lesson.segments}
+    source_cues = {segment.id: segment for segment in expected.segments}
     cue_order = list(source_cues)
     for segment in result.segments:
         if segment.end > lesson.media.duration:
@@ -163,7 +169,7 @@ def validate_binding(manifest: SigningManifest, lesson: Lesson, directory: Path)
             valid_cues = cue_order[first:first + len(segment.cue_ids)] == segment.cue_ids
         if not valid_cues:
             raise ValueError('Phrase must reference ordered adjacent source cues')
-        original_text = " ".join(source_cues[cue_id].text for cue_id in segment.cue_ids) if valid_cues else None
+        original_text = " ".join(source_cues[cue_id].source_text for cue_id in segment.cue_ids) if valid_cues else None
         changed = source_changed or rig_changed or segment.source_text != original_text or text_hash(segment.source_text) != segment.text_sha256
         changed = changed or bool(segment.motion and not valid_asset(directory, segment.motion))
         changed = changed or bool(segment.interpreter_video and not valid_asset(directory, segment.interpreter_video))
@@ -190,6 +196,17 @@ def load_manifest(lesson: Lesson, language: Language, directory: Path) -> Signin
     if manifest.language != language:
         raise ValueError("Signing manifest language differs from requested language")
     return validate_binding(manifest, lesson, directory)
+
+
+def whole_lesson_video(manifest: SigningManifest, lesson: Lesson) -> InterpreterVideo | None:
+    if not lesson.media or manifest.language != "ethsl":
+        return None
+    cue_ids = [segment.id for segment in prepare_manifest(lesson, "ethsl").segments]
+    for segment in manifest.segments:
+        if (segment.status == "approved" and segment.presentation == "interpreter-video" and
+            segment.cue_ids == cue_ids and segment.start == 0 and segment.end == lesson.media.duration):
+            return segment.interpreter_video
+    return None
 
 
 def public_manifest(manifest: SigningManifest) -> dict:

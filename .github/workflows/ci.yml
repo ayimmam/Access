@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  repository-checks:
+    name: Repository checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          submodules: true
+      - run: python3 scripts/check_repository.py
+      - run: python3 -m compileall -q scripts services
+
+  security-baseline:
+    name: Security baseline
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          submodules: true
+      - run: bash scripts/check_security_baseline.sh
+
+  application-checks:
+    name: Application checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          submodules: true
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install locked tools and dependencies
+        run: |
+          python3 -m pip install uv==0.13.8
+          uv sync --locked --python 3.11
+          npm ci
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg
+      - name: Typecheck, build and prebuild reviewed exports
+        run: |
+          npm run typecheck
+          npm run build
+          uv run --no-sync python -m access_core.exports
+          uv run --no-sync python -m access_core.offline_video
+      - name: API and publication regressions
+        run: uv run --no-sync pytest -q
+      - name: Install test browser
+        run: npx playwright install --with-deps chromium
+      - name: Integration and automated accessibility checks
+        run: npm run test:browser -- --workers=2
+      - name: Independent static hosts
+        run: npm run test:vercel-demos -- --workers=2
+
+  ci-gate:
+    name: CI gate
+    if: ${{ always() }}
+    needs: [repository-checks, security-baseline, application-checks]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require every verification job
+        env:
+          CHECK_RESULTS: ${{ toJSON(needs) }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          results = json.loads(os.environ["CHECK_RESULTS"])
+          unsuccessful = [name for name, job in results.items() if job["result"] != "success"]
+          if unsuccessful:
+              raise SystemExit("Verification jobs require attention: " + ", ".join(unsuccessful))
+          print("All verification jobs succeeded.")
+          PY

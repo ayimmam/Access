@@ -16,10 +16,10 @@ test.beforeAll(async () => {
   const environment = { ...process.env, ACCESS_SECURITY_ORIGIN:origin,
     ACCESS_SECURITY_DB:join(directory, 'demo.sqlite'), ACCESS_SECURITY_KEY:randomBytes(32).toString('base64'),
     ACCESS_TEST_PASSWORD:password };
-  execFileSync('uv', ['run', '--offline', 'python', '-c',
+  execFileSync('uv', ['run', '--no-sync', '--offline', 'python', '-c',
     'import os; from pathlib import Path; from access_api.security_store import SecurityStore; s=SecurityStore(Path(os.environ["ACCESS_SECURITY_DB"]), os.environ["ACCESS_SECURITY_KEY"].encode()); s.create_account("browser-learner", os.environ["ACCESS_TEST_PASSWORD"])'],
     { env:environment, stdio:'pipe' });
-  server = spawn('uv', ['run', '--offline', 'uvicorn', 'access_api.main:app', '--host', '127.0.0.1', '--port', '8002'], { env:environment, stdio:'ignore' });
+  server = spawn('uv', ['run', '--no-sync', '--offline', 'uvicorn', 'access_api.main:app', '--host', '127.0.0.1', '--port', '8002'], { env:environment, stdio:'ignore' });
   await expect.poll(async () => { try { return (await fetch(origin + '/healthz')).status; } catch { return 0; } }).toBe(200);
 });
 test.afterAll(async () => {
@@ -63,7 +63,7 @@ test('expired authentication preserves choices and recent-auth dialog restores f
   await page.getByLabel('Caption size', { exact:true }).selectOption('extra-large');
   // Advance the test server's recent-auth timestamp while retaining real cookies,
   // CSRF validation, encryption and session rotation for the continuation.
-  execFileSync('uv', ['run', '--offline', 'python', '-c',
+  execFileSync('uv', ['run', '--no-sync', '--offline', 'python', '-c',
     'import sqlite3,sys; db=sqlite3.connect(sys.argv[1]); db.execute("UPDATE sessions SET authenticated=authenticated-301"); db.commit()', join(directory, 'demo.sqlite')],
     { stdio:'pipe' });
   const exportButton = page.getByRole('button', { name:'Download my demo data' });
@@ -82,7 +82,7 @@ test('expired authentication preserves choices and recent-auth dialog restores f
   await page.getByRole('button', { name:'Confirm and continue' }).click();
   await download;
   expect((await context.cookies()).find(item => item.name === '__Host-access_session')?.value).not.toBe(before);
-  execFileSync('uv', ['run', '--offline', 'python', '-c',
+  execFileSync('uv', ['run', '--no-sync', '--offline', 'python', '-c',
     'import sqlite3,sys; db=sqlite3.connect(sys.argv[1]); db.execute("UPDATE sessions SET expires=0"); db.commit()', join(directory, 'demo.sqlite')], { stdio:'pipe' });
   await page.getByRole('button', { name:'Check session' }).click();
   await expect(page.getByRole('heading', { name:'Sign in to the security demo' })).toBeVisible();
@@ -98,7 +98,7 @@ test('session warning offers extension and account deletion has a cancellable re
   await page.locator('#login-form').getByLabel('Passphrase', { exact:true }).fill(password);
   await page.getByRole('button', { name:'Sign in', exact:true }).click();
   await expect(page.locator('#console')).toBeVisible();
-  execFileSync('uv', ['run', '--offline', 'python', '-c',
+  execFileSync('uv', ['run', '--no-sync', '--offline', 'python', '-c',
     'import sqlite3,sys,time; db=sqlite3.connect(sys.argv[1]); db.execute("UPDATE sessions SET expires=?", (time.time()+119,)); db.commit()', join(directory, 'demo.sqlite')], { stdio:'pipe' });
   const check = page.getByRole('button', { name:'Check session' });
   await check.click();

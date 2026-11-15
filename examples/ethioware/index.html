@@ -18,13 +18,13 @@
       <div class="course-main">
         <div class="course-banner"><p>FOUNDATION / LEARNING READINESS</p><h2>A place to begin.<br>A path to keep learning.</h2><p>The same accessible lesson module, in another provider’s course layout.</p></div>
         <section class="lesson"><h2>Practice lesson</h2>
-          <p>The public course page inspired this layout. The short lesson below is synthetic Access content so the integration can be tried without a provider account.</p>
+          <p>The public course page inspired this layout. The W3C practice fixture has reviewed English, described media and audio. Reviewed Amharic, EthSL and descriptive PDF/HTML remain unavailable. No provider account is used.</p>
           <button type="button" id="toggle-access" aria-expanded="true" aria-controls="access-panel">Hide Access learning tools</button>
           <label class="lesson-choice" for="host-lesson">Demo lesson content</label>
-          <select id="host-lesson"><option value="demo-learning-plan">Short practice lesson</option><option value="alx-transforming-africa">Supplied ALX sample video</option></select>
+          <select id="host-lesson"><option value="w3c-colors-with-good-contrast">Colors with Good Contrast · reviewed English and audio</option><option value="demo-learning-plan">Short practice lesson</option><option value="alx-transforming-africa">Supplied ALX source video · review pending</option></select>
           <p id="release-status" role="status">Preparing Access learning tools…</p>
-          <div id="access-panel"><alx-accessible-lesson api-base="/api/v1" lesson-id="demo-learning-plan" content-version="1" lang="en">
-            <p><a href="/api/v1/lessons/demo-learning-plan/downloads/html?version=1">Read the practice lesson offline</a></p>
+          <div id="access-panel"><alx-accessible-lesson api-base="/api/v1" lesson-id="w3c-colors-with-good-contrast" content-version="1" instance-id="ethioware-primary" lang="en">
+            <p><a href="/api/v1/lessons/w3c-colors-with-good-contrast/downloads/html?version=1">Read the practice lesson offline</a></p>
           </alx-accessible-lesson></div>
         </section>
         <section class="about"><h2>About this integration</h2><p>Ethioware’s public Software Engineering Basics page presents a course overview, expandable modules and a course-information sidebar. Here, Access supplies lesson reading, search, text sizing and offline downloads within a corresponding host layout.</p>

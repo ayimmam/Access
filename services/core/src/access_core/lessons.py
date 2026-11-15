@@ -1,11 +1,7 @@
 """Public fixture repository and portable exports of the same lesson revision."""
 
-import hashlib
 import html
-import io
-import json
 import re
-import zipfile
 from pathlib import Path
 from typing import Literal
 
@@ -25,28 +21,34 @@ class CaptionTrack(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
     language: Literal["en", "am", "ti"]
     label: str
-    src: str
-    status: Literal["source-reviewed", "machine-translated-review-pending", "human-reviewed"]
+    src: str | None
+    status: Literal["source-draft", "source-reviewed", "machine-translated-review-pending", "human-reviewed", "review-pending"]
 
 
 class Media(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
     id: str
     src: str
-    captions: str
+    captions: str | None
     duration: float
-    caption_status: Literal["source-draft", "source-reviewed"] = "source-draft"
+    caption_status: Literal["source-draft", "source-reviewed", "human-reviewed", "review-pending"] = "source-draft"
     avatar_mode: Literal["timing-prototype"] = "timing-prototype"
     sign_language: Literal["Ethiopian Sign Language"] = "Ethiopian Sign Language"
     caption_tracks: tuple[CaptionTrack, ...] = ()
     described_src: str | None = None
     described_captions: str | None = None
+    described_caption_status: Literal["review-pending", "source-reviewed", "human-reviewed"] = "review-pending"
+    described_duration: float | None = None
+    described_segments: tuple[Segment, ...] = ()
     offline_video_src: str | None = None
     offline_described_src: str | None = None
     audio_src: str | None = None
     described_audio_src: str | None = None
     sign_src: str | None = None
     sign_status: Literal["unavailable", "review-pending", "reviewed"] = "unavailable"
+    download_bytes: dict[str, int] = Field(default_factory=dict)
+
+
 class Lesson(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
     schema_version: Literal["1.0"] = "1.0"
@@ -90,6 +92,7 @@ W3C_VIDEO = W3C_DIRECTORY / "standard.mp4"
 W3C_DESCRIBED_VIDEO = W3C_DIRECTORY / "described.mp4"
 W3C_CAPTIONS = W3C_DIRECTORY / "captions.en.vtt"
 W3C_DURATION = 63.755556
+W3C_DESCRIBED_DURATION = 98.469388
 W3C_PDF = W3C_DIRECTORY / "accessibility-prototype.pdf"
 
 
@@ -192,8 +195,7 @@ def w3c_lesson() -> Lesson:
             described_captions=f"/api/v1/lessons/{W3C_ID}/media/described-captions?version=1",
             audio_src=f"/api/v1/lessons/{W3C_ID}/media/audio?version=1",
             described_audio_src=f"/api/v1/lessons/{W3C_ID}/media/described-audio?version=1",
-            sign_src=f"/api/v1/lessons/{W3C_ID}/media/sign-video?version=1" if (W3C_DIRECTORY / "ethsl.mp4").is_file() else None,
-            sign_status="review-pending" if (W3C_DIRECTORY / "ethsl.mp4").is_file() else "unavailable",
+            described_duration=W3C_DESCRIBED_DURATION,
         ),
     )
 
@@ -212,12 +214,12 @@ def get_lesson(lesson_id: str, version: int) -> Lesson:
 
 def captions_vtt(lesson: Lesson) -> str:
     def clock(seconds: float) -> str:
-        total = round(seconds * 1000)
+        total = int(seconds * 1000)
         return f"{total // 3600000:02d}:{total // 60000 % 60:02d}:{total // 1000 % 60:02d}.{total % 1000:03d}"
     cues = ["WEBVTT", "NOTE Source-draft captions. Human timing and wording review pending."]
     for segment in lesson.segments:
         if segment.start is not None and segment.end is not None:
-            cues.append(f"{segment.id}\n{clock(segment.start)} --> {clock(segment.end)}\n{html.escape(segment.text)}")
+            cues.append(f"{segment.id}\n{clock(segment.start)} --> {clock(segment.end)}\n{html.escape(segment.text, quote=False)}")
     return "\n\n".join(cues) + "\n"
 
 
@@ -255,51 +257,6 @@ def braille_ready_file(lesson: Lesson) -> bytes:
 
 
 def export_lesson(lesson: Lesson, format: str) -> tuple[bytes, str, str]:
-    text = "\n\n".join([
-        lesson.title, lesson.content_status + " · version " + str(lesson.content_version),
-        *[f"{s.heading}\n{s.text}" for s in lesson.segments],
-    ]) + "\n"
-    sections = "".join(
-        f'<section id="{html.escape(s.id, quote=True)}"><h2>{html.escape(s.heading)}</h2><p>{html.escape(s.text)}</p></section>'
-        for s in lesson.segments
-    )
-    document = (
-        '<!doctype html><html lang="en"><meta charset="utf-8">'
-        '<meta name="viewport" content="width=device-width, initial-scale=1">'
-        f'<title>{html.escape(lesson.title)}</title>'
-        '<style>body{max-width:65ch;margin:2rem auto;padding:0 1rem;font:1.125rem/1.7 sans-serif;color:#172d38;background:#fff}h1,h2{line-height:1.3}p{overflow-wrap:anywhere}</style>'
-        f'<main><h1>{html.escape(lesson.title)}</h1><p>{html.escape(lesson.content_status)} · version {lesson.content_version}</p>{sections}</main></html>'
-    ).encode()
-    if format == "txt":
-        return text.encode(), "text/plain; charset=utf-8", "txt"
-    if format == "html":
-        return document, "text/html; charset=utf-8", "html"
-    if format == "brf" and lesson.lesson_id == W3C_ID:
-        return braille_ready_file(lesson), "application/octet-stream", "brf"
-    if format == "pdf" and lesson.lesson_id == W3C_ID and W3C_PDF.is_file():
-        return W3C_PDF.read_bytes(), "application/pdf", "pdf"
-    if format != "zip":
-        raise KeyError(format)
-    files = {"index.html": document, "lesson.txt": text.encode()}
-    if lesson.lesson_id == W3C_ID:
-        for name in ("captions.en.vtt", "captions.am.vtt", "captions.ti.vtt", "captions-described.en.vtt", "audio.mp3", "audio-described.mp3", "accessibility-prototype.pdf"):
-            path = W3C_DIRECTORY / name
-            if path.is_file():
-                files[name] = path.read_bytes()
-        files["transcript.uncontracted-review-pending.brf"] = braille_ready_file(lesson)
-    elif lesson.media:
-        files["captions.en.vtt"] = captions_vtt(lesson).encode()
-    manifest = {
-        "schema_version": "1.0", "lesson_id": lesson.lesson_id,
-        "content_version": lesson.content_version, "course_version_id": lesson.course_version_id,
-        "content_status": lesson.content_status,
-        "files": [{"path": name, "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()} for name, data in files.items()],
-    }
-    files["manifest.json"] = json.dumps(manifest, indent=2).encode()
-    output = io.BytesIO()
-    with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-        for name, data in files.items():
-            info = zipfile.ZipInfo(name, date_time=(2026, 11, 13, 0, 0, 0))
-            info.compress_type = zipfile.ZIP_DEFLATED
-            archive.writestr(info, data)
-    return output.getvalue(), "application/zip", "zip"
+    from access_core.exports import export_lesson as portable_export
+
+    return portable_export(lesson, format)

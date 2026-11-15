@@ -6,7 +6,7 @@ test('read, search, resize and download independently in two instances', async (
   const first = page.locator('alx-accessible-lesson').first();
   await expect(first.getByRole('heading', { name: 'Make a learning plan' })).toBeVisible();
   await first.getByRole('searchbox').fill('breaks');
-  await expect(first.getByRole('status')).toHaveText('1 of 3 sections found.');
+  await expect(first.getByRole('status').filter({ hasText: '1 of 3 sections found.' })).toBeVisible();
   await first.getByRole('combobox').selectOption('1.5');
   await page.getByText('Independent second component instance').click();
   const second = page.locator('alx-accessible-lesson').nth(1);

@@ -40,6 +40,7 @@ RUN apt-get update \
 
 COPY ["example lessons", "example lessons"]
 RUN /app/.venv/bin/python -m access_core.offline_video
+RUN /app/.venv/bin/python -m access_core.exports
 
 
 FROM python:3.11-slim-bookworm AS speech-runtime
@@ -79,6 +80,7 @@ COPY --chown=access:access examples examples
 COPY --chown=access:access ["example lessons", "example lessons"]
 COPY --chown=access:access Savanna-static-pages Savanna-static-pages
 COPY --from=offline-media-builder --chown=access:access /app/artifacts/offline-video artifacts/offline-video
+COPY --from=offline-media-builder --chown=access:access /app/artifacts/lesson-exports artifacts/lesson-exports
 COPY --from=component-builder --chown=access:access /build/packages/lesson-component/dist packages/lesson-component/dist
 
 USER access

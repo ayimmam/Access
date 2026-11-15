@@ -12,6 +12,8 @@ a { color: #185d4c; text-underline-offset: .2em; }
 .installation { border-block: 1px solid #9cac9f; padding-block: 1rem 1.5rem; margin-block: 2rem; }
 .controls { display: flex; flex-wrap: wrap; gap: 1rem; align-items: end; }
 label { display: grid; gap: .35rem; font-weight: 600; }
+.controls label { min-width:0; flex:1 1 18rem; }
+.controls select { width:100%; min-width:0; }
 select, button, textarea { font: inherit; padding: .6rem .8rem; border: 1px solid #59766b; border-radius: .3rem; max-width: 100%; color: inherit; background: white; min-height: 44px; }
 button { cursor: pointer; }
 button:disabled { cursor: default; color: #516259; background: #e1e6e1; }

@@ -10,6 +10,7 @@ interface ExportItem { format: string; label: string; bytes: number; href: strin
 
 const styles = `
   :host { display:block; margin-block:1.5rem; font:1rem/1.65 system-ui,sans-serif; color:var(--access-text,#17313b); }
+  :host([hidden]) { display:none !important; }
   * { box-sizing:border-box; }
   article { background:var(--access-surface,#fff); border:1px solid #b4c6c2; border-radius:.7rem; padding:clamp(1rem,4vw,2.25rem); }
   h2,h3 { line-height:1.3; } h2 { margin-top:0; font-size:1.65em; } h3 { font-size:1.15em; }
@@ -20,6 +21,7 @@ const styles = `
   .toolbar input,.toolbar select { width:100%; min-width:0; }
   label { display:grid; gap:.35rem; font-weight:600; flex:1 1 14rem; }
   input,select,button { font:inherit; min-height:2.75rem; padding:.45rem .7rem; border:1px solid #718d90; border-radius:.3rem; background:white; color:inherit; max-width:100%; }
+  input[type=checkbox] { width:1.2rem; height:1.2rem; min-height:0; }
   button { cursor:pointer; } a { color:var(--access-link,#155e63); text-underline-offset:.2em; }
   :focus-visible { outline:3px solid #bd4e19; outline-offset:3px; }
   .reading { font-size:var(--reading-size,1rem); } .exports { display:flex; flex-wrap:wrap; gap:.75rem 1.5rem; padding:0; list-style:none; }
@@ -103,7 +105,7 @@ function node<K extends keyof HTMLElementTagNameMap>(tag: K, text?: string): HTM
 }
 
 export class AccessibleLesson extends HTMLElement {
-  static observedAttributes = ['api-base', 'lesson-id', 'content-version', 'lang'];
+  static observedAttributes = ['api-base', 'lesson-id', 'content-version', 'lang', 'instance-id', 'review-tools'];
   private root = this.attachShadow({ mode: 'open' });
   private controller?: AbortController;
   private sequence = 0;
@@ -144,15 +146,42 @@ export class AccessibleLesson extends HTMLElement {
       if (!['http:', 'https:'].includes(base.protocol) || base.username || base.password) throw new Error('Invalid API address');
       const path = `lessons/${encodeURIComponent(lessonId)}`;
       const read = async (resource: string) => {
-        const response = await fetch(new URL(`${path}/${resource}?version=${version}`, base), { signal: controller.signal, credentials: 'omit' });
-        if (!response.ok) throw new Error('Lesson request failed');
-        return response.json();
+        const requestController = new AbortController();
+        const abort = () => requestController.abort();
+        controller.signal.addEventListener('abort', abort, { once: true });
+        const timer = setTimeout(abort, 15000);
+        try {
+          if (controller.signal.aborted) requestController.abort();
+          const response = await fetch(new URL(`${path}/${resource}?version=${version}`, base), { signal: requestController.signal, credentials: 'omit', redirect: 'error' });
+          if (!response.ok) throw new Error('Lesson request failed');
+          return await response.json();
+        } finally { clearTimeout(timer); controller.signal.removeEventListener('abort', abort); }
       };
-      const [lesson, exports] = await Promise.all([read('manifest'), read('exports')]) as [Lesson, { items: ExportItem[]; content_version: number }];
+      const lesson = await read('manifest') as Lesson;
       if (sequence !== this.sequence || controller.signal.aborted) return;
-      if (lesson.schema_version !== '1.0' || lesson.lesson_id !== lessonId || lesson.content_version !== Number(version) || exports.content_version !== Number(version)) throw new Error('Unsupported lesson version');
-      if (!Array.isArray(lesson.segments) || !Array.isArray(lesson.unavailable) || !Array.isArray(exports.items)) throw new Error('Invalid lesson data');
-      this.render(article, lesson, exports.items, base);
+      if (lesson.schema_version !== '1.0' || lesson.lesson_id !== lessonId || lesson.content_version !== Number(version)) throw new Error('Unsupported lesson version');
+      if (!Array.isArray(lesson.segments) || !Array.isArray(lesson.unavailable)) throw new Error('Invalid lesson data');
+      this.render(article, lesson, [], base);
+      const links = article.querySelector<HTMLUListElement>('.exports')!;
+      const exportStatus = node('p', 'Loading offline download details…'); exportStatus.setAttribute('role', 'status');
+      const retryExports = node('button', 'Retry downloads'); retryExports.type = 'button'; retryExports.hidden = true;
+      links.before(exportStatus, retryExports);
+      const loadExports = async () => {
+        retryExports.disabled = true; exportStatus.textContent = 'Loading offline download details…';
+        try {
+          const result = await read('exports') as { lesson_id: string; items: ExportItem[]; content_version: number };
+          if (controller.signal.aborted || sequence !== this.sequence) return;
+          if (result.lesson_id !== lessonId || result.content_version !== Number(version) || !Array.isArray(result.items)) throw new Error('Invalid exports');
+          this.renderExports(links, lesson, result.items, base);
+          exportStatus.textContent = ''; retryExports.hidden = true;
+        } catch {
+          if (controller.signal.aborted || sequence !== this.sequence) return;
+          exportStatus.textContent = 'Offline downloads are temporarily unavailable. You can still use the lesson and transcript.';
+          retryExports.hidden = false;
+        } finally { retryExports.disabled = false; }
+      };
+      retryExports.addEventListener('click', () => void loadExports());
+      void loadExports();
       if (focusAfterLoad) {
         const heading = article.querySelector('h2');
         if (heading) { heading.tabIndex = -1; heading.focus(); }
@@ -183,7 +212,10 @@ export class AccessibleLesson extends HTMLElement {
     let media: ReturnType<typeof createMediaView> | undefined;
     if (lesson.media) {
       media = createMediaView(lesson.media, lesson.segments, base,
-        detail => this.emit('alx-avatar-status', detail), size => this.emit('alx-caption-size', { size }));
+        detail => this.emit('alx-avatar-status', detail), size => this.emit('alx-caption-size', { size }), {
+          instanceKey: this.getAttribute('instance-id') ? `${encodeURIComponent(base.href)}:${encodeURIComponent(lesson.lesson_id)}:v${lesson.content_version}:${encodeURIComponent(this.getAttribute('instance-id')!)}` : undefined,
+          reviewTools: this.hasAttribute('review-tools'),
+        });
       this.disposeMedia = media.dispose;
       article.append(media.view);
     }
@@ -200,33 +232,35 @@ export class AccessibleLesson extends HTMLElement {
     const status = node('p'); status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite');
     const reading = node('div'); reading.className = 'reading';
     if (media) { reading.classList.add('transcript'); reading.setAttribute('role', 'region'); reading.setAttribute('aria-label', 'Transcript passages'); reading.tabIndex = 0; }
-    const sections = lesson.segments.map(segment => {
-      const section = node('section');
-      if (segment.start !== undefined && segment.start !== null && media) {
-        const seek = node('button', `Jump to ${segment.heading}`); seek.type = 'button'; seek.className = 'seek';
-        seek.addEventListener('click', () => media?.seek(segment.start!));
-        section.append(seek, node('p', segment.text));
-      } else section.append(node('h3', segment.heading), node('p', segment.text));
-      reading.append(section);
-      return { section, text: `${segment.heading} ${segment.text}`.toLocaleLowerCase() };
-    });
-    search.addEventListener('input', () => {
+    let sections: { section: HTMLElement; text: string }[] = [];
+    const filter = () => {
       const query = search.value.trim().toLocaleLowerCase();
       let count = 0;
       for (const item of sections) { item.section.hidden = !item.text.includes(query); if (!item.section.hidden) count++; }
       status.textContent = query ? `${count} of ${sections.length} sections found.` : '';
-    });
+    };
+    const renderTranscript = () => {
+      reading.replaceChildren(); reading.lang = media?.language || lesson.language;
+      sections = (media?.segments || lesson.segments).map(segment => {
+        const section = node('section');
+        if (segment.start !== undefined && segment.start !== null && media) {
+          const seek = node('button', `Jump to ${segment.heading}`); seek.type = 'button'; seek.className = 'seek';
+          seek.addEventListener('click', () => media?.seek(segment.start!));
+          section.append(seek, node('p', segment.text));
+        } else section.append(node('h3', segment.heading), node('p', segment.text));
+        reading.append(section);
+        return { section, text: `${segment.heading} ${segment.text}`.toLocaleLowerCase() };
+      });
+      if (!sections.length) reading.append(node('p', 'The transcript is awaiting human review and is not published.'));
+      filter();
+    };
+    renderTranscript();
+    media?.view.addEventListener('access-edition-change', renderTranscript);
+    search.addEventListener('input', filter);
     size.addEventListener('change', () => { reading.style.setProperty('--reading-size', `${size.value}rem`); });
     const heading = node('h3', 'Save for offline reading');
     const links = node('ul'); links.className = 'exports';
-    for (const item of exports) {
-      const url = new URL(item.href, base);
-      if (url.origin !== base.origin || !url.pathname.startsWith(base.pathname)) throw new Error('Invalid export address');
-      const link = node('a', `${item.label} (${new Intl.NumberFormat('en', { maximumFractionDigits: 1 }).format(item.bytes / 1024)} KB)`);
-      link.href = url.href; link.setAttribute('download', '');
-      link.addEventListener('click', () => this.emit('alx-media-download', { lessonId: lesson.lesson_id, contentVersion: lesson.content_version, format: item.format, status: 'requested' }));
-      const listItem = node('li'); listItem.append(link); links.append(listItem);
-    }
+    this.renderExports(links, lesson, exports, base);
     const availability = node('details');
     availability.append(node('summary', 'Formats awaiting content and review'));
     const list = node('ul');
@@ -234,5 +268,19 @@ export class AccessibleLesson extends HTMLElement {
     availability.append(list);
     if (media) article.append(node('h3', 'Transcript'));
     article.append(toolbar, status, reading, heading, links, availability);
+  }
+
+  private renderExports(links: HTMLUListElement, lesson: Lesson, exports: ExportItem[], base: URL) {
+    const items: HTMLLIElement[] = [];
+    for (const item of exports) {
+      if (!Number.isSafeInteger(item.bytes) || item.bytes < 0 || typeof item.label !== 'string' || typeof item.href !== 'string') throw new Error('Invalid export data');
+      const url = new URL(item.href, base);
+      if (url.origin !== base.origin || !url.pathname.startsWith(base.pathname)) throw new Error('Invalid export address');
+      const link = node('a', `${item.label} (${new Intl.NumberFormat('en', { maximumFractionDigits: 1 }).format(item.bytes / 1024)} KB)`);
+      link.href = url.href; link.setAttribute('download', '');
+      link.addEventListener('click', () => this.emit('alx-media-download', { lessonId: lesson.lesson_id, contentVersion: lesson.content_version, format: item.format, status: 'requested' }));
+      const listItem = node('li'); listItem.append(link); items.push(listItem);
+    }
+    links.replaceChildren(...items);
   }
 }

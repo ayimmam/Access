@@ -43,7 +43,7 @@ test('career page and job dialog have no automated accessibility violations', as
 test('certificate verifier handles valid, revoked and unknown demo records', async ({ page }) => {
   for (const [identifier, message] of [['DEMO-LEARNING-001','Valid fictional demo record.'],['DEMO-REVOKED-001','Revoked fictional demo record.'],['unknown','No matching demo record was found.']]) {
     await page.goto(`/demo/certificates/${identifier}?status=demo-valid`);
-    await expect(page.getByRole('status')).toHaveText(message);
+    await expect(page.locator('#verification')).toHaveText(message);
     await expect(page.getByText('DEMO — NOT AN ALX-ISSUED CREDENTIAL')).toBeVisible();
   }
 });
@@ -51,9 +51,10 @@ test('certificate verifier handles valid, revoked and unknown demo records', asy
 test('Ethioware-style host uses the same working lesson and supports hide/show', async ({ page }) => {
   await page.goto('/demo/ethioware');
   const lesson = page.locator('alx-accessible-lesson');
+  await page.getByLabel('Demo lesson content').selectOption('demo-learning-plan');
   await expect(lesson.getByRole('heading', { name: 'Make a learning plan' })).toBeVisible();
   await lesson.getByRole('searchbox').fill('breaks');
-  await expect(lesson.getByRole('status')).toHaveText('1 of 3 sections found.');
+  await expect(lesson.getByRole('status').filter({ hasText: '1 of 3 sections found.' })).toBeVisible();
   await page.getByRole('button', { name: 'Hide Access learning tools' }).click();
   await expect(lesson).toBeHidden();
   await page.getByRole('button', { name: 'Show Access learning tools' }).click();

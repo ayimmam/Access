@@ -69,12 +69,11 @@ def test_example_media_captions_and_range_requests():
     lesson = client.get(base + "/manifest").json()
     assert lesson["content_status"] == "source-draft"
     assert lesson["media"]["avatar_mode"] == "timing-prototype"
-    assert lesson["segments"][0]["text"] == "[Music]"
-    assert lesson["segments"][-1]["end"] == 121.496916
-    captions = client.get(lesson["media"]["captions"])
-    assert captions.headers["content-type"].startswith("text/vtt")
-    assert "00:00:01.000 --> 00:00:09.000" in captions.text
-    assert "0 seconds" not in captions.text
+    assert lesson["segments"] == []
+    assert lesson["media"]["captions"] is None
+    assert lesson["media"]["caption_tracks"][0]["status"] == "review-pending"
+    assert client.get(base + "/media/captions").status_code == 404
+    assert client.get(base + "/transcripts/en").json()["segments"] == []
     response = client.get(lesson["media"]["src"], headers={"Range": "bytes=0-1023"})
     assert response.status_code == 206
     assert len(response.content) == 1024
@@ -89,11 +88,13 @@ def test_caption_parser_rejects_invalid_or_non_monotonic_timestamps():
             parse_caption_source(text, 20)
 
 
-def test_media_pack_contains_captions_and_all_file_hashes_match():
+def test_media_pack_excludes_unreviewed_captions_and_all_file_hashes_match():
     response = client.get(f"/api/v1/lessons/{EXAMPLE_ID}/downloads/zip")
     with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
         manifest = json.loads(archive.read("manifest.json"))
-        assert "captions.en.vtt" in archive.namelist()
+        assert "captions.en.vtt" not in archive.namelist()
+        assert manifest["pack_type"] == "text-only"
+        assert b"awaiting human review" in archive.read("index.html")
         for entry in manifest["files"]:
             assert hashlib.sha256(archive.read(entry["path"])).hexdigest() == entry["sha256"]
 
@@ -103,26 +104,30 @@ def test_w3c_media_demo_exposes_review_status_and_equivalent_formats():
     lesson = client.get(base + "/manifest").json()
     assert lesson["content_status"] == "review-pending"
     assert [track["language"] for track in lesson["media"]["caption_tracks"]] == ["en", "am", "ti"]
-    assert lesson["media"]["caption_tracks"][1]["status"] == "machine-translated-review-pending"
+    assert lesson["media"]["caption_tracks"][1]["status"] == "review-pending"
+    assert lesson["media"]["caption_tracks"][1]["src"] is None
+    assert lesson["media"]["described_duration"] > lesson["media"]["duration"]
+    assert lesson["media"]["described_segments"][4]["start"] == 31.32
     assert lesson["media"]["described_src"].endswith("described-video?version=1")
     assert lesson["media"]["sign_src"] is None
     assert client.get(base + "/media/sign-video").status_code == 404
-    assert "ጥሩ" in client.get(base + "/media/captions-am").text
-    assert "ጽቡቕ" in client.get(base + "/media/captions-ti").text
+    assert client.get(base + "/media/captions-am").status_code == 404
+    assert client.get(base + "/media/captions-ti").status_code == 404
     formats = {item["format"] for item in client.get(base + "/exports").json()["items"]}
-    assert formats == {"html", "txt", "zip", "pdf", "brf"}
-    pdf = client.get(base + "/downloads/pdf")
-    assert pdf.headers["content-type"] == "application/pdf"
-    assert pdf.content.startswith(b"%PDF-")
-    brf = client.get(base + "/downloads/brf")
-    assert b",,TRANSCRIBER" in brf.content and b",,PENDING" in brf.content
+    assert formats == {"html", "txt", "zip"}
+    assert client.get(base + "/downloads/pdf").status_code == 404
+    assert client.get(base + "/downloads/brf").status_code == 404
 
 
 def test_w3c_offline_pack_contains_low_data_and_review_assets_with_hashes():
     response = client.get(f"/api/v1/lessons/{W3C_ID}/downloads/zip")
     with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
         names = set(archive.namelist())
-        assert {"captions.en.vtt", "captions.am.vtt", "captions.ti.vtt", "captions-described.en.vtt", "audio.mp3", "audio-described.mp3", "accessibility-prototype.pdf", "transcript.uncontracted-review-pending.brf"} <= names
+        assert {"captions.en.vtt", "captions-described.en.vtt", "audio.mp3", "audio-described.mp3"} <= names
+        assert not {"captions.am.vtt", "captions.ti.vtt", "accessibility-prototype.pdf", "transcript.uncontracted-review-pending.brf"} & names
+        document = archive.read("index.html").decode()
+        assert 'src="audio.mp3"' in document and 'src="audio-described.mp3"' in document
+        assert "Audio-described edition: spoken-caption transcript" in document
         manifest = json.loads(archive.read("manifest.json"))
         for entry in manifest["files"]:
             assert hashlib.sha256(archive.read(entry["path"])).hexdigest() == entry["sha256"]
@@ -134,6 +139,11 @@ def test_offline_video_manifest_and_download_are_bound_to_edition_and_version(tm
     assert client.get(base + "/manifest").json()["media"]["offline_video_src"] is None
     asset = tmp_path / f"{EXAMPLE_ID}-v1-standard.mp4"
     asset.write_bytes(b"offline edition fixture")
+    from access_core.exports import publication_binding
+    from access_core.lessons import get_lesson
+    from access_core.review import file_hash
+    assert client.get(base + "/manifest").json()["media"]["offline_video_src"] is None
+    asset.with_suffix(".json").write_text(json.dumps({"binding": publication_binding(get_lesson(EXAMPLE_ID, 1)), "sha256": file_hash(asset)}))
 
     url = client.get(base + "/manifest").json()["media"]["offline_video_src"]
     assert url == base + "/offline-video/standard?version=1"
@@ -144,3 +154,5 @@ def test_offline_video_manifest_and_download_are_bound_to_edition_and_version(tm
     assert response.content == asset.read_bytes()
     assert client.get(base + "/offline-video/described?version=1").status_code == 404
     assert client.get(base + "/offline-video/standard?version=2").status_code == 404
+    asset.write_bytes(b"tampered edition")
+    assert client.get(base + "/offline-video/standard").status_code == 404

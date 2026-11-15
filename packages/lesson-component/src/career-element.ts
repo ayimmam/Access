@@ -9,6 +9,7 @@ export interface Job {
 
 const css = `
 :host { display:block; font:1rem/1.6 system-ui,sans-serif; color:var(--access-text,#192131); }
+:host([hidden]) { display:none !important; }
 * { box-sizing:border-box; } [hidden] { display:none !important; }
 h2,h3,h4 { line-height:1.3; } h2 { font-size:2rem; margin-top:0; } h3 { margin:0 0 .4rem; font-size:1.35rem; }
 p { max-width:75ch; } a { color:var(--access-link,#a8174d); text-underline-offset:.2em; }
@@ -74,17 +75,30 @@ export class CareerGateway extends HTMLElement {
   private saved = new Set<string>();
   private voice?: CareerVoice;
   private cleanupAudio?: () => void;
+  private stopAudio?: () => void;
+  private visibilityObserver?: MutationObserver;
+  private visibility = () => { if (document.hidden || this.closest('[hidden]') || !this.getClientRects().length) { this.stopAudio?.(); this.voice?.stop(false); } };
   private timer?: ReturnType<typeof setTimeout>;
 
-  connectedCallback() { void this.load(); }
+  connectedCallback() {
+    this.visibilityObserver = new MutationObserver(this.visibility);
+    let ancestor: Element | null = this;
+    while (ancestor) {
+      this.visibilityObserver.observe(ancestor, { attributes: true, attributeFilter: ['hidden', 'style', 'class', 'open'] });
+      ancestor = ancestor.parentElement;
+    }
+    document.addEventListener('visibilitychange', this.visibility);
+    void this.load();
+  }
   attributeChangedCallback(name: string) {
-    if (name === 'voice-paused') { this.voice?.setPaused(this.hasAttribute('voice-paused')); return; }
+    if (name === 'voice-paused') { this.voice?.setPaused(this.hasAttribute('voice-paused')); if (this.hasAttribute('voice-paused')) this.stopAudio?.(); return; }
     if (this.isConnected) void this.load();
   }
-  disconnectedCallback() { this.controller?.abort(); this.cleanup(); }
+  disconnectedCallback() { this.controller?.abort(); this.cleanup(); this.visibilityObserver?.disconnect(); document.removeEventListener('visibilitychange', this.visibility); }
   private cleanup() {
     clearTimeout(this.timer); this.voice?.destroy(); this.voice = undefined;
     this.cleanupAudio?.(); this.cleanupAudio = undefined;
+    this.stopAudio = undefined;
   }
   private emit(name: string, jobId: string) {
     this.dispatchEvent(new CustomEvent(name, { bubbles: true, composed: true, detail: { jobId, demo: true } }));
@@ -141,15 +155,19 @@ export class CareerGateway extends HTMLElement {
     const results = el('section'); results.className = 'results'; results.setAttribute('aria-label', 'Job results');
     const resultHeader = el('div'); resultHeader.className = 'result-header';
     const count = el('p'); count.setAttribute('role', 'status'); count.setAttribute('aria-live', 'polite');
-    const calendar = options('Deadline calendar', ['Ethiopian']); resultHeader.append(count, calendar.wrapper);
+    const resultHeading = el('h3', 'Job results'); resultHeading.tabIndex = -1;
+    const calendar = options('Deadline calendar', ['Ethiopian']); calendar.select.options[0].textContent = 'Gregorian';
+    resultHeader.append(resultHeading, count, calendar.wrapper);
     const list = el('div'); results.append(resultHeader, list);
     const dialog = el('dialog'); dialog.setAttribute('aria-labelledby', 'job-dialog-title');
     const soundStatus = el('p', 'Recorded English summaries use a synthetic demo voice; equivalent text is always shown.'); soundStatus.setAttribute('role', 'status'); soundStatus.className = 'note';
     const player = el('audio'); player.controls = true; player.preload = 'none'; player.hidden = true;
     player.setAttribute('aria-label', 'Recorded job summary');
     const stopRecorded = () => { player.pause(); if (player.currentTime) player.currentTime = 0; };
+    this.stopAudio = stopRecorded;
     this.cleanupAudio = () => { stopRecorded(); player.removeAttribute('src'); player.load(); };
-    player.addEventListener('play', () => this.voice?.stop(false));
+    player.addEventListener('play', () => { this.voice?.stop(false); this.visibility(); });
+    player.addEventListener('error', () => { soundStatus.textContent = 'Recorded summary is unavailable. Read the equivalent job text or try another summary.'; });
     const stop = button('Stop recorded summary', () => { player.pause(); player.currentTime = 0; soundStatus.textContent = 'Recorded summary stopped.'; });
     stop.hidden = true;
     const soundControls = el('section'); soundControls.className = 'job-control-card';
@@ -164,15 +182,19 @@ export class CareerGateway extends HTMLElement {
       soundStatus.textContent = `Playing the recorded synthetic demo summary for ${job.title}.`;
       void player.play().catch(() => { soundStatus.textContent = 'Recorded summary could not start. Use the audio controls or read the equivalent text.'; });
     };
-    let trigger: HTMLButtonElement | undefined;
-    dialog.addEventListener('close', () => trigger?.focus());
+    let triggerId: string | undefined;
+    dialog.addEventListener('close', () => {
+      clearTimeout(this.timer); update();
+      const target = [...list.querySelectorAll<HTMLButtonElement>('[data-detail-job-id]')].find(item => item.dataset.detailJobId === triggerId);
+      (target || resultHeading).focus();
+    });
     const dateText = (date: string) => {
       try { return new Intl.DateTimeFormat(calendar.select.value ? 'en-ET-u-ca-ethiopic' : 'en', { year:'numeric', month:'long', day:'numeric', timeZone:'UTC' }).format(new Date(`${date}T12:00:00Z`)) + (calendar.select.value ? ' (Ethiopian)' : ' (Gregorian)'); }
       catch { return `${date} (Gregorian)`; }
     };
-    const detail = (job: Job, opener: HTMLButtonElement) => {
+    const detail = (job: Job) => {
       this.voice?.stop(); stopRecorded();
-      trigger = opener;
+      clearTimeout(this.timer); triggerId = job.id;
       const close = button('Close job details', () => dialog.close()); close.className = 'close';
       const title = el('h2', job.title); title.id = 'job-dialog-title';
       const tasks = el('ul'); job.responsibilities.forEach(task => tasks.append(el('li', task)));
@@ -214,7 +236,8 @@ export class CareerGateway extends HTMLElement {
           const group = el('div'); group.append(el('dt',label),el('dd',value)); facts.append(group);
         }
         const actions = el('div'); actions.className = 'actions';
-        const open = button(`View details — ${job.title}`, () => detail(job, open)); open.className = 'primary';
+        const open = button(`View details — ${job.title}`, () => detail(job)); open.className = 'primary';
+        open.dataset.detailJobId = job.id;
         const save = button(`Save job — ${job.title}`, () => {
           this.saved.has(job.id) ? this.saved.delete(job.id) : this.saved.add(job.id);
           save.setAttribute('aria-pressed', String(this.saved.has(job.id)));

@@ -6,10 +6,12 @@
 *.key
 # JavaScript
 node_modules/
+node_modules
 dist/
 coverage/
 # Python
 .venv/
+.venv
 __pycache__/
 *.py[cod]
 .pytest_cache/

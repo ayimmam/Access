@@ -10,3 +10,5 @@ Vercel project settings:
 - Output Directory: empty
 
 For local cross-origin testing, run the Access API on `127.0.0.1:8000` with `http://127.0.0.1:5173` in `ACCESS_ALLOWED_ORIGINS`, then serve this directory on port 5173. The root test command `npm run test:vercel-demos` starts and verifies the required services.
+
+The catalog layout and artwork reference the [public Ethioware homepage](https://ethioware.jiret.site/). Course previews link to the shared Access practice reader, which uses the attributed public Access media fixtures.

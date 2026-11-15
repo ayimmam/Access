@@ -1,4 +1,22 @@
-@media (max-width: 760px) {
+@media (max-width: 850px) {
+  .header-inner { grid-template-columns: auto minmax(0, 1fr) auto; gap: .65rem; }
+  .course-catalog { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .course-hero, .course-detail, #course-software, .course-detail:target, .learning-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .course-hero { gap: 1.5rem; }
+  .module-panel { order: 2; }
+  .lesson-shell { order: 1; }
+}
+@media (max-width: 620px) {
+  .header-inner { grid-template-columns: auto minmax(0, 1fr); padding-block: .4rem; }
+  .header-inner nav { grid-column: 1 / -1; justify-content: end; }
+  .course-catalog { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; }
+  .catalog-copy { padding: .55rem; }
+  .catalog-card dl { grid-template-columns: minmax(0, 1fr); text-align: left; padding-inline: .55rem; }
+  .catalog-card dl div { display: flex; justify-content: space-between; flex-wrap: wrap; gap: .25rem; }
+  .catalog-card .button { margin-inline: .55rem; }
   .host-controls label { min-width: 0; }
   .host-controls select { width: 100%; }
+  #courses, .course-detail, #lesson-workspace { scroll-margin-top: 1rem; }
 }

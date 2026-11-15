@@ -16,42 +16,145 @@
   <a class="skip-link" href="#lesson-workspace">Skip to lesson workspace</a>
   <div class="demo-ribbon"><strong>Independent integration demo</strong><span>No learner account, enrollment, or live course record is used.</span></div>
   <header class="site-header">
-    <a class="brand" href="/">
-      <span class="brand-mark" aria-hidden="true">E</span>
-      <span>Ethioware<small>Learning lab · Access demo</small></span>
-    </a>
-    <nav aria-label="Course navigation">
-      <a href="#overview">Overview</a>
-      <a href="#modules">Modules</a>
-      <a href="#lesson-workspace" aria-current="page">Learning tools</a>
-      <a href="https://access-career-gateway.vercel.app/">Career gateway</a>
-    </nav>
+    <div class="header-inner">
+      <a class="brand" href="/" aria-label="Ethioware demo home"><img src="/assets/logo.webp" width="48" height="48" alt="Ethioware"></a>
+      <label class="course-search"><span class="visually-hidden">Search courses</span><input type="search" id="course-search" placeholder="What do you want to learn?" aria-controls="course-catalog"></label>
+      <nav aria-label="Course navigation"><a href="#courses">Courses</a><a class="button button-primary" href="#lesson-workspace">Learning tools</a></nav>
+    </div>
   </header>
 
   <main>
-    <section class="course-hero" id="overview" aria-labelledby="course-title">
-      <div class="hero-copy">
-        <p class="breadcrumbs"><span>Courses</span><span aria-hidden="true">/</span><span>Software Engineering</span></p>
-        <p class="eyebrow">Foundation pathway · Self-paced practice</p>
-        <h1 id="course-title">Software Engineering Basics</h1>
-        <p class="hero-lede">Build the learning habits and digital foundations that make technical training easier to navigate—on desktop, mobile, or with assistive technology.</p>
-        <div class="hero-actions">
-          <a class="button button-primary" href="#lesson-workspace">Continue practice</a>
-          <a class="button button-secondary" href="#integration-notes">How Access fits</a>
-        </div>
+    <section class="course-hero" aria-labelledby="site-title">
+      <div>
+        <h1 id="site-title">Ethioware<br>EdTech Initiative</h1>
+        <ul>
+          <li><strong>Motivation</strong> · Learn from expert mentors and see what the road ahead looks like.</li>
+          <li><strong>Adaptation</strong> · Learn from the setbacks of people who have taken that path.</li>
+          <li><strong>Execution</strong> · Decide what to learn, where to learn it, and how to put it into practice.</li>
+        </ul>
       </div>
-      <aside class="course-card" aria-label="Course snapshot">
-        <span class="course-code">SEB · FOUNDATION</span>
-        <div class="course-visual" aria-hidden="true"><span>&lt;/&gt;</span></div>
-        <dl>
-          <div><dt>Level</dt><dd>Beginner</dd></div>
-          <div><dt>Practice</dt><dd>3 short sections</dd></div>
-          <div><dt>Formats</dt><dd>Web + offline text</dd></div>
-        </dl>
-      </aside>
+      <img src="/assets/team.webp" alt="Ethioware platform instructors gathered indoors" width="680" height="382">
     </section>
 
-    <p class="provider-notice">This page is an integration study informed by Ethioware’s public course structure. It uses Access fixtures—not Ethioware course content, accounts, completion, or certificates.</p>
+    <section class="catalog" id="courses" tabindex="-1" aria-labelledby="courses-title">
+      <h2 id="courses-title">Courses</h2>
+      <p id="course-count" class="visually-hidden" role="status"></p>
+      <div class="course-catalog" id="course-catalog">
+        <article class="catalog-card">
+          <img src="/assets/medicine.webp" alt="" width="640" height="360" loading="lazy">
+          <div class="catalog-copy"><p class="catalog-title">Medicine Basics</p><p>The foundation course introduces Internet safety before moving into AP Biology and AP Chemistry.</p></div>
+          <dl><div><dt>Level</dt><dd>Beginner</dd></div><div><dt>Duration</dt><dd>9</dd></div><div><dt>Activities</dt><dd>12</dd></div></dl>
+          <a class="button button-secondary" href="#course-medicine" aria-label="Get started with Medicine Basics">Get started</a>
+        </article>
+        <article class="catalog-card">
+          <img src="/assets/engineering.webp" alt="" width="640" height="360" loading="lazy">
+          <div class="catalog-copy"><p class="catalog-title">Engineering Basics</p><p>Explore engineering pathways after a foundation in digital readiness.</p></div>
+          <dl><div><dt>Level</dt><dd>Beginner</dd></div><div><dt>Duration</dt><dd>10</dd></div><div><dt>Activities</dt><dd>12</dd></div></dl>
+          <a class="button button-secondary" href="#course-engineering" aria-label="Get started with Engineering Basics">Get started</a>
+        </article>
+        <article class="catalog-card">
+          <img src="/assets/law.webp" alt="" width="640" height="360" loading="lazy">
+          <div class="catalog-copy"><p class="catalog-title">Law Basics</p><p>Explore Internet safety, civil law and international relations.</p></div>
+          <dl><div><dt>Level</dt><dd>Beginner</dd></div><div><dt>Duration</dt><dd>8</dd></div><div><dt>Activities</dt><dd>9</dd></div></dl>
+          <a class="button button-secondary" href="#course-law" aria-label="Get started with Law Basics">Get started</a>
+        </article>
+        <article class="catalog-card">
+          <img src="/assets/research.webp" alt="" width="640" height="360" loading="lazy">
+          <div class="catalog-copy"><p class="catalog-title">Research Scholars</p><p>A 16-week online mentorship program for high school students preparing a research paper.</p></div>
+          <dl><div><dt>Level</dt><dd>Beginner</dd></div><div><dt>Duration</dt><dd>10</dd></div><div><dt>Activities</dt><dd>11</dd></div></dl>
+          <a class="button button-secondary" href="#course-research" aria-label="Get started with Research Scholars">Get started</a>
+        </article>
+        <article class="catalog-card">
+          <img src="/assets/software.webp" alt="" width="640" height="360" loading="lazy">
+          <div class="catalog-copy"><p class="catalog-title">Software Engineering Basics</p><p>Start with digital foundations and explore software engineering, programming and data.</p></div>
+          <dl><div><dt>Level</dt><dd>Beginner</dd></div><div><dt>Duration</dt><dd>12</dd></div><div><dt>Activities</dt><dd>16</dd></div></dl>
+          <a class="button button-secondary" href="#course-software" aria-label="Get started with Software Engineering Basics">Get started</a>
+        </article>
+        <article class="catalog-card">
+          <img src="/assets/career.webp" alt="" width="640" height="360" loading="lazy">
+          <div class="catalog-copy"><p class="catalog-title">Jimma University Student Career Development Club Sessions</p><p>Recorded career development sessions from the Jimma University student club.</p></div>
+          <dl><div><dt>Level</dt><dd>Intermediate</dd></div><div><dt>Duration</dt><dd>10</dd></div><div><dt>Activities</dt><dd>6</dd></div></dl>
+          <a class="button button-secondary" href="#course-career" aria-label="Get started with Jimma University Student Career Development Club Sessions">Get started</a>
+        </article>
+      </div>
+    </section>
+
+    <div class="course-previews">
+      <section class="course-detail" id="course-medicine" aria-labelledby="title-medicine" tabindex="-1">
+        <div class="detail-main">
+          <h2 id="title-medicine">Medicine Basics</h2>
+          <img src="/assets/medicine.webp" alt="" width="1200" height="675" loading="lazy">
+          <div class="about-card"><h3>About the Course</h3><p>The foundation course introduces Internet safety before moving into AP Biology and AP Chemistry.</p></div>
+        </div>
+        <aside class="course-facts" aria-label="Course information">
+          <a class="button button-start" href="#lesson-workspace">Open Access practice lesson</a>
+          <dl><div><dt>Level</dt><dd>Beginner</dd></div><div><dt>Language</dt><dd>English</dd></div><div><dt>Course duration</dt><dd>9</dd></div><div><dt>Number of activities</dt><dd>12</dd></div></dl>
+          <p>Catalog preview · Access practice uses public sample media.</p>
+        </aside>
+      </section>
+      <section class="course-detail" id="course-engineering" aria-labelledby="title-engineering" tabindex="-1">
+        <div class="detail-main">
+          <h2 id="title-engineering">Engineering Basics</h2>
+          <img src="/assets/engineering.webp" alt="" width="1200" height="675" loading="lazy">
+          <div class="about-card"><h3>About the Course</h3><p>Explore engineering pathways after a foundation in digital readiness.</p></div>
+        </div>
+        <aside class="course-facts" aria-label="Course information">
+          <a class="button button-start" href="#lesson-workspace">Open Access practice lesson</a>
+          <dl><div><dt>Level</dt><dd>Beginner</dd></div><div><dt>Language</dt><dd>English</dd></div><div><dt>Course duration</dt><dd>10</dd></div><div><dt>Number of activities</dt><dd>12</dd></div></dl>
+          <p>Catalog preview · Access practice uses public sample media.</p>
+        </aside>
+      </section>
+      <section class="course-detail" id="course-law" aria-labelledby="title-law" tabindex="-1">
+        <div class="detail-main">
+          <h2 id="title-law">Law Basics</h2>
+          <img src="/assets/law.webp" alt="" width="1200" height="675" loading="lazy">
+          <div class="about-card"><h3>About the Course</h3><p>Explore Internet safety, civil law and international relations.</p></div>
+        </div>
+        <aside class="course-facts" aria-label="Course information">
+          <a class="button button-start" href="#lesson-workspace">Open Access practice lesson</a>
+          <dl><div><dt>Level</dt><dd>Beginner</dd></div><div><dt>Language</dt><dd>English</dd></div><div><dt>Course duration</dt><dd>8</dd></div><div><dt>Number of activities</dt><dd>9</dd></div></dl>
+          <p>Catalog preview · Access practice uses public sample media.</p>
+        </aside>
+      </section>
+      <section class="course-detail" id="course-research" aria-labelledby="title-research" tabindex="-1">
+        <div class="detail-main">
+          <h2 id="title-research">Research Scholars</h2>
+          <img src="/assets/research.webp" alt="" width="1200" height="675" loading="lazy">
+          <div class="about-card"><h3>About the Course</h3><p>A 16-week online mentorship program for high school students preparing a research paper.</p></div>
+        </div>
+        <aside class="course-facts" aria-label="Course information">
+          <a class="button button-start" href="#lesson-workspace">Open Access practice lesson</a>
+          <dl><div><dt>Level</dt><dd>Beginner</dd></div><div><dt>Language</dt><dd>English</dd></div><div><dt>Course duration</dt><dd>10</dd></div><div><dt>Number of activities</dt><dd>11</dd></div></dl>
+          <p>Catalog preview · Access practice uses public sample media.</p>
+        </aside>
+      </section>
+      <section class="course-detail" id="course-software" aria-labelledby="title-software" tabindex="-1">
+        <div class="detail-main">
+          <h2 id="title-software">Software Engineering Basics</h2>
+          <img src="/assets/software.webp" alt="" width="1200" height="675" loading="lazy">
+          <div class="about-card"><h3>About the Course</h3><p>Start with digital foundations and explore software engineering, programming and data.</p></div>
+        </div>
+        <aside class="course-facts" aria-label="Course information">
+          <a class="button button-start" href="#lesson-workspace">Open Access practice lesson</a>
+          <dl><div><dt>Level</dt><dd>Beginner</dd></div><div><dt>Language</dt><dd>English</dd></div><div><dt>Course duration</dt><dd>12</dd></div><div><dt>Number of activities</dt><dd>16</dd></div></dl>
+          <p>Catalog preview · Access practice uses public sample media.</p>
+        </aside>
+      </section>
+      <section class="course-detail" id="course-career" aria-labelledby="title-career" tabindex="-1">
+        <div class="detail-main">
+          <h2 id="title-career">Jimma University Student Career Development Club Sessions</h2>
+          <img src="/assets/career.webp" alt="" width="1200" height="675" loading="lazy">
+          <div class="about-card"><h3>About the Course</h3><p>Recorded career development sessions from the Jimma University student club.</p></div>
+        </div>
+        <aside class="course-facts" aria-label="Course information">
+          <a class="button button-start" href="#lesson-workspace">Open Access practice lesson</a>
+          <dl><div><dt>Level</dt><dd>Intermediate</dd></div><div><dt>Language</dt><dd>English</dd></div><div><dt>Course duration</dt><dd>10</dd></div><div><dt>Number of activities</dt><dd>6</dd></div></dl>
+          <p>Catalog preview · Access practice uses public sample media.</p>
+        </aside>
+      </section>
+    </div>
+
+    <p class="provider-notice">Ethioware interface demo with Access. Practice uses public sample media. No learner account or course progress is recorded.</p>
 
     <section class="comparison-bar" aria-labelledby="comparison-heading">
       <div><p class="eyebrow">COMPARE THE INTEGRATION</p><h2 id="comparison-heading">See the same lesson before and after Access</h2><p>The baseline is a reconstructed standard course reader using the same fictional lesson. Switch views to compare the learning tools—not the course content.</p></div>
@@ -60,22 +163,11 @@
     </section>
 
     <div class="learning-layout">
-      <aside class="module-panel" id="modules" aria-labelledby="module-heading">
-        <div class="panel-heading"><p>COURSE OUTLINE</p><h2 id="module-heading">4 modules</h2></div>
-        <ol class="module-list">
-          <li class="is-current"><span class="module-number">01</span><span><strong>Learning readiness</strong><small>Current practice</small></span></li>
-          <li><span class="module-number">02</span><span><strong>Digital fluency</strong><small>Course preview</small></span></li>
-          <li><span class="module-number">03</span><span><strong>Programming foundations</strong><small>Course preview</small></span></li>
-          <li><span class="module-number">04</span><span><strong>Project habits</strong><small>Course preview</small></span></li>
-        </ol>
-        <div class="help-card"><span aria-hidden="true">?</span><div><strong>Need another format?</strong><p>Use the lesson’s text sizing, search, transcript, and offline options.</p></div></div>
-      </aside>
-
-      <section class="lesson-shell" id="lesson-workspace" aria-label="Lesson workspace">
+      <section class="lesson-shell" id="lesson-workspace" tabindex="-1" aria-label="Lesson workspace">
         <div data-experience-view="before" hidden>
           <div class="lesson-header"><div><p class="eyebrow">Module 1 · Inclusive interfaces</p><h2 id="lesson-heading">Colors with Good Contrast</h2></div><span class="baseline-chip">Standard course player</span></div>
-          <p class="baseline-note"><strong>Reconstructed baseline:</strong> the attributed W3C learning video in a standard player. It does not include the Access caption panel, translated caption choices, audio description, transcript search, caption preferences, low-data audio, or equivalent downloads.</p>
           <video controls preload="metadata" style="width:100%;background:#14232c;border-radius:.7rem" aria-label="Colors with Good Contrast standard course video"><source src="https://access-plugin.onrender.com/api/v1/lessons/w3c-colors-with-good-contrast/media/video?version=1" type="video/mp4"></video>
+          <p class="baseline-note"><strong>Reconstructed baseline:</strong> the attributed W3C learning video in a standard player. It does not include the Access caption panel, translated caption choices, audio description, transcript search, caption preferences, low-data audio, or equivalent downloads.</p>
           <p class="baseline-note">Source: <a href="https://www.w3.org/WAI/perspective-videos/contrast/" rel="noreferrer">W3C Web Accessibility Initiative — Colors with Good Contrast</a>.</p>
           <article class="baseline-lesson">
             <section><span>01</span><div><h3>Choose one goal</h3><p>Choose a skill you want to practise. Write one small goal you can complete this week.</p></div></section>
@@ -85,7 +177,7 @@
           <a class="baseline-download" href="https://access-plugin.onrender.com/api/v1/lessons/w3c-colors-with-good-contrast/downloads/html?version=1">Download the standard HTML transcript</a>
         </div>
         <div data-experience-view="after">
-          <div class="lesson-header"><div><p class="eyebrow">Module 1 · Learning readiness</p><h2>Practice with Access learning tools</h2></div><span class="integration-chip"><i aria-hidden="true"></i> Plug-in connected</span></div>
+          <div class="lesson-header"><div><p class="eyebrow">Module 1 · Practice activities</p><h2>Activity 1 · Access practice lesson</h2></div><span class="integration-chip"><i aria-hidden="true"></i> Plug-in connected</span></div>
           <p>Use one attributed lesson to compare English, Amharic, and Tigrigna captions, an audio-described edition, searchable transcript, caption preferences, low-data audio, and offline formats. Machine-translated captions remain clearly marked for human review.</p>
           <div class="host-controls" aria-label="Host page controls"><label for="host-lesson">Practice content<select id="host-lesson"><option value="w3c-colors-with-good-contrast">Colors with Good Contrast · complete media demo</option><option value="demo-learning-plan">Make a learning plan</option><option value="alx-transforming-africa">We Are Transforming Africa · sample video</option></select></label><button type="button" id="toggle-access" aria-expanded="true" aria-controls="access-panel">Hide learning tools</button></div>
           <p class="release-status" id="release-status" role="status">Connecting to the Access public-fixture service…</p>
@@ -95,15 +187,15 @@
         </div>
       </section>
 
-      <aside class="study-panel" aria-labelledby="study-heading">
-        <p class="eyebrow">STUDY SUPPORT</p>
-        <h2 id="study-heading">Learn your way</h2>
-        <ul class="feature-list">
-          <li><span aria-hidden="true">Aa</span><div><strong>Readable text</strong><small>Search and resize without losing content.</small></div></li>
-          <li><span aria-hidden="true">↓</span><div><strong>Offline options</strong><small>Save light HTML, text, or a lesson pack.</small></div></li>
-          <li><span aria-hidden="true">⌨</span><div><strong>Keyboard-ready</strong><small>Reach lesson controls without a pointer.</small></div></li>
-        </ul>
-        <a class="text-link" href="https://ethioware.jiret.site/course/a7ae0c9b-d104-459d-a67a-a7580d833b0e" rel="noreferrer">View Ethioware’s original public course page <span aria-hidden="true">↗</span></a>
+      <aside class="module-panel" id="modules" aria-labelledby="module-heading">
+        <div class="panel-heading"><h2 id="module-heading">Course outline</h2></div>
+        <details open>
+          <summary>Module 1 · Practice activities</summary>
+          <ol class="module-list">
+            <li class="is-current"><a href="#lesson-workspace" aria-current="location"><span aria-hidden="true">▷</span> Activity 1 · Access practice lesson</a></li>
+            <li><a href="#courses">Browse the course catalog</a></li>
+          </ol>
+        </details>
       </aside>
     </div>
 
@@ -118,6 +210,6 @@
     </section>
   </main>
 
-  <footer><div><strong>Ethioware × Access</strong><p>Independent Track 2 integration demonstration.</p></div><nav aria-label="Footer navigation"><a href="#overview">Course overview</a><a href="https://access-plugin.onrender.com/api/docs">Public API</a><a href="https://access-career-gateway.vercel.app/">Career gateway</a></nav></footer>
+  <footer><div><strong>Ethioware × Access</strong><p>Independent Track 2 integration demonstration.</p></div><nav aria-label="Footer navigation"><a href="#courses">Course overview</a><a href="https://access-plugin.onrender.com/api/docs">Public API</a><a href="https://access-career-gateway.vercel.app/">Career gateway</a></nav></footer>
 </body>
 </html>

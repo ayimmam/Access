@@ -2,3 +2,11 @@
   .site-header { align-items: flex-start; flex-direction: column; }
   .site-header nav { width: 100%; gap: .7rem; }
 }
+@media (max-width: 720px) {
+  .career-demo .site-header { position: static; flex-wrap: wrap; gap: .4rem 1rem; }
+  .career-demo .site-header nav { order: 3; width: 100%; }
+  .career-demo .hero, .baseline-gateway { grid-template-columns: minmax(0, 1fr); }
+  .career-demo .hero { min-height: 0; }
+  .career-demo .hero-art { max-width: 25rem; }
+  .baseline-results, .baseline-filters { grid-row: auto; }
+}

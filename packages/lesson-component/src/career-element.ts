@@ -1,4 +1,6 @@
-interface Job {
+import { CareerVoice } from './career-voice';
+
+export interface Job {
   id: string; title: string; organization: string; location: string; sector: string;
   employment_type: string; workplace: string; experience: string; salary: string;
   deadline: string; summary: string; responsibilities: string[]; skills: string[];
@@ -66,20 +68,23 @@ function options(label: string, values: string[]) {
 }
 
 export class CareerGateway extends HTMLElement {
-  static observedAttributes = ['api-base', 'certificate-base'];
+  static observedAttributes = ['api-base', 'certificate-base', 'voice-navigation', 'voice-paused'];
   private root = this.attachShadow({ mode: 'open' });
   private controller?: AbortController;
   private saved = new Set<string>();
-  private utterance?: SpeechSynthesisUtterance;
-  private cleanupVoice?: () => void;
+  private voice?: CareerVoice;
+  private cleanupAudio?: () => void;
   private timer?: ReturnType<typeof setTimeout>;
 
   connectedCallback() { void this.load(); }
-  attributeChangedCallback() { if (this.isConnected) void this.load(); }
+  attributeChangedCallback(name: string) {
+    if (name === 'voice-paused') { this.voice?.setPaused(this.hasAttribute('voice-paused')); return; }
+    if (this.isConnected) void this.load();
+  }
   disconnectedCallback() { this.controller?.abort(); this.cleanup(); }
   private cleanup() {
-    clearTimeout(this.timer); this.cleanupVoice?.(); this.cleanupVoice = undefined;
-    if (this.utterance) { window.speechSynthesis?.cancel(); this.utterance = undefined; }
+    clearTimeout(this.timer); this.voice?.destroy(); this.voice = undefined;
+    this.cleanupAudio?.(); this.cleanupAudio = undefined;
   }
   private emit(name: string, jobId: string) {
     this.dispatchEvent(new CustomEvent(name, { bubbles: true, composed: true, detail: { jobId, demo: true } }));
@@ -95,7 +100,7 @@ export class CareerGateway extends HTMLElement {
       const response = await fetch(new URL('jobs', base), { credentials: 'omit', signal: controller.signal });
       if (!response.ok) throw new Error('Jobs unavailable');
       const jobs = await response.json() as Job[];
-      if (!Array.isArray(jobs) || jobs.length > 100 || !jobs.every(job => job.demo === true &&
+      if (!Array.isArray(jobs) || jobs.length > 100 || new Set(jobs.map(job => job?.id)).size !== jobs.length || !jobs.every(job => job?.demo === true &&
         ['id','title','organization','location','sector','employment_type','workplace','experience','salary','deadline','summary'].every(key => typeof job[key as keyof Job] === 'string') &&
         /^[a-z0-9-]+$/.test(job.id) && /^\d{4}-\d{2}-\d{2}$/.test(job.deadline) &&
         ['responsibilities','skills','support'].every(key => Array.isArray(job[key as keyof Job]) && (job[key as keyof Job] as unknown[]).every(value => typeof value === 'string')))) throw new Error('Invalid jobs');
@@ -142,12 +147,16 @@ export class CareerGateway extends HTMLElement {
     const soundStatus = el('p', 'Recorded English summaries use a synthetic demo voice; equivalent text is always shown.'); soundStatus.setAttribute('role', 'status'); soundStatus.className = 'note';
     const player = el('audio'); player.controls = true; player.preload = 'none'; player.hidden = true;
     player.setAttribute('aria-label', 'Recorded job summary');
+    const stopRecorded = () => { player.pause(); if (player.currentTime) player.currentTime = 0; };
+    this.cleanupAudio = () => { stopRecorded(); player.removeAttribute('src'); player.load(); };
+    player.addEventListener('play', () => this.voice?.stop(false));
     const stop = button('Stop recorded summary', () => { player.pause(); player.currentTime = 0; soundStatus.textContent = 'Recorded summary stopped.'; });
     stop.hidden = true;
     const soundControls = el('section'); soundControls.className = 'job-control-card';
     soundControls.append(el('h3', 'Listen to job summaries'), soundStatus, player, stop);
     controls.append(searchCard, soundControls);
     const read = (job: Job) => {
+      this.voice?.stop();
       player.pause();
       player.src = new URL(`/demo-assets/career-audio/${job.id}.mp3`, base).href;
       player.hidden = false;
@@ -156,12 +165,13 @@ export class CareerGateway extends HTMLElement {
       void player.play().catch(() => { soundStatus.textContent = 'Recorded summary could not start. Use the audio controls or read the equivalent text.'; });
     };
     let trigger: HTMLButtonElement | undefined;
-    dialog.addEventListener('close', () => { if (this.utterance) { window.speechSynthesis?.cancel(); this.utterance = undefined; } trigger?.focus(); });
+    dialog.addEventListener('close', () => trigger?.focus());
     const dateText = (date: string) => {
       try { return new Intl.DateTimeFormat(calendar.select.value ? 'en-ET-u-ca-ethiopic' : 'en', { year:'numeric', month:'long', day:'numeric', timeZone:'UTC' }).format(new Date(`${date}T12:00:00Z`)) + (calendar.select.value ? ' (Ethiopian)' : ' (Gregorian)'); }
       catch { return `${date} (Gregorian)`; }
     };
     const detail = (job: Job, opener: HTMLButtonElement) => {
+      this.voice?.stop(); stopRecorded();
       trigger = opener;
       const close = button('Close job details', () => dialog.close()); close.className = 'close';
       const title = el('h2', job.title); title.id = 'job-dialog-title';
@@ -183,10 +193,11 @@ export class CareerGateway extends HTMLElement {
       dialog.showModal(); close.focus(); this.emit('access-job-open', job.id);
     };
     const selected = (inputs: HTMLInputElement[]) => inputs.filter(input => input.checked).map(input => input.value);
-    const update = () => {
+    let matches: Job[] = [];
+    const update = (notifyVoice = true) => {
       const query = search.value.trim().toLocaleLowerCase();
       const wantedTypes = selected(types), wantedSites = selected(sites), wantedSupport = selected(support);
-      const matches = jobs.filter(job => (!query || `${job.title} ${job.organization} ${job.summary} ${job.skills.join(' ')}`.toLocaleLowerCase().includes(query)) &&
+      matches = jobs.filter(job => (!query || `${job.title} ${job.organization} ${job.summary} ${job.skills.join(' ')}`.toLocaleLowerCase().includes(query)) &&
         (!sector.select.value || sector.select.value === job.sector) && (!view.select.value || this.saved.has(job.id)) &&
         (!wantedTypes.length || wantedTypes.includes(job.employment_type)) && (!wantedSites.length || wantedSites.includes(job.workplace)) && wantedSupport.every(value => job.support.includes(value)));
       count.textContent = `${matches.length} ${matches.length === 1 ? 'job' : 'jobs'} found${view.select.value ? ' in saved jobs' : ''}.`;
@@ -208,19 +219,56 @@ export class CareerGateway extends HTMLElement {
           this.saved.has(job.id) ? this.saved.delete(job.id) : this.saved.add(job.id);
           save.setAttribute('aria-pressed', String(this.saved.has(job.id)));
           count.textContent = `${job.title} ${this.saved.has(job.id) ? 'saved for this session' : 'removed from saved jobs'}.`;
-          if (view.select.value) { update(); view.select.focus(); }
+          if (view.select.value) { update(false); view.select.focus(); }
+          this.voice?.savedChanged(view.select.value ? matches : undefined);
         }); save.setAttribute('aria-pressed', String(this.saved.has(job.id)));
-        const audio = button(`Play recorded summary — ${job.title}`, () => read(job));
-        actions.append(open, save, audio);
+        save.dataset.jobId = job.id;
+        actions.append(open, save);
+        if (['demo-copywriter','demo-data-assistant','demo-machine-operator','demo-web-developer'].includes(job.id)) {
+          actions.append(button(`Play recorded summary — ${job.title}`, () => read(job)));
+        }
         article.append(title, company, el('p',job.summary), tags, offers, facts, actions);
         list.append(article);
       }
+      if (notifyVoice) this.voice?.resultsChanged(matches);
     };
-    filters.append(button('Clear filters', () => { search.value = ''; sector.select.value = ''; view.select.value = ''; [...types,...sites,...support].forEach(input => input.checked = false); update(); }));
-    search.addEventListener('input', () => { clearTimeout(this.timer); this.timer = setTimeout(update, 200); });
-    [sector.select,view.select,calendar.select,...types,...sites,...support].forEach(input => input.addEventListener('change',update));
+    const clearFilters = () => { search.value = ''; sector.select.value = ''; view.select.value = ''; [...types,...sites,...support].forEach(input => input.checked = false); };
+    filters.append(button('Clear filters', () => { clearTimeout(this.timer); clearFilters(); update(); }));
+    search.addEventListener('input', () => { this.voice?.resultsWillChange(); clearTimeout(this.timer); this.timer = setTimeout(update, 200); });
+    [sector.select,view.select,calendar.select,...types,...sites,...support].forEach(input => input.addEventListener('change', () => update()));
+    if (this.hasAttribute('voice-navigation')) {
+      let previousFilters: { query: string; sector: string; checked: boolean[] } | undefined;
+      this.voice = new CareerVoice({
+        search: query => { clearTimeout(this.timer); clearFilters(); search.value = query; previousFilters = undefined; update(false); return [...matches]; },
+        showSaved: () => {
+          if (!view.select.value) previousFilters = { query: search.value, sector: sector.select.value, checked: [...types,...sites,...support].map(input => input.checked) };
+          clearTimeout(this.timer); clearFilters(); view.select.value = 'Saved jobs'; update(false);
+        },
+        showResults: () => {
+          view.select.value = '';
+          if (previousFilters) {
+            search.value = previousFilters.query; sector.select.value = previousFilters.sector;
+            [...types,...sites,...support].forEach((input, index) => input.checked = previousFilters!.checked[index]);
+            previousFilters = undefined;
+          }
+          update(false); return [...matches];
+        },
+        savedJobs: () => jobs.filter(job => this.saved.has(job.id)),
+        save: id => {
+          if (!jobs.some(job => job.id === id)) return;
+          this.saved.add(id);
+          list.querySelectorAll<HTMLButtonElement>('[data-job-id]').forEach(button => button.setAttribute('aria-pressed', String(this.saved.has(button.dataset.jobId!))));
+        },
+        stopRecorded,
+        guideActive: enabled => count.setAttribute('aria-live', enabled ? 'off' : 'polite'),
+        outputMode: enabled => soundStatus.setAttribute('aria-live', enabled ? 'off' : 'polite'),
+      }, base);
+      this.voice.setPaused(this.hasAttribute('voice-paused'));
+    }
     layout.append(filters, results);
-    this.root.append(heading, introduction, controls, layout, dialog);
+    this.root.append(heading, introduction, controls);
+    if (this.voice) this.root.append(this.voice.root);
+    this.root.append(layout, dialog);
     update();
   }
 }

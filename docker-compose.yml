@@ -6,7 +6,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      ACCESS_ALLOWED_ORIGINS: "${ACCESS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}"
+      ACCESS_ALLOWED_ORIGINS: "${ACCESS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://localhost:8000,http://127.0.0.1:8000}"
     init: true
     read_only: true
     tmpfs:

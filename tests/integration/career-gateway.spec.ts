@@ -6,7 +6,7 @@ test('job search filters locally, saves and opens accessible details', async ({ 
   page.on('request', request => requests.push(request.url()));
   await page.goto('/demo/careers');
   const gateway = page.locator('access-career-gateway');
-  await expect(gateway.getByText('4 jobs found.', { exact: true })).toBeVisible();
+  await expect(gateway.getByText('11 jobs found.', { exact: true })).toBeVisible();
   requests.length = 0;
   await gateway.getByLabel('Written interview', { exact: true }).check();
   await expect(gateway.getByText('2 jobs found.', { exact: true })).toBeVisible();

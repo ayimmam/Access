@@ -1,5 +1,8 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { useDemoApi } from '../helpers/demo-api';
+
+test.beforeEach(async ({ page, baseURL }) => useDemoApi(page, baseURL));
 
 const tags = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
@@ -61,7 +64,7 @@ test('EthioWare comparison preserves a realistic baseline and shareable mode', a
 
 test('Career Gateway filters jobs and restores dialog focus', async ({ page }) => {
   await page.goto('http://127.0.0.1:5174/');
-  await expect(page.getByText('4 jobs found.')).toBeVisible();
+  await expect(page.getByText('11 jobs found.')).toBeVisible();
   const search = page.getByRole('searchbox', { name: 'Search jobs by title, skill or employer' });
   await search.fill('developer');
   await expect(page.getByText('1 job found.')).toBeVisible();
@@ -85,7 +88,7 @@ test('Career Gateway filters jobs and restores dialog focus', async ({ page }) =
 test('Career Gateway comparison filters the baseline and switches to Access', async ({ page }) => {
   await page.goto('http://127.0.0.1:5174/?mode=before');
   await expect(page.locator('.comparison-status')).toHaveText('Showing the reconstructed standard vacancy listings.');
-  await expect(page.getByText('4 vacancies found.')).toBeVisible();
+  await expect(page.getByText('11 vacancies found.')).toBeVisible();
   await page.getByLabel('Search vacancies').fill('developer');
   await expect(page.getByText('1 vacancy found.')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Junior web developer' })).toBeVisible();
@@ -97,7 +100,7 @@ test('Career Gateway comparison filters the baseline and switches to Access', as
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.getByRole('button', { name: 'After With Access' }).click();
   await expect(page).toHaveURL(/mode=after/);
-  await expect(page.getByText('4 jobs found.')).toBeVisible();
+  await expect(page.getByText('11 jobs found.')).toBeVisible();
   await expect(page.locator('html')).toHaveAttribute('data-access-mode', 'after');
   await expect(page.getByRole('heading', { name: 'Listen to job summaries' })).toBeVisible();
 });

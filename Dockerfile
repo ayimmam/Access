@@ -42,6 +42,26 @@ COPY ["example lessons", "example lessons"]
 RUN /app/.venv/bin/python -m access_core.offline_video
 
 
+FROM python:3.11-slim-bookworm AS speech-runtime
+
+ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+RUN addgroup --system access \
+    && adduser --system --ingroup access --home /nonexistent --no-create-home access \
+    && mkdir /state && chown access:access /state
+
+COPY --from=python-builder --chown=access:access /app/.venv .venv
+COPY --chown=access:access services services
+
+USER access
+
+CMD ["uvicorn", "access_worker.speech_gateway:app", "--host", "0.0.0.0", "--port", "8010", "--no-access-log"]
+
+
 FROM python:3.11-slim-bookworm AS runtime
 
 ENV PATH="/app/.venv/bin:$PATH" \
@@ -69,4 +89,3 @@ HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=5 \
     CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=2).read()"]
 
 CMD ["uvicorn", "access_api.main:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]
-

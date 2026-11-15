@@ -56,8 +56,9 @@ class AddisSpeech:
         if not key or len(key) > 512 or not key.isascii() or any(ord(char) < 33 for char in key):
             raise SpeechFailure()
         return fetch_bounded(PROVIDER + path, destinations=DESTINATIONS,
-                             headers={"x-api-key": key, "Content-Type": content_type}, body=body,
-                             content_types={"application/octet-stream", "audio/mpeg", "application/json"} if audio else {"application/json"},
+                             headers={"x-api-key": key, "Content-Type": content_type,
+                                      "User-Agent": "Access-Career-Demo/1.0 (+https://github.com/ayimmam/Access)"}, body=body,
+                             content_types={"application/octet-stream", "audio/mpeg", "text/event-stream", "application/json"} if audio else {"application/json"},
                              limit=MAX_RESPONSE_BYTES + 131072 if audio else 131072)
 
     def current_voice(self) -> str:

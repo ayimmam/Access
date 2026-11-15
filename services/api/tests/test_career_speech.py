@@ -309,3 +309,16 @@ def test_provider_429_does_not_leak_its_error_body(monkeypatch):
     with pytest.raises(SpeechFailure) as caught:
         addis_speech.provider.request("/api/v1/voice/voices?language=am")
     assert caught.value.status == 429 and "private" not in str(caught.value)
+
+
+def test_provider_uses_an_explicit_application_user_agent(monkeypatch):
+    request_headers = {}
+
+    def response(url, **kwargs):
+        request_headers.update(kwargs["headers"])
+        return json.dumps({"data": []}).encode(), headers()
+
+    monkeypatch.setattr(addis_speech, "fetch_bounded", response)
+    addis_speech.provider.request("/api/v1/voice/voices?language=am")
+    assert request_headers["User-Agent"].startswith("Access-Career-Demo/")
+    assert request_headers["x-api-key"] == "test-only-provider-credential"

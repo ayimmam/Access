@@ -7,7 +7,15 @@ test('EthioWare host loads the lesson tools and reflows at 320px', async ({ page
   await page.goto('http://127.0.0.1:5173/');
   await expect(page.getByRole('heading', { name: 'Software Engineering Basics' })).toBeVisible();
   const lesson = page.locator('alx-accessible-lesson');
-  await expect(lesson.getByRole('heading', { name: 'Make a learning plan' })).toBeVisible();
+  await expect(lesson.getByRole('heading', { name: 'Colors with Good Contrast' })).toBeVisible();
+  await lesson.getByRole('combobox', { name: 'Captions', exact: true }).selectOption('am');
+  await expect(lesson.getByText('Amharic · review pending. Human review is pending.')).toBeVisible();
+  await lesson.getByRole('button', { name: 'Use audio-described video' }).click();
+  await expect(lesson.getByText('Audio-described video selected.')).toBeVisible();
+  await lesson.getByRole('button', { name: 'Reset caption preferences' }).click();
+  await expect(lesson.getByText('Caption preferences reset.')).toBeVisible();
+  await expect(lesson.getByRole('link', { name: /tagged PDF prototype/ })).toBeVisible();
+  await expect(lesson.getByRole('link', { name: /BRF prototype/ })).toBeVisible();
   await page.getByRole('button', { name: 'Hide learning tools' }).click();
   await expect(lesson).toBeHidden();
   await page.getByRole('button', { name: 'Show learning tools' }).click();
@@ -17,6 +25,15 @@ test('EthioWare host loads the lesson tools and reflows at 320px', async ({ page
   expect(scan.violations).toEqual([]);
   await page.setViewportSize({ width: 320, height: 800 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('EthioWare recorded-session fixture remains searchable and clearly fictional', async ({ page }) => {
+  await page.goto('http://127.0.0.1:5173/');
+  await page.getByText('Recorded-session replay demo').click();
+  await expect(page.getByText('Fictional replay:', { exact: true })).toBeVisible();
+  await page.getByLabel('Find in replay').fill('checker');
+  await expect(page.locator('#replay-count')).toHaveText('2 of 3 replay entries found.');
+  await expect(page.locator('#replay-log li:visible')).toHaveCount(2);
 });
 
 test('EthioWare comparison preserves a realistic baseline and shareable mode', async ({ page }) => {
@@ -39,6 +56,10 @@ test('Career Gateway filters jobs and restores dialog focus', async ({ page }) =
   await search.fill('developer');
   await expect(page.getByText('1 job found.')).toBeVisible();
   const open = page.getByRole('button', { name: 'View details — Junior web developer' });
+  await page.getByRole('button', { name: 'Play recorded summary — Junior web developer' }).click();
+  await expect(page.getByLabel('Recorded job summary')).toBeVisible();
+  await expect(page.getByLabel('Recorded job summary')).toHaveAttribute('src', /demo-web-developer\.mp3$/);
+  await expect.poll(() => page.getByLabel('Recorded job summary').evaluate((audio: HTMLAudioElement) => audio.duration || 0)).toBeGreaterThan(10);
   await open.click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Close job details' })).toBeFocused();

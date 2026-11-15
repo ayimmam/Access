@@ -5,6 +5,9 @@ const apiBase = `${pluginOrigin}/api/v1`;
 const status = document.querySelector('#release-status');
 const lesson = document.querySelector('alx-accessible-lesson');
 const fallback = lesson?.querySelector('a');
+const replaySearch = document.querySelector('#replay-search');
+const replayItems = [...document.querySelectorAll('[data-replay-text]')];
+const replayCount = document.querySelector('#replay-count');
 
 function setExperience(mode, announce = true) {
   const selected = mode === 'before' ? 'before' : 'after';
@@ -51,6 +54,16 @@ document.querySelector('#host-lesson')?.addEventListener('change', event => {
   const id = event.target.value;
   lesson?.setAttribute('lesson-id', id);
   if (fallback) fallback.href = `${apiBase}/lessons/${id}/downloads/html?version=1`;
+});
+
+replaySearch?.addEventListener('input', () => {
+  const query = replaySearch.value.trim().toLocaleLowerCase();
+  let visible = 0;
+  for (const item of replayItems) {
+    item.hidden = Boolean(query) && !item.textContent.toLocaleLowerCase().includes(query);
+    if (!item.hidden) visible++;
+  }
+  replayCount.textContent = query ? `${visible} of ${replayItems.length} replay entries found.` : '';
 });
 
 const toggle = document.querySelector('#toggle-access');

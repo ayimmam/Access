@@ -31,6 +31,7 @@ dl { display:flex; flex-wrap:wrap; gap:1rem 2rem; margin-block:1.5rem; } dt { co
 dialog { color:inherit; border:1px solid #8290a3; border-radius:.8rem; max-width:min(46rem,calc(100vw - 2rem)); max-height:85vh; overflow:auto; padding:1.5rem; }
 dialog::backdrop { background:#101827a6; } .close { float:right; margin:0 0 1rem 1rem; }
 summary { min-height:44px; padding:.5rem 0; font-weight:600; } textarea { font:inherit; width:100%; min-height:6rem; }
+audio { display:block; width:min(100%,32rem); margin:.75rem 0; }
 @media(max-width:850px) { .layout { display:flex; flex-direction:column; } .filters,.results { width:100%; } .search { grid-template-columns:1fr; } }
 @media(prefers-contrast:more) { button,input,select,article { border:2px solid currentColor; } }
 `;
@@ -120,26 +121,17 @@ export class CareerGateway extends HTMLElement {
     const calendar = options('Deadline calendar', ['Ethiopian']); resultHeader.append(count, calendar.wrapper);
     const list = el('div'); results.append(resultHeader, list);
     const dialog = el('dialog'); dialog.setAttribute('aria-labelledby', 'job-dialog-title');
-    const soundStatus = el('p'); soundStatus.setAttribute('role', 'status'); soundStatus.className = 'note';
-    const stop = button('Stop reading', () => { window.speechSynthesis?.cancel(); this.utterance = undefined; soundStatus.textContent = 'Reading stopped.'; });
-    const soundControls = el('div'); soundControls.append(stop, soundStatus);
-    const localVoice = () => 'speechSynthesis' in window ? window.speechSynthesis.getVoices().find(voice => voice.localService && voice.lang.toLowerCase().startsWith('en')) : undefined;
-    const voiceNotice = () => { if (!this.utterance) soundStatus.textContent = localVoice() ? 'Read aloud uses an on-device English voice. The same summary is available as text.' : 'An on-device English voice is unavailable. Read the equivalent text summary; recorded audio is still pending.'; };
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.addEventListener('voiceschanged', voiceNotice);
-      this.cleanupVoice = () => window.speechSynthesis.removeEventListener('voiceschanged', voiceNotice);
-    }
-    voiceNotice();
+    const soundStatus = el('p', 'Recorded English summaries use a synthetic demo voice; equivalent text is always shown.'); soundStatus.setAttribute('role', 'status'); soundStatus.className = 'note';
+    const player = el('audio'); player.controls = true; player.preload = 'none'; player.hidden = true;
+    player.setAttribute('aria-label', 'Recorded job summary');
+    const stop = button('Stop recorded summary', () => { player.pause(); player.currentTime = 0; soundStatus.textContent = 'Recorded summary stopped.'; });
+    const soundControls = el('div'); soundControls.append(player, stop, soundStatus);
     const read = (job: Job) => {
-      const voice = localVoice();
-      if (!voice) { voiceNotice(); return; }
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(`${job.title}. ${job.organization}. ${job.summary}`);
-      utterance.voice = voice; utterance.lang = voice.lang; this.utterance = utterance;
-      soundStatus.textContent = `Reading the summary for ${job.title}.`;
-      utterance.onend = () => { if (this.utterance === utterance) { this.utterance = undefined; soundStatus.textContent = 'Summary reading finished.'; } };
-      utterance.onerror = () => { if (this.utterance === utterance) { this.utterance = undefined; soundStatus.textContent = 'Reading could not finish. The full text summary remains available.'; } };
-      window.speechSynthesis.speak(utterance);
+      player.pause();
+      player.src = new URL(`/demo-assets/career-audio/${job.id}.mp3`, base).href;
+      player.hidden = false;
+      soundStatus.textContent = `Playing the recorded synthetic demo summary for ${job.title}.`;
+      void player.play().catch(() => { soundStatus.textContent = 'Recorded summary could not start. Use the audio controls or read the equivalent text.'; });
     };
     let trigger: HTMLButtonElement | undefined;
     dialog.addEventListener('close', () => { if (this.utterance) { window.speechSynthesis?.cancel(); this.utterance = undefined; } trigger?.focus(); });
@@ -196,7 +188,7 @@ export class CareerGateway extends HTMLElement {
           count.textContent = `${job.title} ${this.saved.has(job.id) ? 'saved for this session' : 'removed from saved jobs'}.`;
           if (view.select.value) { update(); view.select.focus(); }
         }); save.setAttribute('aria-pressed', String(this.saved.has(job.id)));
-        const audio = button(`Read summary — ${job.title}`, () => read(job));
+        const audio = button(`Play recorded summary — ${job.title}`, () => read(job));
         actions.append(open, save, audio);
         article.append(title, company, el('p',job.summary), tags, offers, facts, actions);
         list.append(article);

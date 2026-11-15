@@ -26,11 +26,14 @@ const styles = `
   [role=status] { min-height:1.65em; }
   .media-view { margin-top:1.25rem; } .media-stage { display:flex; align-items:stretch; gap:1rem; } .video-column { flex:1; min-width:0; }
   video { width:100%; display:block; max-height:32rem; background:#14232c; border-radius:.5rem; }
-  video::cue { font-size:var(--caption-size,1rem); color:#fff; background:#14232cf0; }
-  .active-caption { padding:.8rem 1rem; background:#edf3f5; border-left:3px solid #087c9e; margin:0; min-height:5rem; font-size:var(--caption-size,1rem); }
+  video::cue { font-size:var(--caption-size,1rem); color:var(--caption-foreground,#fff); background:var(--caption-background,#14232c); }
+  .active-caption { padding:.8rem 1rem; color:var(--caption-foreground,#fff); background:var(--caption-background,#14232c); border-left:3px solid #087c9e; margin:0; min-height:5rem; font-size:var(--caption-size,1rem); }
   .media-options { display:flex; flex-wrap:wrap; gap:.75rem; align-items:end; margin:1rem 0; }
   .media-options label { flex:1 1 8rem; font-size:.85rem; }
   .avatar-panel { flex:0 0 280px; padding:1rem; background:#eaf0f4; border-radius:.5rem; }
+  .sign-panel { flex:0 0 300px; padding:1rem; color:#fff; background:#172d38; border-radius:.5rem; }
+  .sign-panel h3 { margin:.25rem 0 .75rem; } .sign-panel p { font-size:.85rem; }
+  .sign-below { flex-wrap:wrap; } .sign-below .sign-panel { flex-basis:100% !important; }
   .avatar-panel h3 { margin:.25rem 0; } .avatar-panel p { font-size:.8rem; line-height:1.5; }
   .prototype-label { color:#633a13; } .avatar-canvas { width:100%; height:300px; } .avatar-clock { font-variant-numeric:tabular-nums; }
   .avatar-below { flex-direction:column; } .avatar-below .avatar-panel { flex-basis:auto; }
@@ -117,7 +120,12 @@ export class AccessibleLesson extends HTMLElement {
 
   private render(article: HTMLElement, lesson: Lesson, exports: ExportItem[], base: URL) {
     article.lang = lesson.language;
-    article.replaceChildren(node('p', `${lesson.content_status === 'source-draft' ? 'ALX video · Source captions awaiting review' : 'Synthetic demo'} · Version ${lesson.content_version}`), node('h2', lesson.title), node('p', lesson.summary));
+    const statusLabel = lesson.content_status === 'source-draft'
+      ? 'ALX video · Source captions awaiting review'
+      : lesson.content_status === 'review-pending'
+        ? 'Attributed source media · translated captions awaiting human review'
+        : 'Synthetic demo';
+    article.replaceChildren(node('p', `${statusLabel} · Version ${lesson.content_version}`), node('h2', lesson.title), node('p', lesson.summary));
     let media: ReturnType<typeof createMediaView> | undefined;
     if (lesson.media) {
       media = createMediaView(lesson.media, lesson.segments, base, detail => this.emit('alx-avatar-status', detail));

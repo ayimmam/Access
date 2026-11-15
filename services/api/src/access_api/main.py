@@ -1,10 +1,13 @@
 """Public lesson foundation. Staff and protected-content routes await contracts."""
 
 import hashlib
+import json
+import logging
 import os
 import uuid
 from pathlib import Path
 from typing import Literal
+from urllib.parse import urlsplit
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
@@ -14,9 +17,14 @@ from pydantic import BaseModel
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.staticfiles import StaticFiles
 
-from access_core.lessons import EXAMPLE_VIDEO, Lesson, captions_vtt, export_lesson, get_lesson
+from access_core.lessons import (
+    EXAMPLE_VIDEO, W3C_DIRECTORY, W3C_ID, Lesson, captions_vtt, export_lesson, get_lesson,
+)
 from access_core.jobs import JOBS, DemoVerification, Job, verify_demo
 from access_core.signing import Language, load_manifest, public_manifest
+from access_api.body_limit import SecurityBodyLimit
+from access_api.security import configured_store, origin as security_origin, router as security_router
+from access_api.security_store import SecurityError
 
 
 class ErrorDetail(BaseModel):
@@ -30,6 +38,7 @@ class ErrorEnvelope(BaseModel):
 
 
 ROOT = Path(__file__).resolve().parents[4]
+security_log = logging.getLogger("access.security")
 app = FastAPI(
     title="Access public lesson API", version="0.1.0", docs_url="/api/docs", redoc_url=None,
     responses={404: {"model": ErrorEnvelope}, 422: {"model": ErrorEnvelope}, 500: {"model": ErrorEnvelope}},
@@ -38,6 +47,15 @@ origins = [origin.strip() for origin in os.environ.get("ACCESS_ALLOWED_ORIGINS",
 if "*" in origins:
     raise RuntimeError("ACCESS_ALLOWED_ORIGINS must contain explicit origins")
 app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=False, allow_methods=["GET"], allow_headers=["If-None-Match"], expose_headers=["ETag", "X-Correlation-ID"])
+app.add_middleware(SecurityBodyLimit)
+app.state.security_store = configured_store(ROOT)
+app.include_router(security_router)
+
+
+def add_security_headers(response: Response) -> None:
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Content-Security-Policy"] = "frame-ancestors 'none'"
 
 
 def signing_directory() -> Path:
@@ -77,10 +95,24 @@ def signing_asset(lesson_id: str, filename: str, lang: Language = "ethsl", versi
 @app.middleware("http")
 async def headers(request: Request, call_next):
     request.state.correlation_id = str(uuid.uuid4())
+    is_security = request.url.path.startswith("/api/v1/security/")
+    if is_security:
+        configured = urlsplit(security_origin(request))
+        if request.headers.get("host", "").lower() != configured.netloc.lower():
+            response = error_response(request, 403, "host_rejected", "Open the privacy console on its configured site.")
+            add_security_headers(response)
+            return response
+        if request.url.scheme != "https" and not (request.url.scheme == "http" and request.url.hostname in {"127.0.0.1", "localhost"}):
+            response = error_response(request, 400, "https_required", "Security endpoints require HTTPS.")
+            add_security_headers(response)
+            return response
     response = await call_next(request)
     response.headers["X-Correlation-ID"] = request.state.correlation_id
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "no-referrer"
+    if is_security:
+        add_security_headers(response)
+        security_log.info(json.dumps({"event": "security_request", "role": getattr(request.state, "user_role", "anonymous"), "status": response.status_code}))
     return response
 
 
@@ -96,6 +128,14 @@ async def http_error(request: Request, exc: StarletteHTTPException):
 @app.exception_handler(RequestValidationError)
 async def validation_error(request: Request, exc: RequestValidationError):
     return error_response(request, 422, "invalid_request", "Check the lesson version and requested format.")
+
+
+@app.exception_handler(SecurityError)
+async def security_error(request: Request, exc: SecurityError):
+    response = error_response(request, exc.status, exc.code, exc.message)
+    if exc.retry_after > 0:
+        response.headers["Retry-After"] = str(exc.retry_after)
+    return response
 
 
 @app.exception_handler(Exception)
@@ -161,28 +201,55 @@ def transcript(lesson_id: str, language: str, version: int = Query(1, ge=1)):
 
 
 @app.get("/api/v1/lessons/{lesson_id}/media/{kind}")
-def media(lesson_id: str, kind: Literal["video", "captions"], version: int = Query(1, ge=1)):
+def media(lesson_id: str, kind: Literal["video", "captions", "captions-am", "captions-ti", "described-video", "described-captions", "audio", "described-audio", "sign-video"], version: int = Query(1, ge=1)):
     lesson = resolve(lesson_id, version)
     if lesson.media is None:
         raise HTTPException(404)
+    if lesson_id == W3C_ID:
+        assets = {
+            "video": (W3C_DIRECTORY / "standard.mp4", "video/mp4"),
+            "captions": (W3C_DIRECTORY / "captions.en.vtt", "text/vtt"),
+            "captions-am": (W3C_DIRECTORY / "captions.am.vtt", "text/vtt"),
+            "captions-ti": (W3C_DIRECTORY / "captions.ti.vtt", "text/vtt"),
+            "described-video": (W3C_DIRECTORY / "described.mp4", "video/mp4"),
+            "described-captions": (W3C_DIRECTORY / "captions-described.en.vtt", "text/vtt"),
+            "audio": (W3C_DIRECTORY / "audio.mp3", "audio/mpeg"),
+            "described-audio": (W3C_DIRECTORY / "audio-described.mp3", "audio/mpeg"),
+            "sign-video": (W3C_DIRECTORY / "ethsl.mp4", "video/mp4"),
+        }
+        path, media_type = assets[kind]
+        if not path.is_file():
+            raise HTTPException(404)
+        return FileResponse(path, media_type=media_type, headers={"Cache-Control": "public, max-age=0, must-revalidate"})
     if kind == "video":
         return FileResponse(EXAMPLE_VIDEO, media_type="video/mp4", headers={"Cache-Control": "public, max-age=0, must-revalidate"})
-    return Response(captions_vtt(lesson), media_type="text/vtt", headers={"Cache-Control": "public, max-age=0, must-revalidate"})
+    if kind == "captions":
+        return Response(captions_vtt(lesson), media_type="text/vtt", headers={"Cache-Control": "public, max-age=0, must-revalidate"})
+    raise HTTPException(404)
 
 
 @app.get("/api/v1/lessons/{lesson_id}/exports")
 def exports(lesson_id: str, version: int = Query(1, ge=1)):
     lesson = resolve(lesson_id, version)
     items = []
-    for format, label in [("html", "Read offline HTML"), ("txt", "Download text"), ("zip", "Download offline pack")]:
+    formats = [("html", "Read offline HTML"), ("txt", "Download text"), ("zip", "Download offline pack")]
+    if lesson_id == W3C_ID:
+        formats.extend([
+            ("pdf", "Download tagged PDF prototype · verification pending"),
+            ("brf", "Download uncontracted English BRF prototype · transcriber review pending"),
+        ])
+    for format, label in formats:
         data, media_type, _ = export_lesson(lesson, format)
         items.append({"format": format, "label": label, "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest(), "media_type": media_type, "href": f"/api/v1/lessons/{lesson_id}/downloads/{format}?version={version}"})
     return {"lesson_id": lesson_id, "content_version": version, "language": lesson.language, "items": items}
 
 
 @app.get("/api/v1/lessons/{lesson_id}/downloads/{format}")
-def download(lesson_id: str, format: Literal["html", "txt", "zip"], version: int = Query(1, ge=1)):
-    data, media_type, suffix = export_lesson(resolve(lesson_id, version), format)
+def download(lesson_id: str, format: Literal["html", "txt", "zip", "pdf", "brf"], version: int = Query(1, ge=1)):
+    try:
+        data, media_type, suffix = export_lesson(resolve(lesson_id, version), format)
+    except KeyError:
+        raise HTTPException(404)
     return Response(data, media_type=media_type, headers={"Content-Disposition": f'attachment; filename="{lesson_id}-v{version}.{suffix}"', "Cache-Control": "public, max-age=0, must-revalidate"})
 
 
@@ -214,6 +281,16 @@ def certificate_demo(identifier: str):
 @app.get("/demo/avatar-review", include_in_schema=False)
 def avatar_review():
     return FileResponse(ROOT / "examples/savanna/avatar-review.html")
+
+
+@app.get("/demo/plug-in", include_in_schema=False)
+def plug_in_demo():
+    return FileResponse(ROOT / "examples/plug-in-demo/index.html")
+
+
+@app.get("/demo/privacy", include_in_schema=False)
+def privacy_demo():
+    return FileResponse(ROOT / "examples/privacy/index.html")
 
 
 @app.get("/demo/savanna", include_in_schema=False)

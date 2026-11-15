@@ -6,7 +6,7 @@ import zipfile
 from fastapi.testclient import TestClient
 
 from access_api.main import app
-from access_core.lessons import EXAMPLE_ID, parse_caption_source
+from access_core.lessons import EXAMPLE_ID, W3C_ID, parse_caption_source
 
 client = TestClient(app)
 BASE = "/api/v1/lessons/demo-learning-plan"
@@ -45,7 +45,7 @@ def test_pack_matches_listing_hash_and_has_portable_content():
 
 
 def test_invalid_version_and_format_do_not_reflect_input():
-    for path in [BASE + "/manifest?version=secret-value", BASE + "/downloads/pdf"]:
+    for path in [BASE + "/manifest?version=secret-value", BASE + "/downloads/epub"]:
         response = client.get(path)
         assert response.status_code == 422
         assert "secret-value" not in response.text
@@ -94,5 +94,35 @@ def test_media_pack_contains_captions_and_all_file_hashes_match():
     with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
         manifest = json.loads(archive.read("manifest.json"))
         assert "captions.en.vtt" in archive.namelist()
+        for entry in manifest["files"]:
+            assert hashlib.sha256(archive.read(entry["path"])).hexdigest() == entry["sha256"]
+
+
+def test_w3c_media_demo_exposes_review_status_and_equivalent_formats():
+    base = f"/api/v1/lessons/{W3C_ID}"
+    lesson = client.get(base + "/manifest").json()
+    assert lesson["content_status"] == "review-pending"
+    assert [track["language"] for track in lesson["media"]["caption_tracks"]] == ["en", "am", "ti"]
+    assert lesson["media"]["caption_tracks"][1]["status"] == "machine-translated-review-pending"
+    assert lesson["media"]["described_src"].endswith("described-video?version=1")
+    assert lesson["media"]["sign_src"] is None
+    assert client.get(base + "/media/sign-video").status_code == 404
+    assert "ጥሩ" in client.get(base + "/media/captions-am").text
+    assert "ጽቡቕ" in client.get(base + "/media/captions-ti").text
+    formats = {item["format"] for item in client.get(base + "/exports").json()["items"]}
+    assert formats == {"html", "txt", "zip", "pdf", "brf"}
+    pdf = client.get(base + "/downloads/pdf")
+    assert pdf.headers["content-type"] == "application/pdf"
+    assert pdf.content.startswith(b"%PDF-")
+    brf = client.get(base + "/downloads/brf")
+    assert b",,TRANSCRIBER" in brf.content and b",,PENDING" in brf.content
+
+
+def test_w3c_offline_pack_contains_low_data_and_review_assets_with_hashes():
+    response = client.get(f"/api/v1/lessons/{W3C_ID}/downloads/zip")
+    with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
+        names = set(archive.namelist())
+        assert {"captions.en.vtt", "captions.am.vtt", "captions.ti.vtt", "captions-described.en.vtt", "audio.mp3", "audio-described.mp3", "accessibility-prototype.pdf", "transcript.uncontracted-review-pending.brf"} <= names
+        manifest = json.loads(archive.read("manifest.json"))
         for entry in manifest["files"]:
             assert hashlib.sha256(archive.read(entry["path"])).hexdigest() == entry["sha256"]

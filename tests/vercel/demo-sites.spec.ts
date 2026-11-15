@@ -46,7 +46,7 @@ test('EthioWare recorded-session fixture remains searchable and clearly fictiona
 });
 
 test('EthioWare comparison preserves a realistic baseline and shareable mode', async ({ page }) => {
-  await page.goto('http://127.0.0.1:5173/?mode=before');
+  await page.goto('http://127.0.0.1:5173/?mode=before', { waitUntil: 'domcontentloaded' });
   await expect(page.locator('.comparison-status')).toHaveText('Showing the reconstructed standard course reader.');
   await expect(page.getByText('Reconstructed baseline:', { exact: true })).toBeVisible();
   await expect(page.locator('[data-experience-view="before"] video track')).toHaveCount(0);
@@ -90,6 +90,7 @@ test('Career Gateway comparison filters the baseline and switches to Access', as
   await expect(page.getByText('1 vacancy found.')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Junior web developer' })).toBeVisible();
   await expect(page.locator('access-career-gateway')).toBeHidden();
+  await expect(page.locator('html')).toHaveAttribute('data-access-mode', 'before');
   const scan = await new AxeBuilder({ page }).withTags(tags).analyze();
   expect(scan.violations).toEqual([]);
   await page.setViewportSize({ width: 320, height: 800 });
@@ -97,6 +98,8 @@ test('Career Gateway comparison filters the baseline and switches to Access', as
   await page.getByRole('button', { name: 'After With Access' }).click();
   await expect(page).toHaveURL(/mode=after/);
   await expect(page.getByText('4 jobs found.')).toBeVisible();
+  await expect(page.locator('html')).toHaveAttribute('data-access-mode', 'after');
+  await expect(page.getByRole('heading', { name: 'Listen to job summaries' })).toBeVisible();
 });
 
 test('fictional certificate page exposes only the public record fields', async ({ page }) => {

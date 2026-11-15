@@ -11,14 +11,20 @@ function pauseLessonMedia(mode) {
 
 function setExperience(mode, announce = true) {
   const selected = mode === 'before' ? 'before' : 'after';
+  document.documentElement.dataset.accessMode = selected;
   document.querySelectorAll('[data-experience-view]').forEach(view => { view.hidden = view.dataset.experienceView !== selected; });
   document.querySelectorAll('[data-mode]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.mode === selected)));
   pauseLessonMedia(selected);
   if (announce) document.querySelector('.comparison-status').textContent = selected === 'before'
     ? 'Showing the reconstructed standard Savanna video lesson.'
-    : 'Showing the Savanna fixture with Access learning tools.';
+    : 'Showing Access learning tools and the readable page appearance.';
   return selected;
 }
+
+document.querySelector('alx-accessible-lesson')?.addEventListener('alx-caption-size', event => {
+  const size = event.detail.size;
+  if (['1', '1.25', '1.5'].includes(size)) document.documentElement.dataset.captionSize = size;
+});
 
 const initialMode = new URLSearchParams(location.search).get('mode');
 setExperience(initialMode === 'before' ? 'before' : 'after');

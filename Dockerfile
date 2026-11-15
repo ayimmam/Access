@@ -32,6 +32,16 @@ COPY services services
 RUN uv sync --locked --no-dev --python /usr/local/bin/python
 
 
+FROM python-builder AS offline-media-builder
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY ["example lessons", "example lessons"]
+RUN /app/.venv/bin/python -m access_core.offline_video
+
+
 FROM python:3.11-slim-bookworm AS runtime
 
 ENV PATH="/app/.venv/bin:$PATH" \
@@ -48,6 +58,7 @@ COPY --chown=access:access services services
 COPY --chown=access:access examples examples
 COPY --chown=access:access ["example lessons", "example lessons"]
 COPY --chown=access:access Savanna-static-pages Savanna-static-pages
+COPY --from=offline-media-builder --chown=access:access /app/artifacts/offline-video artifacts/offline-video
 COPY --from=component-builder --chown=access:access /build/packages/lesson-component/dist packages/lesson-component/dist
 
 USER access

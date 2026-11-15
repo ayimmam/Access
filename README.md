@@ -97,8 +97,11 @@ git submodule update --init
 npm ci
 npm run build
 uv sync --locked
+uv run python -m access_core.offline_video
 uv run uvicorn access_api.main:app --reload --host 127.0.0.1 --port 8000
 ```
+
+The offline video build uses FFmpeg to create MP4s with language-tagged selectable subtitles under `artifacts/offline-video/`. The Docker build generates these automatically.
 
 Keep `example lessons/` beside the service because the public fixture repository reads those approved local assets. The [avatar runbook](docs/architecture/AVATAR_BLUEPRINT_EVALUATION.md) documents the optional capture dependency group and local review flow.
 

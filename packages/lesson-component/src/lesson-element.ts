@@ -16,6 +16,8 @@ const styles = `
   p { max-width:65ch; overflow-wrap:anywhere; }
   .note { color:#405b64; font-size:.9em; }
   .toolbar { display:flex; flex-wrap:wrap; gap:1rem; align-items:end; border-block:1px solid #d8e2df; padding:1rem 0; }
+  .toolbar label { flex-basis:min(100%,14rem); min-width:0; }
+  .toolbar input,.toolbar select { width:100%; min-width:0; }
   label { display:grid; gap:.35rem; font-weight:600; flex:1 1 14rem; }
   input,select,button { font:inherit; min-height:2.75rem; padding:.45rem .7rem; border:1px solid #718d90; border-radius:.3rem; background:white; color:inherit; max-width:100%; }
   button { cursor:pointer; } a { color:var(--access-link,#155e63); text-underline-offset:.2em; }
@@ -28,8 +30,56 @@ const styles = `
   video { width:100%; display:block; max-height:32rem; background:#14232c; border-radius:.5rem; }
   video::cue { font-size:var(--caption-size,1rem); color:var(--caption-foreground,#fff); background:var(--caption-background,#14232c); }
   .active-caption { padding:.8rem 1rem; color:var(--caption-foreground,#fff); background:var(--caption-background,#14232c); border-left:3px solid #087c9e; margin:0; min-height:5rem; font-size:var(--caption-size,1rem); }
-  .media-options { display:flex; flex-wrap:wrap; gap:.75rem; align-items:end; margin:1rem 0; }
-  .media-options label { flex:1 1 8rem; font-size:.85rem; }
+  .media-options {
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(min(100%,17rem),1fr));
+    gap:.85rem;
+    margin-top:1rem;
+    color:#17313b;
+  }
+  .media-options-title,.caption-card { grid-column:1 / -1; }
+  .media-options-title { margin:0; font-size:1.25rem; }
+  .media-option-card {
+    min-width:0;
+    padding:clamp(.75rem,3%,1.2rem);
+    border:1px solid #c8d7db;
+    border-radius:.85rem;
+    background:#f5f9fa;
+  }
+  .media-option-card h4 { margin:0 0 .8rem; font-size:1rem; line-height:1.3; }
+  .media-option-fields { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,9rem),1fr)); gap:.65rem; }
+  .media-option-fields:not(:has(> :not([hidden]))) { display:none; }
+  .media-options label { min-width:0; font-size:.875rem; }
+  .media-options select { width:100%; min-width:0; }
+  .media-options select,.media-options button { border-radius:.55rem; }
+  .media-option-action,.media-option-reset { font-weight:650; }
+  .media-option-action {
+    width:100%;
+    margin-bottom:.6rem;
+    border-color:#376879;
+    color:#174957;
+    text-align:left;
+  }
+  .media-option-action:hover:not(:disabled),.media-option-reset:hover { background:#e7f2f5; }
+  .media-option-action[aria-pressed=true],.media-option-action[aria-pressed=true]:hover {
+    border-color:#174957;
+    background:#174957;
+    color:#fff;
+  }
+  .media-option-action:disabled { background:#e9eff1; color:#455960; cursor:default; }
+  .media-caption-actions { display:flex; flex-wrap:wrap; gap:.65rem; margin-top:.65rem; }
+  .media-option-download {
+    display:inline-flex; align-items:center; min-height:2.75rem; padding:.45rem .7rem;
+    border:1px solid #174957; border-radius:.55rem; background:#174957; color:#fff; font-weight:650; overflow-wrap:anywhere;
+  }
+  .media-option-download:hover { background:#0f3540; }
+  .media-option-card > label,.media-option-card > .media-option-fields:not(:last-child) { margin-bottom:.65rem; }
+  .media-option-status { margin:.25rem 0 0; min-height:0; font-size:.875rem; color:#405b64; }
+  .media-option-status:empty { margin:0; }
+  .media-option-card details { margin-top:.35rem; padding-inline:.7rem; border:1px solid #c8d7db; border-radius:.55rem; background:#fff; }
+  .media-option-card summary { font-weight:650; }
+  .media-option-card details p,.media-option-card details ul { font-size:.875rem; }
+  .media-option-card details a { display:inline-flex; align-items:center; min-height:2.75rem; color:#155e63; }
   .avatar-panel { flex:0 1 420px; min-width:0; padding:1rem; background:#eaf0f4; border-radius:.5rem; }
   .sign-panel { flex:0 0 300px; padding:1rem; color:#fff; background:#172d38; border-radius:.5rem; }
   .sign-panel h3 { margin:.25rem 0 .75rem; } .sign-panel p { font-size:.85rem; }
@@ -77,6 +127,7 @@ export class AccessibleLesson extends HTMLElement {
 
   private async load(focusAfterLoad = false) {
     this.disposeMedia?.(); this.disposeMedia = undefined;
+    this.emit('alx-caption-size', { size: '1' });
     this.controller?.abort();
     const controller = new AbortController();
     this.controller = controller;
@@ -131,7 +182,8 @@ export class AccessibleLesson extends HTMLElement {
     article.replaceChildren(node('p', `${statusLabel} · Version ${lesson.content_version}`), node('h2', lesson.title), node('p', lesson.summary));
     let media: ReturnType<typeof createMediaView> | undefined;
     if (lesson.media) {
-      media = createMediaView(lesson.media, lesson.segments, base, detail => this.emit('alx-avatar-status', detail));
+      media = createMediaView(lesson.media, lesson.segments, base,
+        detail => this.emit('alx-avatar-status', detail), size => this.emit('alx-caption-size', { size }));
       this.disposeMedia = media.dispose;
       article.append(media.view);
     }

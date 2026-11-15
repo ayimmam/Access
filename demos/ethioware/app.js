@@ -11,6 +11,7 @@ const replayCount = document.querySelector('#replay-count');
 
 function setExperience(mode, announce = true) {
   const selected = mode === 'before' ? 'before' : 'after';
+  document.documentElement.dataset.accessMode = selected;
   document.querySelectorAll('[data-experience-view]').forEach(view => {
     view.hidden = view.dataset.experienceView !== selected;
   });
@@ -20,10 +21,15 @@ function setExperience(mode, announce = true) {
   if (announce) {
     document.querySelector('.comparison-status').textContent = selected === 'before'
       ? 'Showing the reconstructed standard course reader.'
-      : 'Showing the lesson with Access learning tools.';
+      : 'Showing Access learning tools and the readable page appearance.';
   }
   return selected;
 }
+
+document.querySelector('alx-accessible-lesson')?.addEventListener('alx-caption-size', event => {
+  const size = event.detail.size;
+  if (['1', '1.25', '1.5'].includes(size)) document.documentElement.dataset.captionSize = size;
+});
 
 const initialMode = new URLSearchParams(location.search).get('mode');
 setExperience(initialMode === 'before' ? 'before' : 'after');
@@ -54,6 +60,10 @@ courseSearch.addEventListener('keydown', event => {
 filterCourses();
 
 if (lesson) lesson.setAttribute('api-base', apiBase);
+if (local) {
+  const video = document.querySelector('[data-experience-view="before"] video');
+  video.src = `${apiBase}/lessons/w3c-colors-with-good-contrast/media/video?version=1`;
+}
 
 try {
   const response = await fetch(`${pluginOrigin}/components/0.1.0/integrity.json`, { credentials: 'omit' });

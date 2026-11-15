@@ -10,6 +10,7 @@ export class TimingAvatar {
   private signing?: SigningPlayer;
   private preview = createHandsRig();
   private hasReviewedSequence = false;
+  private closePreview = true;
 
   constructor(private container: HTMLElement) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -37,8 +38,15 @@ export class TimingAvatar {
     const width = Math.max(1, this.container.clientWidth);
     const height = Math.max(1, this.container.clientHeight);
     const aspect = width / height;
-    const spaceWidth = SIGNING_SPACE.right - SIGNING_SPACE.left;
-    const spaceHeight = SIGNING_SPACE.top - SIGNING_SPACE.bottom;
+    // Frame the neutral preview tightly so fingers can be inspected. Reviewed
+    // motion retains its full, fixed signing space and original render profile.
+    const bounds = this.closePreview ? new THREE.Box3().setFromObject(this.preview.root) : undefined;
+    const center = bounds?.getCenter(new THREE.Vector3()) ?? new THREE.Vector3(0, 1.55, 0);
+    const size = bounds?.getSize(new THREE.Vector3());
+    const spaceWidth = size ? size.x * 1.25 : SIGNING_SPACE.right - SIGNING_SPACE.left;
+    const spaceHeight = size ? size.y * 1.25 : SIGNING_SPACE.top - SIGNING_SPACE.bottom;
+    this.camera.position.set(center.x, center.y, 6);
+    this.camera.lookAt(center.x, center.y, 0);
     const vertical = Math.max(spaceHeight, spaceWidth / aspect) / 2;
     this.camera.left = -vertical * aspect;
     this.camera.right = vertical * aspect;
@@ -69,12 +77,17 @@ export class TimingAvatar {
     this.signing = undefined;
     this.hasReviewedSequence = false;
     this.preview.root.visible = true;
-    this.renderer.render(this.scene, this.camera);
+    this.closePreview = true;
+    this.resize();
   }
 
   update(time: number, hasCue: boolean) {
     const approved = this.signing?.update(time);
     this.preview.root.visible = !this.hasReviewedSequence && !this.signing?.showsRigPreview;
+    if (this.closePreview !== this.preview.root.visible) {
+      this.closePreview = this.preview.root.visible;
+      this.resize();
+    }
     this.renderer.render(this.scene, this.camera);
     return approved;
   }

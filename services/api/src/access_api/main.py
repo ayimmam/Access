@@ -20,6 +20,7 @@ from starlette.staticfiles import StaticFiles
 from access_core.lessons import (
     EXAMPLE_VIDEO, W3C_DIRECTORY, W3C_ID, Lesson, captions_vtt, export_lesson, get_lesson,
 )
+from access_core.offline_video import Edition, offline_video_path
 from access_core.jobs import JOBS, DemoVerification, Job, verify_demo
 from access_core.signing import Language, load_manifest, public_manifest
 from access_api.body_limit import SecurityBodyLimit
@@ -185,6 +186,14 @@ def demo_certificate(identifier: str):
 @app.get("/api/v1/lessons/{lesson_id}/manifest", response_model=Lesson)
 def manifest(request: Request, lesson_id: str, version: int = Query(1, ge=1)):
     lesson = resolve(lesson_id, version)
+    if lesson.media:
+        downloads = {}
+        for edition, field in (("standard", "offline_video_src"), ("described", "offline_described_src")):
+            path = offline_video_path(lesson_id, version, edition)
+            if path and path.is_file():
+                downloads[field] = f"/api/v1/lessons/{lesson_id}/offline-video/{edition}?version={version}"
+        if downloads:
+            lesson = lesson.model_copy(update={"media": lesson.media.model_copy(update=downloads)})
     body = lesson.model_dump_json().encode()
     tag = '"' + hashlib.sha256(body).hexdigest() + '"'
     cache_headers = {"ETag": tag, "Cache-Control": "public, max-age=0, must-revalidate"}
@@ -227,6 +236,16 @@ def media(lesson_id: str, kind: Literal["video", "captions", "captions-am", "cap
     if kind == "captions":
         return Response(captions_vtt(lesson), media_type="text/vtt", headers={"Cache-Control": "public, max-age=0, must-revalidate"})
     raise HTTPException(404)
+
+
+@app.get("/api/v1/lessons/{lesson_id}/offline-video/{edition}", response_class=FileResponse)
+def offline_video(lesson_id: str, edition: Edition, version: int = Query(1, ge=1)):
+    resolve(lesson_id, version)
+    asset = offline_video_path(lesson_id, version, edition)
+    if not asset or not asset.is_file():
+        raise HTTPException(404)
+    return FileResponse(asset, media_type="video/mp4", filename=asset.name,
+                        headers={"Cache-Control": "public, max-age=0, must-revalidate"})
 
 
 @app.get("/api/v1/lessons/{lesson_id}/exports")

@@ -1,6 +1,6 @@
 # Career Gateway voice-navigation evidence
 
-This is public, fictional draft practice, not a recruiting integration. No real employer submission, incentive amount, eligibility decision, account, contact lookup, or AI provider is implemented. Partner integration and verified eligibility rules need separate review.
+This is public, fictional draft practice, not a recruiting integration. No real employer submission, incentive amount, eligibility decision, account, or contact lookup is implemented. Partner integration and verified eligibility rules need separate review. Optional **Amharic speech through Addis AI** is now implemented behind a private worker; see the [key placement, setup, data limits and Amharic testing guide](ADDIS_AMHARIC_VOICE.md). English still needs no API key.
 
 ## Demo and equivalent walkthrough
 
@@ -18,7 +18,7 @@ This is public, fictional draft practice, not a recruiting integration. No real 
 ## Safety and accessibility behavior
 
 - There is no recognition instance until explicit Start/Listen. Each request has a 15-second limit. Stop, new commands, filter changes, tab hiding, comparison hiding, page exit and disconnect invalidate pending callbacks. No automatic retry after denied permission.
-- Recognition and app synthesis cancel one another; recorded summary playback also stops the guide. Only an explicitly enabled, local English synthesis voice is used. Remote-only/missing voices fall back to text instead of silently sending text to a remote synthesizer.
+- Recognition and app synthesis cancel one another; recorded summary playback also stops the guide. In **English**, only an explicitly enabled local synthesis voice is used. Remote-only/missing English voices fall back to text instead of silently sending text to a remote synthesizer. **Amharic** explicitly uses the separate Addis service and its disclosed retention/billing policy; recognized text requires review before execution.
 - Typed commands, native buttons, visible labels, status/error regions and predictable intentional focus transitions are always available. Result pages are not whole-list live regions. Active guided results use one count announcement, rather than duplicating the ordinary card count. App read-aloud defaults off; when enabled, duplicate guide live announcements are disabled. This is a mitigation, **not a tested guarantee** against screen-reader overlap.
 - Numbered commands resolve through a snapshot of stable fixture IDs. Changes to ordinary filters cancel capture and require Repeat before accepting new spoken/typed numbers. A late result from an aborted capture cannot save a different listing. Shared saved jobs survive Stop but not a page reload.
 - Draft entry uses typed fields or the user's screen reader. It intentionally does not support dictating personal information. Name and introduction are required; relevant experience is optional and skippable. There is no generated biography, contact request, submission button, draft persistence, telemetry event, or draft network request. Draft strings render as text, not HTML.
@@ -31,7 +31,7 @@ From a checkout of this branch with its dependencies and browser installed:
 ```sh
 npm run build
 uv run pytest
-npm run test:browser -- tests/integration/career-gateway.spec.ts tests/integration/career-voice.spec.ts
+npm run test:browser -- tests/integration/career-gateway.spec.ts tests/integration/career-voice.spec.ts tests/integration/career-amharic.spec.ts
 npm run test:vercel-demos
 python3 scripts/check_repository.py
 bash scripts/check_security_baseline.sh
@@ -48,9 +48,9 @@ ACCESS_RECORD_DEMO=1 npm run test:vercel-demos -- tests/vercel/career-voice.spec
 
 The recording contains fictional fixtures only. The helper banner labels simulated speech, and the guide still executes the real search, stable-ID save and draft actions. Browser speech mocks assert the utterance content/count and capture/synthesis exclusion, but do not make audible output or emulate an assistive technology.
 
-### Results in this environment
+### Original English implementation results
 
-Date: 15 November 2026. Linux; Node 24; Python 3.11; system Chromium.
+Date: 15 November 2026; commit `ea61039`, before the Amharic extension. Linux; Node 24; Python 3.11; system Chromium. These are historical results, not a claim that new provider/device checks ran. The Amharic guide and updated PR report the extension's validation separately.
 
 | Check | Actual result |
 | --- | --- |
@@ -82,4 +82,6 @@ For **each** NVDA/Chrome or Firefox and TalkBack/Chrome combination:
 4. While listening, change the ordinary query and then Stop. Check late recognition cannot act. After filters change, Repeat must establish the new numbers. Switch to Without Access or hide the tab: the microphone must switch off.
 5. In the shortlist, review each saved title before preparing a draft. Check required-field errors individually, skipped optional content, edit focus, Escape/Cancel and absence of app/microphone speech during fields. Reopen to confirm erasure. Do not record a participant's name, audio, screen, disability disclosure or other private information without separate consent.
 
-Human review is required before merge. UI/events belong with Anteneh, fixture/API changes with Biniyam, and microphone/draft boundaries with Hailemichael. No deployment, paid service or secret is required by this change.
+Repeat this checklist in Amharic, including transcript review, the Stop/Send distinction, native playback controls, denied recording, service limits and a language change while transcription is pending. Amharic text accuracy and audible Addis output require a native speaker; they are not established by automated tests.
+
+Human review is required before merge. UI/events belong with Anteneh, fixture/API changes with Biniyam, and microphone/draft boundaries with Hailemichael. English and typed Amharic need no deployment, paid service or secret. Live Addis speech is optional, billable and requires the separately configured private worker; no such deployment occurred for the recorded tests.

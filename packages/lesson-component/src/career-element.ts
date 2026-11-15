@@ -262,7 +262,7 @@ export class CareerGateway extends HTMLElement {
         stopRecorded,
         guideActive: enabled => count.setAttribute('aria-live', enabled ? 'off' : 'polite'),
         outputMode: enabled => soundStatus.setAttribute('aria-live', enabled ? 'off' : 'polite'),
-      });
+      }, base);
       this.voice.setPaused(this.hasAttribute('voice-paused'));
     }
     layout.append(filters, results);

@@ -1,4 +1,4 @@
-type SpeechState = 'off' | 'starting' | 'listening' | 'speaking';
+export type SpeechState = 'off' | 'starting' | 'listening' | 'speaking' | 'transcribing' | 'preparing';
 interface Alternative { transcript: string; confidence: number }
 interface RecognitionResult { isFinal: boolean; length: number; [index: number]: Alternative }
 interface Recognition {

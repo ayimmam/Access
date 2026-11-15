@@ -1,0 +1,47 @@
+services:
+  api:
+    environment:
+      ACCESS_SPEECH_WORKER_URL: http://speech:8010
+      ACCESS_SPEECH_WORKER_TOKEN: "${ACCESS_SPEECH_WORKER_TOKEN:?Set a private worker token in .env}"
+    depends_on:
+      speech:
+        condition: service_healthy
+    networks:
+      - default
+      - speech-private
+  speech:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: speech-runtime
+    command: ["uvicorn", "access_worker.speech_gateway:app", "--host", "0.0.0.0", "--port", "8010", "--no-access-log"]
+    environment:
+      ADDIS_API_KEY: "${ADDIS_API_KEY:?Set a rotated Addis key in .env}"
+      ACCESS_SPEECH_WORKER_TOKEN: "${ACCESS_SPEECH_WORKER_TOKEN:?Set a private worker token in .env}"
+      ACCESS_SPEECH_DAILY_REQUEST_LIMIT: "${ACCESS_SPEECH_DAILY_REQUEST_LIMIT:-100}"
+      ACCESS_SPEECH_BUDGET_DB: /state/speech-budget.sqlite3
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 256m
+    cpus: 1
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    volumes:
+      - speech-budget:/state
+    networks:
+      - speech-private
+      - speech-egress
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8010/healthz', timeout=2).read()"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+networks:
+  speech-private:
+    internal: true
+  speech-egress:
+volumes:
+  speech-budget:

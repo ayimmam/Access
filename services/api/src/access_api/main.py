@@ -22,6 +22,8 @@ from access_core.lessons import (
 )
 from access_core.offline_video import Edition, offline_video_path
 from access_core.jobs import JOBS, DemoVerification, Job, verify_demo
+from access_core.speech_transport import SpeechFailure
+from access_api.career_speech import router as career_speech_router
 from access_core.signing import Language, load_manifest, public_manifest
 from access_api.body_limit import SecurityBodyLimit
 from access_api.security import configured_store, origin as security_origin, router as security_router
@@ -44,13 +46,15 @@ app = FastAPI(
     title="Access public lesson API", version="0.1.0", docs_url="/api/docs", redoc_url=None,
     responses={404: {"model": ErrorEnvelope}, 422: {"model": ErrorEnvelope}, 500: {"model": ErrorEnvelope}},
 )
-origins = [origin.strip() for origin in os.environ.get("ACCESS_ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",") if origin.strip()]
+origins = [origin.strip() for origin in os.environ.get("ACCESS_ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173,http://localhost:8000,http://127.0.0.1:8000").split(",") if origin.strip()]
 if "*" in origins:
     raise RuntimeError("ACCESS_ALLOWED_ORIGINS must contain explicit origins")
-app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=False, allow_methods=["GET"], allow_headers=["If-None-Match"], expose_headers=["ETag", "X-Correlation-ID"])
+app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=False, allow_methods=["GET", "POST"], allow_headers=["If-None-Match", "Content-Type"], expose_headers=["ETag", "X-Correlation-ID", "Retry-After"])
 app.add_middleware(SecurityBodyLimit)
 app.state.security_store = configured_store(ROOT)
 app.include_router(security_router)
+app.state.career_speech_origins = origins
+app.include_router(career_speech_router)
 
 
 def add_security_headers(response: Response) -> None:
@@ -129,7 +133,17 @@ async def http_error(request: Request, exc: StarletteHTTPException):
 
 @app.exception_handler(RequestValidationError)
 async def validation_error(request: Request, exc: RequestValidationError):
+    if request.url.path.startswith("/api/v1/career-speech/"):
+        return error_response(request, 422, "invalid_speech_request", "Check the recording or fictional job selection. Use typed controls instead.")
     return error_response(request, 422, "invalid_request", "Check the lesson version and requested format.")
+
+
+@app.exception_handler(SpeechFailure)
+async def speech_failure(request: Request, exc: SpeechFailure):
+    response = error_response(request, exc.status, "speech_limit" if exc.status == 429 else "speech_unavailable", "Speech unavailable. Use typed controls or try again later.")
+    if exc.status == 429:
+        response.headers["Retry-After"] = str(exc.retry_after)
+    return response
 
 
 @app.exception_handler(SecurityError)

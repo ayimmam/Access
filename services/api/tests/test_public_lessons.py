@@ -126,3 +126,21 @@ def test_w3c_offline_pack_contains_low_data_and_review_assets_with_hashes():
         manifest = json.loads(archive.read("manifest.json"))
         for entry in manifest["files"]:
             assert hashlib.sha256(archive.read(entry["path"])).hexdigest() == entry["sha256"]
+
+
+def test_offline_video_manifest_and_download_are_bound_to_edition_and_version(tmp_path, monkeypatch):
+    monkeypatch.setattr("access_core.offline_video.OUTPUT", tmp_path)
+    base = f"/api/v1/lessons/{EXAMPLE_ID}"
+    assert client.get(base + "/manifest").json()["media"]["offline_video_src"] is None
+    asset = tmp_path / f"{EXAMPLE_ID}-v1-standard.mp4"
+    asset.write_bytes(b"offline edition fixture")
+
+    url = client.get(base + "/manifest").json()["media"]["offline_video_src"]
+    assert url == base + "/offline-video/standard?version=1"
+    response = client.get(url)
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "video/mp4"
+    assert response.headers["content-disposition"] == f'attachment; filename="{asset.name}"'
+    assert response.content == asset.read_bytes()
+    assert client.get(base + "/offline-video/described?version=1").status_code == 404
+    assert client.get(base + "/offline-video/standard?version=2").status_code == 404

@@ -14,10 +14,20 @@ button,input,select { font:inherit; color:inherit; background:white; border:1px 
 button,summary { cursor:pointer; } button:disabled { color:#586371; background:#edf0f3; cursor:default; }
 :focus-visible { outline:3px solid #7141b0; outline-offset:3px; }
 label { display:grid; gap:.35rem; font-weight:600; } input[type=checkbox] { width:1.2rem; height:1.2rem; min-height:0; flex-shrink:0; }
-.search { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; gap:1rem; margin-bottom:1.5rem; }
+.job-controls {
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,19rem),1fr));
+  gap:.85rem; margin:1.25rem 0;
+}
+.job-control-card { min-width:0; padding:1rem; border:1px solid #c6d2df; border-radius:.85rem; background:#f4f7fb; }
+.job-control-card h3 { margin:0 0 .75rem; font-size:1rem; }
+.job-control-card .note { margin:0; }
+.search { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; gap:.65rem; }
+.search label { min-width:0; } .search input,.search select { width:100%; }
 .layout { display:grid; grid-template-columns:minmax(0,1fr) 18rem; gap:1.75rem; align-items:start; }
-.filters { grid-column:2; grid-row:1; border:1px solid #d6dce5; border-radius:.8rem; background:white; padding:1.5rem; }
-.filters h3 { margin-bottom:1rem; } fieldset { border:0; margin:1.3rem 0 0; padding:0; } legend { font-weight:700; }
+.filters { grid-column:2; grid-row:1; border:1px solid #c6d2df; border-radius:.85rem; background:#f4f7fb; padding:1.15rem; }
+.filters h3 { margin-bottom:1rem; }
+fieldset { min-width:0; border:1px solid #c6d2df; border-radius:.55rem; margin:1rem 0 0; padding:.2rem .65rem .45rem; background:#fff; }
+legend { padding:0 .25rem; font-weight:700; }
 .check { display:flex; gap:.7rem; align-items:center; min-height:44px; font-weight:400; }
 .results { grid-column:1; grid-row:1; min-width:0; }
 .result-header { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:.7rem; margin-bottom:1rem; }
@@ -26,13 +36,18 @@ label { display:grid; gap:.35rem; font-weight:600; } input[type=checkbox] { widt
 .tags li { background:#f1f3f7; border:1px solid #d4dae4; border-radius:1rem; padding:.2rem .65rem; font-size:.85rem; }
 .support li { background:#edf6ef; border-color:#bad3c0; color:#254d32; }
 dl { display:flex; flex-wrap:wrap; gap:1rem 2rem; margin-block:1.5rem; } dt { color:#505c6e; font-size:.85rem; } dd { margin:0; font-weight:600; }
-.actions { display:flex; gap:.6rem; flex-wrap:wrap; } .primary { color:#a8174d; border-color:#a8174d; font-weight:600; }
+.actions { display:flex; gap:.6rem; flex-wrap:wrap; }
+.actions button { text-align:left; overflow-wrap:anywhere; }
+.primary { color:#fff; background:#274c69; border-color:#274c69; font-weight:650; }
+.primary:hover { background:#17374f; }
+.actions [aria-pressed=true] { border:2px solid #274c69; background:#e6edf5; font-weight:750; }
 .note { color:#4b596a; font-size:.9rem; } .empty { padding:2rem; border:1px dashed #8290a3; background:white; }
 dialog { color:inherit; border:1px solid #8290a3; border-radius:.8rem; max-width:min(46rem,calc(100vw - 2rem)); max-height:85vh; overflow:auto; padding:1.5rem; }
 dialog::backdrop { background:#101827a6; } .close { float:right; margin:0 0 1rem 1rem; }
 summary { min-height:44px; padding:.5rem 0; font-weight:600; } textarea { font:inherit; width:100%; min-height:6rem; }
 audio { display:block; width:min(100%,32rem); margin:.75rem 0; }
-@media(max-width:850px) { .layout { display:flex; flex-direction:column; } .filters,.results { width:100%; } .search { grid-template-columns:1fr; } }
+@media(max-width:850px) { .layout { display:flex; flex-direction:column; } .filters,.results { width:100%; } }
+@media(max-width:560px) { .search { grid-template-columns:minmax(0,1fr); } }
 @media(prefers-contrast:more) { button,input,select,article { border:2px solid currentColor; } }
 `;
 
@@ -100,6 +115,9 @@ export class CareerGateway extends HTMLElement {
     const searchLabel = el('label', 'Search jobs by title, skill or employer');
     const search = el('input'); search.type = 'search'; search.placeholder = 'Search for a job'; searchLabel.append(search);
     const view = options('Show jobs', ['Saved jobs']); searchRow.append(searchLabel, view.wrapper);
+    const controls = el('div'); controls.className = 'job-controls';
+    const searchCard = el('section'); searchCard.className = 'job-control-card';
+    searchCard.append(el('h3', 'Find and save jobs'), searchRow);
     const layout = el('div'); layout.className = 'layout';
     const filters = el('section'); filters.className = 'filters'; filters.setAttribute('aria-label', 'Filter jobs');
     filters.append(el('h3', 'Filter jobs'));
@@ -125,11 +143,15 @@ export class CareerGateway extends HTMLElement {
     const player = el('audio'); player.controls = true; player.preload = 'none'; player.hidden = true;
     player.setAttribute('aria-label', 'Recorded job summary');
     const stop = button('Stop recorded summary', () => { player.pause(); player.currentTime = 0; soundStatus.textContent = 'Recorded summary stopped.'; });
-    const soundControls = el('div'); soundControls.append(player, stop, soundStatus);
+    stop.hidden = true;
+    const soundControls = el('section'); soundControls.className = 'job-control-card';
+    soundControls.append(el('h3', 'Listen to job summaries'), soundStatus, player, stop);
+    controls.append(searchCard, soundControls);
     const read = (job: Job) => {
       player.pause();
       player.src = new URL(`/demo-assets/career-audio/${job.id}.mp3`, base).href;
       player.hidden = false;
+      stop.hidden = false;
       soundStatus.textContent = `Playing the recorded synthetic demo summary for ${job.title}.`;
       void player.play().catch(() => { soundStatus.textContent = 'Recorded summary could not start. Use the audio controls or read the equivalent text.'; });
     };
@@ -198,7 +220,7 @@ export class CareerGateway extends HTMLElement {
     search.addEventListener('input', () => { clearTimeout(this.timer); this.timer = setTimeout(update, 200); });
     [sector.select,view.select,calendar.select,...types,...sites,...support].forEach(input => input.addEventListener('change',update));
     layout.append(filters, results);
-    this.root.append(heading, introduction, searchRow, soundControls, layout, dialog);
+    this.root.append(heading, introduction, controls, layout, dialog);
     update();
   }
 }

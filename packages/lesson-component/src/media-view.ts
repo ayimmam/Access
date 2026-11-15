@@ -7,6 +7,7 @@ export interface CaptionTrack { language: 'en' | 'am' | 'ti'; label: string; src
 export interface LessonMedia {
   id: string; src: string; captions: string; duration: number; avatar_mode: string;
   caption_tracks?: CaptionTrack[]; described_src?: string; described_captions?: string;
+  offline_video_src?: string; offline_described_src?: string;
   audio_src?: string; described_audio_src?: string; sign_src?: string; sign_status?: string;
 }
 
@@ -16,7 +17,7 @@ function element<K extends keyof HTMLElementTagNameMap>(tag: K, text?: string): 
   return result;
 }
 
-export function createMediaView(media: LessonMedia, segments: TimedSegment[], base: URL, notify: (detail: Record<string, unknown>) => void) {
+export function createMediaView(media: LessonMedia, segments: TimedSegment[], base: URL, notify: (detail: Record<string, unknown>) => void, resizePage: (size: string) => void) {
   const resource = (path: string) => {
     const url = new URL(path, base);
     if (url.origin !== base.origin || !url.pathname.startsWith(base.pathname)) throw new Error('Invalid media address');
@@ -59,6 +60,12 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
   panel.append(title, warning, canvasHost, interpretation, clock, avatarStatus, sizeHelp);
   stage.append(videoColumn, signPanel, panel);
   const controls = element('div'); controls.className = 'media-options';
+  const controlsTitle = element('h3', 'Video accessibility'); controlsTitle.className = 'media-options-title';
+  const optionsCard = (heading: string) => {
+    const card = element('section'); card.className = 'media-option-card';
+    const title = element('h4', heading); card.append(title);
+    return card;
+  };
   const captionLabel = element('label', 'Captions'); const captionSelect = element('select');
   const off = element('option', 'Off'); off.value = 'off'; captionSelect.append(off);
   for (const definition of definitions) { const option = element('option', definition.label); option.value = optionValue(definition.language); captionSelect.append(option); }
@@ -75,6 +82,15 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
   }
   appearanceLabel.append(appearance);
   const reset = element('button', 'Reset caption preferences'); reset.type = 'button';
+  const offlineVideo = element('a', 'Download video with captions');
+  offlineVideo.className = 'media-option-download';
+  const setOfflineEdition = (described: boolean) => {
+    const path = described ? media.offline_described_src : media.offline_video_src;
+    offlineVideo.hidden = !path;
+    if (path) offlineVideo.href = resource(path);
+    offlineVideo.textContent = described ? 'Download described video with captions' : 'Download video with captions';
+  };
+  setOfflineEdition(false);
   const preferenceStatus = element('p'); preferenceStatus.setAttribute('role', 'status');
   const preferenceKey = `access:${media.id}:media-preferences`;
   const savePreferences = () => {
@@ -91,6 +107,7 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
   reset.addEventListener('click', () => {
     appearance.value = 'default'; size.value = '1'; captionSelect.value = 'off';
     captionSelect.dispatchEvent(new Event('change')); applyAppearance();
+    resizePage(size.value);
     try { localStorage.removeItem(preferenceKey); } catch { /* Reset still applies to this session. */ }
     preferenceStatus.textContent = 'Caption preferences reset.';
   });
@@ -101,6 +118,7 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
     if (['default', 'dark', 'yellow'].includes(saved.appearance)) appearance.value = saved.appearance;
     applyAppearance();
   } catch { /* Ignore corrupt or blocked local preferences. */ }
+  resizePage(size.value);
   const descriptionToggle = element('button', 'Use audio-described video'); descriptionToggle.type = 'button';
   descriptionToggle.hidden = !media.described_src;
   descriptionToggle.setAttribute('aria-pressed', 'false');
@@ -120,21 +138,46 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
     const option = element('option', label); option.value = value; dock.append(option);
   }
   dockLabel.append(dock); dockLabel.hidden = true;
-  controls.append(captionLabel, sizeLabel, appearanceLabel, reset, descriptionToggle, signToggle, signDockLabel, signSizeLabel, toggle, dockLabel);
   const tools = element('details'); tools.append(element('summary', 'EthSL recording and review'));
   tools.append(element('p', 'Use a consented fluent EthSL recording and interpreter-approved phrases. No ASL, NGT, automatic fingerspelling or generated lesson gestures are used.'));
   const worksheet = element('button', 'Download caption-to-motion worksheet'); worksheet.type = 'button';
   const reviewLink = element('a', 'Review the hands rig and local EthSL clips'); reviewLink.href = new URL('/demo/avatar-review', base).href;
   tools.append(worksheet, element('br'), reviewLink);
   const note = element('p', 'Source captions need wording and timing review. All source cues await EthSL translation, consented recording and Deaf/interpreter review.'); note.className = 'note';
-  const mediaStatus = element('div'); mediaStatus.append(preferenceStatus, descriptionStatus);
   const lowData = element('details'); lowData.append(element('summary', 'Low-data audio and offline media'));
   const lowDataList = element('ul');
   for (const [path, label] of [[media.audio_src, 'Download audio only · 48 kbps'], [media.described_audio_src, 'Download described audio · 48 kbps']] as const) {
     if (!path) continue; const item = element('li'); const link = element('a', label); link.href = resource(path); link.setAttribute('download', ''); item.append(link); lowDataList.append(item);
   }
   lowData.append(lowDataList, element('p', 'Audio-only files reduce data use. File sizes are also shown in the offline download list.'));
-  view.append(stage, controls, mediaStatus, note, lowData, tools);
+
+  const captionCard = optionsCard('Read along'); captionCard.classList.add('caption-card');
+  const captionFields = element('div'); captionFields.className = 'media-option-fields';
+  captionFields.append(captionLabel, sizeLabel, appearanceLabel);
+  reset.className = 'media-option-reset';
+  preferenceStatus.className = 'media-option-status';
+  const captionActions = element('div'); captionActions.className = 'media-caption-actions';
+  captionActions.append(offlineVideo, reset);
+  captionCard.append(captionFields, captionActions, preferenceStatus);
+
+  controls.append(controlsTitle, captionCard);
+  if (media.described_src || lowDataList.children.length) {
+    const audioCard = optionsCard('Audio options');
+    descriptionStatus.className = 'media-option-status';
+    descriptionToggle.className = 'media-option-action';
+    audioCard.append(descriptionToggle, descriptionStatus);
+    if (lowDataList.children.length) audioCard.append(lowData);
+    controls.append(audioCard);
+  }
+
+  const signCard = optionsCard('Ethiopian Sign Language');
+  const signFields = element('div'); signFields.className = 'media-option-fields';
+  signFields.append(signDockLabel, signSizeLabel);
+  signToggle.className = 'media-option-action';
+  toggle.className = 'media-option-action';
+  signCard.append(signToggle, signFields, toggle, dockLabel, tools);
+  controls.append(signCard);
+  view.append(stage, controls, note);
   let avatar: TimingAvatar | undefined;
   let manifest: SigningManifest | undefined;
   let active = false;
@@ -227,10 +270,11 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
   captionSelect.addEventListener('change', applyCaptionSelection);
   video.textTracks.addEventListener('change', syncNativeTrackModes);
   tracks.forEach((_track, index) => video.textTracks[index]?.addEventListener('cuechange', update));
-  size.addEventListener('change', () => { applyAppearance(); savePreferences(); });
+  size.addEventListener('change', () => { applyAppearance(); savePreferences(); resizePage(size.value); });
   let described = false;
   descriptionToggle.addEventListener('click', () => {
     described = !described; video.pause(); signVideo.pause();
+    setOfflineEdition(described);
     video.src = resource(described ? media.described_src! : media.src);
     tracks.forEach((track, index) => {
       track.src = resource(described && index === 0 && media.described_captions ? media.described_captions : definitions[index].src);

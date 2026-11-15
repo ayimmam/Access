@@ -10,8 +10,11 @@ def test_jobs_are_explicitly_fictional_and_have_equivalent_summary_text():
     response = client.get("/api/v1/jobs")
     assert response.status_code == 200
     jobs = response.json()
-    assert len(jobs) == 4
-    assert len({job["id"] for job in jobs}) == 4
+    assert len(jobs) == 11
+    assert len({job["id"] for job in jobs}) == 11
+    assert [job["id"] for job in jobs[:4]] == [
+        "demo-copywriter", "demo-data-assistant", "demo-machine-operator", "demo-web-developer"
+    ]
     for job in jobs:
         assert job["demo"] is True
         assert "fictional" in job["summary"]
@@ -38,7 +41,7 @@ def test_career_and_second_provider_pages_use_reusable_components():
     career = client.get("/demo/careers")
     learning = client.get("/demo/ethioware")
     assert career.status_code == learning.status_code == 200
-    assert '<access-career-gateway api-base="/api/v1">' in career.text
+    assert '<access-career-gateway voice-navigation api-base="/api/v1">' in career.text
     assert '<alx-accessible-lesson api-base="/api/v1"' in learning.text
     assert "live Ethioware site is unchanged" in learning.text
     assert "NOT AN ALX-ISSUED CREDENTIAL" in client.get("/demo/certificates/unknown").text

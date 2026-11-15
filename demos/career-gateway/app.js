@@ -8,9 +8,13 @@ const gateway = document.querySelector('access-career-gateway');
 
 function setExperience(mode, announce = true) {
   const selected = mode === 'before' ? 'before' : 'after';
+  const previous = document.querySelector('[data-experience-view]:not([hidden])');
+  const restoreFocus = previous?.dataset.experienceView !== selected && previous?.contains(document.activeElement);
+  gateway?.toggleAttribute('voice-paused', selected === 'before');
   document.documentElement.dataset.accessMode = selected;
   document.querySelectorAll('[data-experience-view]').forEach(view => { view.hidden = view.dataset.experienceView !== selected; });
   document.querySelectorAll('[data-mode]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.mode === selected)));
+  if (restoreFocus) document.querySelector(`[data-mode="${selected}"]`)?.focus();
   if (announce) document.querySelector('.comparison-status').textContent = selected === 'before'
     ? 'Showing the reconstructed standard vacancy listings.'
     : 'Showing Access career tools and the readable page appearance.';

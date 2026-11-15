@@ -6,6 +6,7 @@
   "description": "Accessible learning media component and public fixture API",
   "scripts": {
     "build": "npm run build --workspace @access/lesson-component && node scripts/write-component-integrity.mjs",
+    "build:hands-preview": "esbuild scripts/build_hands_preview.mjs --bundle --packages=external --platform=node --format=esm --outfile=artifacts/build-hands-preview.mjs",
     "typecheck": "npm run typecheck --workspace @access/lesson-component",
     "test:browser": "playwright test",
     "test:vercel-demos": "playwright test --config playwright.vercel.config.ts"

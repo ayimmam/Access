@@ -24,6 +24,7 @@
     .review { max-width: 700px; background: white; padding: 1.25rem; border-radius: .8rem; }
     #caption { min-height: 3em; }
     #observations { padding-left: 1.3rem; }
+    [hidden] { display: none !important; }
     @media(max-width: 700px) { .stage { grid-template-columns: 1fr; } #avatar { height: 380px; } }
   </style>
 </head>
@@ -31,15 +32,17 @@
 <main>
   <a href="/">Back to lesson</a>
   <h1>Avatar co-design review</h1>
-  <p class="warning"><strong>Unreviewed motion study.</strong> The generated sample follows source-presenter gestures. EthSL and ASL translation and comprehension review are pending.</p>
+  <p class="warning"><strong>3D hands preview · EthSL review pending.</strong> Neutral poses are not interpretation. Only consented EthSL recording-derived drafts may be reviewed here. Presenter gestures, ASL and NGT assets are not accepted.</p>
   <label for="assets">Load a language manifest and its GLB files</label>
   <input id="assets" type="file" accept=".json,.glb" multiple aria-describedby="file-help">
-  <p id="file-help">Select the language JSON plus the rig and every motion GLB from the generated study folder. Files are processed in this browser session. Feedback downloads to your device.</p>
+  <p id="file-help">Select the EthSL hands manifest, rig and any recording-derived motion GLBs. Files stay in this browser session. Record what the rendered clip communicates at normal speed before revealing the English source. Feedback is not approval.</p>
   <button id="load" type="button">Load draft performance</button>
   <p id="status" role="status">Choose the study files to begin.</p>
+  <button id="play" type="button">Play / pause rendered clip</button>
+  <button id="reveal" type="button" disabled>Compare source after saving observation</button>
   <div class="stage">
     <section aria-label="Source video">
-      <video id="video" controls playsinline preload="metadata" aria-label="Source lesson video">
+      <video id="video" controls playsinline preload="metadata" aria-label="Source lesson video" hidden>
         <source src="/api/v1/lessons/alx-transforming-africa/media/video?version=1" type="video/mp4">
       </video>
       <p id="caption">The source caption appears here while playing.</p>

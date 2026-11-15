@@ -1,5 +1,7 @@
 # Interpreter-recording avatar implementation
 
+Historical November 13 evaluation. The November 14 [EthSL hands-only workflow](SIGN_AVATAR_WORKFLOW.md) supersedes the visible-character, ASL-selection and presenter-study playback choices below for the current lesson. Preserve the source/capture history, but do not load its full-character GLBs into the new hands view or treat presenter studies as language interpretation.
+
 Evaluated on 13 November 2026 against the supplied `3D Avatar Implementation Blueprint.md`, the current code and the source lesson. The selected approach uses a fluent interpreter's recording, offline motion authoring and review, followed by browser playback of language-specific GLB clips. EthSL is primary and ASL is the user-selected alternative. The character direction remains an African woman.
 
 ## Evaluation and corrections

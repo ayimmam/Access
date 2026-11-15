@@ -1,7 +1,12 @@
 import type { TimingAvatar } from './timing-avatar';
 
 export interface TimedSegment { id: string; heading: string; text: string; start?: number; end?: number }
-export interface LessonMedia { id: string; src: string; captions: string; duration: number; avatar_mode: string }
+export interface CaptionTrack { language: 'en' | 'am' | 'ti'; label: string; src: string; status: string }
+export interface LessonMedia {
+  id: string; src: string; captions: string; duration: number; avatar_mode: string;
+  caption_tracks?: CaptionTrack[]; described_src?: string; described_captions?: string;
+  audio_src?: string; described_audio_src?: string; sign_src?: string; sign_status?: string;
+}
 
 function element<K extends keyof HTMLElementTagNameMap>(tag: K, text?: string): HTMLElementTagNameMap[K] {
   const result = document.createElement(tag);
@@ -19,13 +24,28 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
   const stage = element('div'); stage.className = 'media-stage';
   const video = element('video');
   video.controls = true; video.preload = 'metadata'; video.playsInline = true;
-  video.crossOrigin = 'anonymous'; video.src = resource(media.src); video.setAttribute('aria-label', 'We Are Transforming Africa lesson video');
-  const track = element('track'); track.kind = 'captions'; track.label = 'English · source draft'; track.srclang = 'en'; track.src = resource(media.captions); track.default = true;
-  video.append(track);
+  video.crossOrigin = 'anonymous'; video.src = resource(media.src); video.setAttribute('aria-label', 'Lesson video');
+  const definitions = media.caption_tracks?.length ? media.caption_tracks : [{ language: 'en' as const, label: 'English · source draft', src: media.captions, status: 'source-draft' }];
+  const legacyCaptionValue = !media.caption_tracks?.length;
+  const optionValue = (language: string) => legacyCaptionValue ? 'on' : language;
+  const tracks = definitions.map((definition, index) => {
+    const track = element('track'); track.kind = 'captions'; track.label = definition.label; track.srclang = definition.language;
+    track.src = resource(definition.src); track.default = index === 0; video.append(track); return track;
+  });
   const videoColumn = element('div'); videoColumn.className = 'video-column'; videoColumn.append(video);
   const cue = element('p', 'Captions will follow the video.'); cue.className = 'active-caption';
   cue.setAttribute('aria-label', 'Current caption');
   videoColumn.append(cue);
+  const signPanel = element('aside'); signPanel.className = 'sign-panel'; signPanel.hidden = true;
+  signPanel.setAttribute('aria-label', 'Ethiopian Sign Language interpretation');
+  const signTitle = element('h3', 'Ethiopian Sign Language');
+  const signStatus = element('p'); signStatus.setAttribute('role', 'status');
+  const signVideo = element('video'); signVideo.muted = true; signVideo.playsInline = true; signVideo.preload = 'metadata';
+  signVideo.setAttribute('aria-label', 'Ethiopian Sign Language interpretation video');
+  if (media.sign_src) signVideo.src = resource(media.sign_src);
+  signPanel.append(signTitle);
+  if (media.sign_src) signPanel.append(signVideo);
+  signPanel.append(signStatus);
   const panel = element('aside'); panel.className = 'avatar-panel'; panel.hidden = true;
   panel.setAttribute('aria-label', '3D avatar timing prototype');
   const title = element('h3', '3D timing prototype');
@@ -34,18 +54,63 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
   const clock = element('p', 'Video time 0:00'); clock.className = 'avatar-clock';
   const avatarStatus = element('p'); avatarStatus.setAttribute('role', 'status');
   panel.append(title, warning, canvasHost, clock, avatarStatus);
-  stage.append(videoColumn, panel);
+  stage.append(videoColumn, signPanel, panel);
   const controls = element('div'); controls.className = 'media-options';
   const captionLabel = element('label', 'Captions'); const captionSelect = element('select');
-  for (const [value, label] of [['on', 'English · draft'], ['off', 'Off']]) {
-    const option = element('option', label); option.value = value; captionSelect.append(option);
-  }
+  for (const definition of definitions) { const option = element('option', definition.label); option.value = optionValue(definition.language); captionSelect.append(option); }
+  const off = element('option', 'Off'); off.value = 'off'; captionSelect.append(off);
   captionLabel.append(captionSelect);
   const sizeLabel = element('label', 'Caption size'); const size = element('select');
   for (const [value, label] of [['1', 'Standard'], ['1.25', 'Large'], ['1.5', 'Extra large']]) {
     const option = element('option', label); option.value = value; size.append(option);
   }
   sizeLabel.append(size);
+  const appearanceLabel = element('label', 'Caption appearance');
+  const appearance = element('select');
+  for (const [value, label] of [['default', 'Default'], ['dark', 'White on black'], ['yellow', 'Yellow on black']]) {
+    const option = element('option', label); option.value = value; appearance.append(option);
+  }
+  appearanceLabel.append(appearance);
+  const reset = element('button', 'Reset caption preferences'); reset.type = 'button';
+  const preferenceStatus = element('p'); preferenceStatus.setAttribute('role', 'status');
+  const preferenceKey = `access:${media.id}:media-preferences`;
+  const savePreferences = () => {
+    try { localStorage.setItem(preferenceKey, JSON.stringify({ captions: captionSelect.value, size: size.value, appearance: appearance.value })); } catch { /* Preferences remain usable for this session. */ }
+  };
+  const applyAppearance = () => {
+    const foreground = appearance.value === 'yellow' ? '#ffff00' : '#ffffff';
+    const background = appearance.value === 'default' ? '#14232c' : '#000000';
+    view.style.setProperty('--caption-foreground', foreground);
+    view.style.setProperty('--caption-background', background);
+    view.style.setProperty('--caption-size', `${size.value}rem`);
+  };
+  appearance.addEventListener('change', () => { applyAppearance(); savePreferences(); });
+  reset.addEventListener('click', () => {
+    appearance.value = 'default'; size.value = '1'; captionSelect.value = optionValue(definitions[0].language);
+    captionSelect.dispatchEvent(new Event('change')); applyAppearance();
+    try { localStorage.removeItem(preferenceKey); } catch { /* Reset still applies to this session. */ }
+    preferenceStatus.textContent = 'Caption preferences reset.';
+  });
+  try {
+    const saved = JSON.parse(localStorage.getItem(preferenceKey) || '{}');
+    if (definitions.some(track => optionValue(track.language) === saved.captions) || saved.captions === 'off') captionSelect.value = saved.captions;
+    if (['1', '1.25', '1.5'].includes(saved.size)) size.value = saved.size;
+    if (['default', 'dark', 'yellow'].includes(saved.appearance)) appearance.value = saved.appearance;
+    applyAppearance();
+  } catch { /* Ignore corrupt or blocked local preferences. */ }
+  const descriptionToggle = element('button', 'Use audio-described video'); descriptionToggle.type = 'button';
+  descriptionToggle.hidden = !media.described_src;
+  descriptionToggle.setAttribute('aria-pressed', 'false');
+  const descriptionStatus = element('p'); descriptionStatus.setAttribute('role', 'status');
+  const signToggle = element('button', media.sign_src ? 'Show EthSL interpretation' : 'EthSL recording awaiting review'); signToggle.type = 'button';
+  signToggle.disabled = !media.sign_src;
+  signToggle.setAttribute('aria-pressed', 'false');
+  const signDockLabel = element('label', 'Interpreter position'); const signDock = element('select');
+  for (const [value, label] of [['beside', 'Beside video'], ['below', 'Below video']]) { const option = element('option', label); option.value = value; signDock.append(option); }
+  signDockLabel.append(signDock); signDockLabel.hidden = true;
+  const signSizeLabel = element('label', 'Interpreter size'); const signSize = element('select');
+  for (const [value, label] of [['220', 'Compact'], ['300', 'Standard'], ['380', 'Large']]) { const option = element('option', label); option.value = value; signSize.append(option); }
+  signSize.value = '300'; signSizeLabel.append(signSize); signSizeLabel.hidden = true;
   const toggle = element('button', 'Show 3D timing prototype'); toggle.type = 'button'; toggle.setAttribute('aria-pressed', 'false');
   const dockLabel = element('label', 'Avatar position'); const dock = element('select');
   const languageLabel = element('label', 'Avatar sign language');
@@ -59,7 +124,7 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
     const option = element('option', label); option.value = value; dock.append(option);
   }
   dockLabel.append(dock); dockLabel.hidden = true;
-  controls.append(captionLabel, sizeLabel, languageLabel, generate, toggle, dockLabel);
+  controls.append(captionLabel, sizeLabel, appearanceLabel, reset, descriptionToggle, signToggle, signDockLabel, signSizeLabel, languageLabel, generate, toggle, dockLabel);
   const tools = element('details');
   tools.append(element('summary', 'Free sign-motion authoring tools'));
   tools.append(element('p', 'Performs is a free MIT-licensed renderer for authored sign motions. Create and review language-specific clips before using them for this lesson.'));
@@ -77,7 +142,14 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
   const reviewHelp = element('p'); reviewHelp.append(reviewLink);
   tools.append(worksheet, openEditor, editorStatus, editorHost, fallback, captureHelp, reviewHelp);
   const note = element('p', 'Source captions need wording and timing review. The 3D prototype is awaiting EthSL motion authoring and Deaf review.'); note.className = 'note';
-  view.append(stage, controls, note, tools);
+  const mediaStatus = element('div'); mediaStatus.append(preferenceStatus, descriptionStatus);
+  const lowData = element('details'); lowData.append(element('summary', 'Low-data audio and offline media'));
+  const lowDataList = element('ul');
+  for (const [path, label] of [[media.audio_src, 'Download audio only · 48 kbps'], [media.described_audio_src, 'Download described audio · 48 kbps']] as const) {
+    if (!path) continue; const item = element('li'); const link = element('a', label); link.href = resource(path); link.setAttribute('download', ''); item.append(link); lowDataList.append(item);
+  }
+  lowData.append(lowDataList, element('p', 'Audio-only files reduce data use. File sizes are also shown in the offline download list.'));
+  view.append(stage, controls, mediaStatus, note, lowData, tools);
   let avatar: TimingAvatar | undefined;
   let active = false;
   let disposed = false;
@@ -142,10 +214,16 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
     editorStatus.textContent = 'External workspace requires internet. If loading is blocked, use the separate-tab link. Import authored clips or SiGML/BML in Performs.';
   });
   const activeCue = () => segments.find(segment => segment.start !== undefined && segment.end !== undefined && video.currentTime >= segment.start && video.currentTime < segment.end);
+  const captionText = () => {
+    const index = definitions.findIndex(definition => optionValue(definition.language) === captionSelect.value);
+    const activeCues = index >= 0 ? video.textTracks[index]?.activeCues : null;
+    const selected = activeCues?.[0] as VTTCue | undefined;
+    return selected?.text;
+  };
   const update = () => {
     if (disposed) return;
     const segment = activeCue();
-    cue.textContent = segment?.text || 'Captions will follow the video.';
+    cue.textContent = captionText() || segment?.text || 'Captions will follow the video.';
     clock.textContent = `Video time ${Math.floor(video.currentTime / 60)}:${String(Math.floor(video.currentTime % 60)).padStart(2, '0')}`;
     panel.dataset.videoTime = String(video.currentTime);
     panel.dataset.cueId = segment?.id || '';
@@ -166,16 +244,61 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
   const visibility = () => { cancelAnimationFrame(animation); if (!document.hidden) animate(); };
   video.addEventListener('timeupdate', update);
   video.addEventListener('seeked', update);
-  video.addEventListener('play', animate);
-  video.addEventListener('pause', () => { cancelAnimationFrame(animation); update(); });
-  video.addEventListener('error', () => { note.textContent = 'Video unavailable. Try reloading the lesson or use the transcript below.'; });
-  track.addEventListener('error', () => { note.textContent = 'Caption file unavailable. Use the timestamped transcript below while we restore it.'; });
-  document.addEventListener('visibilitychange', visibility);
-  captionSelect.addEventListener('change', () => {
-    if (video.textTracks[0]) video.textTracks[0].mode = captionSelect.value === 'on' ? 'showing' : 'hidden';
-    cue.hidden = captionSelect.value === 'off';
+  video.addEventListener('play', () => {
+    animate();
+    if (!signPanel.hidden && media.sign_src) {
+      signVideo.currentTime = video.currentTime; signVideo.playbackRate = video.playbackRate;
+      void signVideo.play().catch(() => { video.pause(); signStatus.textContent = 'Interpretation could not resume. Both videos were paused.'; });
+    }
   });
-  size.addEventListener('change', () => { view.style.setProperty('--caption-size', `${size.value}rem`); });
+  video.addEventListener('pause', () => { cancelAnimationFrame(animation); signVideo.pause(); update(); });
+  video.addEventListener('ratechange', () => { signVideo.playbackRate = video.playbackRate; });
+  video.addEventListener('seeking', () => { if (media.sign_src) signVideo.currentTime = video.currentTime; });
+  video.addEventListener('error', () => { note.textContent = 'Video unavailable. Try reloading the lesson or use the transcript below.'; });
+  tracks.forEach(track => track.addEventListener('error', () => { note.textContent = 'A caption file is unavailable. Use the timestamped transcript below while we restore it.'; }));
+  signVideo.addEventListener('waiting', () => { video.pause(); signStatus.textContent = 'Interpretation is buffering. The lesson video was paused to keep both synchronized.'; });
+  signVideo.addEventListener('timeupdate', () => { if (!video.paused && Math.abs(signVideo.currentTime - video.currentTime) > .25) signVideo.currentTime = video.currentTime; });
+  document.addEventListener('visibilitychange', visibility);
+  const applyCaptionSelection = () => {
+    definitions.forEach((definition, index) => { if (video.textTracks[index]) video.textTracks[index].mode = optionValue(definition.language) === captionSelect.value ? 'showing' : 'hidden'; });
+    cue.hidden = captionSelect.value === 'off';
+    const definition = definitions.find(item => optionValue(item.language) === captionSelect.value);
+    preferenceStatus.textContent = definition?.status.includes('pending') ? `${definition.label}. Human review is pending.` : '';
+    savePreferences(); update();
+  };
+  captionSelect.addEventListener('change', applyCaptionSelection);
+  tracks.forEach((_track, index) => video.textTracks[index]?.addEventListener('cuechange', update));
+  size.addEventListener('change', () => { applyAppearance(); savePreferences(); });
+  let described = false;
+  descriptionToggle.addEventListener('click', () => {
+    described = !described; video.pause(); signVideo.pause();
+    video.src = resource(described ? media.described_src! : media.src);
+    tracks.forEach((track, index) => {
+      track.src = resource(described && index === 0 && media.described_captions ? media.described_captions : definitions[index].src);
+      const option = captionSelect.options[index]; if (option) option.disabled = described && index > 0;
+    });
+    if (described) captionSelect.value = optionValue(definitions[0].language);
+    applyCaptionSelection(); video.load();
+    descriptionToggle.setAttribute('aria-pressed', String(described));
+    descriptionToggle.textContent = described ? 'Use standard video' : 'Use audio-described video';
+    descriptionStatus.textContent = described
+      ? 'Audio-described video selected. It uses an extended timeline and restarts from the beginning. English captions are available.'
+      : 'Standard video selected and restarted from the beginning.';
+    if (described && !signPanel.hidden) signToggle.click();
+    signToggle.disabled = described || !media.sign_src;
+  });
+  signToggle.addEventListener('click', () => {
+    const showing = signPanel.hidden;
+    signPanel.hidden = !showing; signDockLabel.hidden = !showing; signSizeLabel.hidden = !showing;
+    signToggle.setAttribute('aria-pressed', String(showing));
+    signToggle.textContent = showing ? 'Hide EthSL interpretation' : 'Show EthSL interpretation';
+    signStatus.textContent = showing ? 'Interpreter recording loaded. Deaf reviewer approval is pending.' : '';
+    if (showing) { signVideo.currentTime = video.currentTime; signVideo.playbackRate = video.playbackRate; if (!video.paused) void signVideo.play(); }
+    else signVideo.pause();
+  });
+  signDock.addEventListener('change', () => { stage.classList.toggle('sign-below', signDock.value === 'below'); });
+  signSize.addEventListener('change', () => { signPanel.style.flexBasis = `${signSize.value}px`; });
+  applyCaptionSelection();
   dock.addEventListener('change', () => { stage.classList.toggle('avatar-below', dock.value === 'below'); });
   toggle.addEventListener('click', async () => {
     active = !active;

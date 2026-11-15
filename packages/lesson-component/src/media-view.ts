@@ -28,9 +28,9 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
   const definitions = media.caption_tracks?.length ? media.caption_tracks : [{ language: 'en' as const, label: 'English · source draft', src: media.captions, status: 'source-draft' }];
   const legacyCaptionValue = !media.caption_tracks?.length;
   const optionValue = (language: string) => legacyCaptionValue ? 'on' : language;
-  const tracks = definitions.map((definition, index) => {
+  const tracks = definitions.map(definition => {
     const track = element('track'); track.kind = 'captions'; track.label = definition.label; track.srclang = definition.language;
-    track.src = resource(definition.src); track.default = index === 0; video.append(track); return track;
+    track.src = resource(definition.src); video.append(track); return track;
   });
   const videoColumn = element('div'); videoColumn.className = 'video-column'; videoColumn.append(video);
   const cue = element('p', 'Captions will follow the video.'); cue.className = 'active-caption';
@@ -57,8 +57,8 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
   stage.append(videoColumn, signPanel, panel);
   const controls = element('div'); controls.className = 'media-options';
   const captionLabel = element('label', 'Captions'); const captionSelect = element('select');
-  for (const definition of definitions) { const option = element('option', definition.label); option.value = optionValue(definition.language); captionSelect.append(option); }
   const off = element('option', 'Off'); off.value = 'off'; captionSelect.append(off);
+  for (const definition of definitions) { const option = element('option', definition.label); option.value = optionValue(definition.language); captionSelect.append(option); }
   captionLabel.append(captionSelect);
   const sizeLabel = element('label', 'Caption size'); const size = element('select');
   for (const [value, label] of [['1', 'Standard'], ['1.25', 'Large'], ['1.5', 'Extra large']]) {
@@ -86,7 +86,7 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
   };
   appearance.addEventListener('change', () => { applyAppearance(); savePreferences(); });
   reset.addEventListener('click', () => {
-    appearance.value = 'default'; size.value = '1'; captionSelect.value = optionValue(definitions[0].language);
+    appearance.value = 'default'; size.value = '1'; captionSelect.value = 'off';
     captionSelect.dispatchEvent(new Event('change')); applyAppearance();
     try { localStorage.removeItem(preferenceKey); } catch { /* Reset still applies to this session. */ }
     preferenceStatus.textContent = 'Caption preferences reset.';
@@ -259,14 +259,23 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
   signVideo.addEventListener('waiting', () => { video.pause(); signStatus.textContent = 'Interpretation is buffering. The lesson video was paused to keep both synchronized.'; });
   signVideo.addEventListener('timeupdate', () => { if (!video.paused && Math.abs(signVideo.currentTime - video.currentTime) > .25) signVideo.currentTime = video.currentTime; });
   document.addEventListener('visibilitychange', visibility);
+  const syncNativeTrackModes = () => {
+    definitions.forEach((definition, index) => {
+      const textTrack = video.textTracks[index];
+      if (!textTrack) return;
+      const mode = optionValue(definition.language) === captionSelect.value ? 'hidden' : 'disabled';
+      if (textTrack.mode !== mode) textTrack.mode = mode;
+    });
+  };
   const applyCaptionSelection = () => {
-    definitions.forEach((definition, index) => { if (video.textTracks[index]) video.textTracks[index].mode = optionValue(definition.language) === captionSelect.value ? 'showing' : 'hidden'; });
+    syncNativeTrackModes();
     cue.hidden = captionSelect.value === 'off';
     const definition = definitions.find(item => optionValue(item.language) === captionSelect.value);
     preferenceStatus.textContent = definition?.status.includes('pending') ? `${definition.label}. Human review is pending.` : '';
     savePreferences(); update();
   };
   captionSelect.addEventListener('change', applyCaptionSelection);
+  video.textTracks.addEventListener('change', syncNativeTrackModes);
   tracks.forEach((_track, index) => video.textTracks[index]?.addEventListener('cuechange', update));
   size.addEventListener('change', () => { applyAppearance(); savePreferences(); });
   let described = false;
@@ -275,9 +284,9 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
     video.src = resource(described ? media.described_src! : media.src);
     tracks.forEach((track, index) => {
       track.src = resource(described && index === 0 && media.described_captions ? media.described_captions : definitions[index].src);
-      const option = captionSelect.options[index]; if (option) option.disabled = described && index > 0;
+      const option = captionSelect.options[index + 1]; if (option) option.disabled = described && index > 0;
     });
-    if (described) captionSelect.value = optionValue(definitions[0].language);
+    if (described && captionSelect.value !== optionValue(definitions[0].language)) captionSelect.value = 'off';
     applyCaptionSelection(); video.load();
     descriptionToggle.setAttribute('aria-pressed', String(described));
     descriptionToggle.textContent = described ? 'Use standard video' : 'Use audio-described video';
@@ -329,6 +338,7 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
       disposed = true; generation++; cancelAnimationFrame(animation);
       signingController?.abort();
       document.removeEventListener('visibilitychange', visibility);
+      video.textTracks.removeEventListener('change', syncNativeTrackModes);
       video.pause(); video.removeAttribute('src'); video.load(); avatar?.dispose();
       editorHost.replaceChildren();
       if (worksheetUrl) URL.revokeObjectURL(worksheetUrl);

@@ -186,3 +186,9 @@ dt { color: var(--muted); }
 [data-access-mode="after"] .module-list a { text-decoration:underline; }
 [data-access-mode="after"] .button-start { color:#fff; background:#274c69; border-color:#274c69; }
 [data-access-mode="after"] .comparison-controls button[aria-pressed="true"] { box-shadow:inset 0 0 0 2px currentColor; }
+
+@media (forced-colors: active) {
+  .comparison-controls button { border: 1px solid ButtonText; }
+  .comparison-controls button[aria-pressed="true"] { border: 3px double ButtonText; }
+  .comparison-controls button:focus-visible { outline: 3px solid Highlight; outline-offset: 2px; }
+}

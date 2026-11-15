@@ -53,3 +53,9 @@ body.navigation-collapsed .site-navigation { display:none; }body.navigation-coll
 [data-access-mode="after"] .site-navigation a.active,
 [data-access-mode="after"] .course-outline a.current { font-weight:750; border-left:4px solid #245673; }
 [data-access-mode="after"] .comparison-controls button[aria-pressed="true"] { box-shadow:inset 0 0 0 2px currentColor; }
+
+@media (forced-colors: active) {
+  .comparison-controls button { border: 1px solid ButtonText; }
+  .comparison-controls button[aria-pressed="true"] { border: 3px double ButtonText; }
+  .comparison-controls button:focus-visible { outline: 3px solid Highlight; outline-offset: 2px; }
+}

@@ -18,6 +18,7 @@ const styles = `
   .toolbar { display:flex; flex-wrap:wrap; gap:1rem; align-items:end; border-block:1px solid #d8e2df; padding:1rem 0; }
   .toolbar label { flex-basis:min(100%,14rem); min-width:0; }
   .toolbar input,.toolbar select { width:100%; min-width:0; }
+  .transcript-download { display:inline-flex; align-items:center; min-height:2.75rem; padding:.45rem 0; }
   label { display:grid; gap:.35rem; font-weight:600; flex:1 1 14rem; }
   input,select,button { font:inherit; min-height:2.75rem; padding:.45rem .7rem; border:1px solid #718d90; border-radius:.3rem; background:white; color:inherit; max-width:100%; }
   button { cursor:pointer; } a { color:var(--access-link,#155e63); text-underline-offset:.2em; }
@@ -94,6 +95,12 @@ const styles = `
   [hidden] { display:none !important; }
   @media(max-width:800px) { .media-stage { flex-direction:column; } .avatar-panel { flex-basis:auto; } }
   @media(max-width:480px) { .hands-size-help { display:block; } }
+  @media (forced-colors:active) {
+    :focus-visible { outline-color:Highlight; }
+    .active-caption { color:CanvasText; background:Canvas; border-color:CanvasText; }
+    .media-option-action[aria-pressed=true] { border:3px double ButtonText; }
+    .media-option-download { border-color:LinkText; }
+  }
 `;
 
 function node<K extends keyof HTMLElementTagNameMap>(tag: K, text?: string): HTMLElementTagNameMap[K] {
@@ -224,7 +231,15 @@ export class AccessibleLesson extends HTMLElement {
       if (url.origin !== base.origin || !url.pathname.startsWith(base.pathname)) throw new Error('Invalid export address');
       const link = node('a', `${item.label} (${new Intl.NumberFormat('en', { maximumFractionDigits: 1 }).format(item.bytes / 1024)} KB)`);
       link.href = url.href; link.setAttribute('download', '');
-      link.addEventListener('click', () => this.emit('alx-media-download', { lessonId: lesson.lesson_id, contentVersion: lesson.content_version, format: item.format, status: 'requested' }));
+      const reportDownload = () => this.emit('alx-media-download', { lessonId: lesson.lesson_id, contentVersion: lesson.content_version, format: item.format, status: 'requested' });
+      link.addEventListener('click', reportDownload);
+      if (media && item.format === 'txt' && !toolbar.querySelector('.transcript-download')) {
+        const transcriptDownload = link.cloneNode(false) as HTMLAnchorElement;
+        transcriptDownload.className = 'transcript-download';
+        transcriptDownload.textContent = 'Download transcript (' + new Intl.NumberFormat('en', { maximumFractionDigits: 1 }).format(item.bytes / 1024) + ' KB)';
+        transcriptDownload.addEventListener('click', reportDownload);
+        toolbar.append(transcriptDownload);
+      }
       const listItem = node('li'); listItem.append(link); links.append(listItem);
     }
     const availability = node('details');

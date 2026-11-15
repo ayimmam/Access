@@ -33,6 +33,26 @@ document.querySelectorAll('[data-mode]').forEach(button => button.addEventListen
 }));
 addEventListener('popstate', () => setExperience(new URLSearchParams(location.search).get('mode')));
 
+const courseSearch = document.querySelector('#course-search');
+const courseCount = document.querySelector('#course-count');
+const courseCards = [...document.querySelectorAll('.catalog-card')];
+
+function filterCourses() {
+  const query = courseSearch.value.trim().toLocaleLowerCase();
+  let matches = 0;
+  for (const card of courseCards) {
+    card.hidden = !card.textContent.toLocaleLowerCase().includes(query);
+    if (!card.hidden) matches++;
+  }
+  courseCount.textContent = `${matches} ${matches === 1 ? 'course' : 'courses'} found.`;
+}
+
+courseSearch.addEventListener('input', filterCourses);
+courseSearch.addEventListener('keydown', event => {
+  if (event.key === 'Enter') location.hash = 'courses';
+});
+filterCourses();
+
 if (lesson) lesson.setAttribute('api-base', apiBase);
 
 try {

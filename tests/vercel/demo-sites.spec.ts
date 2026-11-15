@@ -107,3 +107,19 @@ test('fictional certificate page exposes only the public record fields', async (
   const scan = await new AxeBuilder({ page }).withTags(tags).analyze();
   expect(scan.violations).toEqual([]);
 });
+
+test('Ethioware catalog search opens the matching course preview and practice reader', async ({ page }) => {
+  await page.goto('http://127.0.0.1:5173/');
+  const search = page.getByRole('searchbox', { name: 'Search courses' });
+  await search.fill('Research Scholars');
+  await expect(page.locator('.catalog-card:visible')).toHaveCount(1);
+  await search.press('Enter');
+  await expect(page).toHaveURL(/#courses$/);
+  await page.getByRole('link', { name: 'Get started with Research Scholars' }).click();
+  const preview = page.getByRole('region', { name: 'Research Scholars' });
+  await expect(preview).toBeVisible();
+  await expect(preview).toBeFocused();
+  await preview.getByRole('link', { name: 'Open Access practice lesson' }).click();
+  await expect(page.locator('#lesson-workspace')).toBeFocused();
+  await expect(page.locator('alx-accessible-lesson').getByRole('heading', { name: 'Colors with Good Contrast' })).toBeVisible();
+});

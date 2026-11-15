@@ -1,7 +1,7 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 
-export async function mockCareerSpeech(page: Page, options: { supported?: boolean; localVoice?: boolean; delay?: number } = {}) {
-  await page.addInitScript(({ supported = true, localVoice = true, delay = 5 }) => {
+export async function mockCareerSpeech(page: Page, options: { supported?: boolean; localVoice?: boolean; delay?: number; permission?: PermissionState } = {}) {
+  await page.addInitScript(({ supported = true, localVoice = true, delay = 5, permission = 'prompt' }) => {
     const state = {
       starts: 0, aborts: 0, cancels: 0, microphone: false, speaking: false, spoken: [] as string[], overlaps: [] as string[],
       current: undefined as MockRecognition | undefined,
@@ -39,6 +39,7 @@ export async function mockCareerSpeech(page: Page, options: { supported?: boolea
       },
       cancel() { state.cancels++; state.speaking = false; clearTimeout(state.timer); },
     } });
+    Object.defineProperty(navigator, 'permissions', { configurable: true, value: { query: async () => ({ state: permission }) } });
     Object.defineProperty(window, '__careerSpeech', { value: state });
   }, options);
 }

@@ -47,6 +47,7 @@ test('local articulated draft plays and feedback preserves pending review', asyn
   page.on('pageerror', error => errors.push(error.message));
   await page.goto('/demo/avatar-review');
   await expect(page.getByText('Unreviewed motion study.', { exact: true })).toBeVisible();
+  await expect(page.locator('#video track')).toHaveCount(0);
   await page.getByLabel('Load a language manifest and its GLB files').setInputFiles(studyFiles);
   await page.getByRole('button', { name: 'Load draft performance', exact: true }).click();
   await expect(page.locator('#status')).toContainText('Loaded 1 ETHSL-target draft clips');

@@ -14,6 +14,10 @@ type SpeechWindow = Window & {
   webkitSpeechRecognition?: new () => Recognition;
 };
 
+function normalizeCommand(value: string) {
+  return value.trim().toLowerCase().replace(/[.!?]+$/, '').trim().replace(/\s+/g, ' ');
+}
+
 export class CareerSpeech {
   private recognition?: Recognition;
   private utterance?: SpeechSynthesisUtterance;
@@ -61,7 +65,7 @@ export class CareerSpeech {
       recognition.lang = 'en-US';
       recognition.continuous = false;
       recognition.interimResults = false;
-      recognition.maxAlternatives = 2;
+      recognition.maxAlternatives = 1;
       recognition.onstart = () => { if (current()) this.state('listening'); };
       recognition.onerror = event => {
         if (!current()) return;
@@ -80,14 +84,13 @@ export class CareerSpeech {
         const result = event.results[event.resultIndex];
         if (!result?.isFinal) return;
         const first = result[0];
-        const second = result[1];
         this.stop();
-        if (!first || first.transcript.length > 160 || (first.confidence > 0 && first.confidence < 0.55) ||
-          (second && first.transcript.trim().toLowerCase() !== second.transcript.trim().toLowerCase() && first.confidence - second.confidence < 0.15)) {
+        const command = typeof first?.transcript === 'string' ? normalizeCommand(first.transcript) : '';
+        if (!command || first.transcript.length > 160 || (first.confidence > 0 && first.confidence < 0.55)) {
           this.error('That speech was ambiguous. Nothing was changed. Please repeat one command or type it.');
           return;
         }
-        receive(first.transcript);
+        receive(command);
       };
       this.state('starting');
       recognition.start();

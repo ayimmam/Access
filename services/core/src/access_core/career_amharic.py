@@ -22,6 +22,8 @@ UI = {
     "Transcribing. Microphone off.": "ድምፁን ወደ ጽሑፍ በመቀየር ላይ። ማይክሮፎኑ ጠፍቷል።",
     "Preparing audio. Microphone off.": "ድምፅ በማዘጋጀት ላይ። ማይክሮፎኑ ጠፍቷል።",
     "Choose Start voice search or Use typed search.": "«በድምፅ ፍለጋ ጀምር» ወይም «በጽሑፍ ፈልግ» ይምረጡ።",
+    "Welcome to the Access Career Gateway. Voice navigation is ready.": "ወደ Access የሥራ መግቢያ እንኳን ደህና መጡ። የድምፅ አሰሳው ዝግጁ ነው።",
+    "Microphone permission is not active yet. Press Enter on Start voice search to grant permission, or use typed controls.": "የማይክሮፎን ፈቃድ ገና አልተሰጠም። ፈቃድ ለመስጠት «በድምፅ ፍለጋ ጀምር» ላይ Enter ይጫኑ፣ ወይም በጽሑፍ ይቀጥሉ።",
     "What role would you like? Say or type a role, or “all jobs” to clear filters and explore every fictional listing.": "ምን ዓይነት ሥራ ይፈልጋሉ? የሥራውን ዓይነት ይናገሩ ወይም ይጻፉ። ሁሉንም የማሳያ ሥራዎች ለማየት «ሁሉም ሥራዎች» ይበሉ።",
     "Voice navigation stopped. Typed controls still work. Saved jobs stay for this page session.": "የድምፅ አሰሳ ቆሟል። በጽሑፍ መቀጠል ይችላሉ። የተቀመጡ ሥራዎች ይህ ገጽ እስኪዘጋ ድረስ ይቆያሉ።",
     "Guided search results": "የተመራ ፍለጋ ውጤቶች",

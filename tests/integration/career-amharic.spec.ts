@@ -160,6 +160,24 @@ test('language changes cancel a late transcript and keep English usable', async 
   await expect(guide).toHaveAttribute('data-speech-state', 'off');
 });
 
+test('switching from Amharic keeps read-aloud active and resumes English listening', async ({ page }) => {
+  await mockCareerSpeech(page);
+  await mockAddisSpeech(page);
+  await page.goto('/demo/careers');
+  const guide = page.locator('.voice-guide');
+  await chooseAmharic(guide);
+  await guide.getByRole('checkbox', { name: 'ጥያቄዎችንና ውጤቶችን በድምፅ አንብብ' }).check();
+  await guide.getByRole('combobox').selectOption('en');
+  await expect(guide).toHaveAttribute('lang', 'en');
+  await expect(guide.getByLabel('Read prompts and results aloud')).toBeChecked();
+  await expect(guide).toHaveAttribute('data-speech-state', 'listening');
+  expect(await page.evaluate(() => window.__careerSpeech.starts)).toBe(1);
+  expect(await page.evaluate(() => window.__careerSpeech.spoken.slice(-2))).toEqual([
+    'Welcome to the Access Career Gateway. Voice navigation is ready.',
+    'What role would you like? Say or type a role, or “all jobs” to clear filters and explore every fictional listing.',
+  ]);
+});
+
 test('provider limits restore live errors without automatic retries or speech overlap', async ({ page }) => {
   const requests = await mockAddisSpeech(page, { speechStatus: 429 });
   await page.goto('/demo/careers');

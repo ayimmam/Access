@@ -17,6 +17,7 @@ type SpeechWindow = Window & {
 export class CareerSpeech {
   private recognition?: Recognition;
   private utterance?: SpeechSynthesisUtterance;
+  private voicesChanged?: () => void;
   private generation = 0;
   private timer?: ReturnType<typeof setTimeout>;
   private readonly recognitionType = (window as SpeechWindow).SpeechRecognition || (window as SpeechWindow).webkitSpeechRecognition;
@@ -28,6 +29,10 @@ export class CareerSpeech {
   stop() {
     this.generation++;
     clearTimeout(this.timer);
+    if (this.voicesChanged) {
+      window.speechSynthesis?.removeEventListener('voiceschanged', this.voicesChanged);
+      this.voicesChanged = undefined;
+    }
     if (this.recognition) {
       const recognition = this.recognition;
       this.recognition = undefined;
@@ -100,37 +105,54 @@ export class CareerSpeech {
   speak(messages: string[], done?: () => void) {
     this.stop();
     const synthesis = window.speechSynthesis;
-    const voice = synthesis?.getVoices().find(candidate => candidate.localService && /^en(?:-|$)/i.test(candidate.lang));
-    if (!voice || typeof SpeechSynthesisUtterance === 'undefined') {
-      this.error('No on-device English voice is available. Turn off Read aloud and use the text or your screen reader.');
+    if (!synthesis || typeof SpeechSynthesisUtterance === 'undefined') {
+      this.error('No English browser voice is available. Turn off Read aloud and use the text or your screen reader.');
       done?.();
       return;
     }
     const generation = this.generation;
-    const remaining = [...messages];
-    const next = () => {
-      if (generation !== this.generation) return;
+    const launch = () => {
+      const voices = synthesis.getVoices().filter(candidate => /^en(?:-|$)/i.test(candidate.lang));
+      const voice = voices.find(candidate => candidate.localService) || voices[0];
+      if (!voice) return false;
       clearTimeout(this.timer);
-      const message = remaining.shift();
-      if (!message) { this.utterance = undefined; this.state('off'); done?.(); return; }
-      const utterance = new SpeechSynthesisUtterance(message);
-      this.utterance = utterance;
-      utterance.voice = voice;
-      utterance.lang = voice.lang;
-      utterance.onend = next;
-      utterance.onerror = () => {
+      if (this.voicesChanged) synthesis.removeEventListener('voiceschanged', this.voicesChanged);
+      this.voicesChanged = undefined;
+      const remaining = [...messages];
+      const next = () => {
         if (generation !== this.generation) return;
-        this.stop();
-        this.error('Read aloud could not finish. Use Repeat, the equivalent text, or your screen reader.');
+        clearTimeout(this.timer);
+        const message = remaining.shift();
+        if (!message) { this.utterance = undefined; this.state('off'); done?.(); return; }
+        const utterance = new SpeechSynthesisUtterance(message);
+        this.utterance = utterance;
+        utterance.voice = voice;
+        utterance.lang = voice.lang;
+        utterance.onend = next;
+        utterance.onerror = () => {
+          if (generation !== this.generation) return;
+          this.stop();
+          this.error('Read aloud could not finish. Use Repeat, the equivalent text, or your screen reader.');
+        };
+        this.state('speaking');
+        try { synthesis.speak(utterance); } catch { utterance.onerror?.(new Event('error') as SpeechSynthesisErrorEvent); }
+        this.timer = setTimeout(() => {
+          if (generation !== this.generation) return;
+          this.stop();
+          this.error('Read aloud timed out. Use the text or your screen reader.');
+        }, 60000);
       };
-      this.state('speaking');
-      try { synthesis.speak(utterance); } catch { utterance.onerror?.(new Event('error') as SpeechSynthesisErrorEvent); }
-      this.timer = setTimeout(() => {
-        if (generation !== this.generation) return;
-        this.stop();
-        this.error('Read aloud timed out. Use the text or your screen reader.');
-      }, 60000);
+      next();
+      return true;
     };
-    next();
+    if (launch()) return;
+    this.voicesChanged = () => { if (generation === this.generation) launch(); };
+    synthesis.addEventListener('voiceschanged', this.voicesChanged);
+    this.timer = setTimeout(() => {
+      if (generation !== this.generation) return;
+      this.stop();
+      this.error('No English browser voice is available. Turn off Read aloud and use the text or your screen reader.');
+      done?.();
+    }, 2000);
   }
 }

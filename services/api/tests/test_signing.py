@@ -6,7 +6,12 @@ from fastapi.testclient import TestClient
 
 from access_api.main import app
 from access_core.lessons import EXAMPLE_ID, get_lesson
-from access_core.signing import Asset, SigningManifest, prepare_manifest, sha256, text_hash, validate_binding
+from access_core.signing import Asset, SigningManifest, prepare_manifest, render_revision, sha256, text_hash, validate_binding
+
+
+REVIEW_FIXTURE = dict(review_ref='private-review-reference', consent_ref='private-consent-reference',
+                     deaf_review_ref='test-deaf-review', interpreter_review_ref='test-interpreter-review',
+                     reference_recording_id='test-recording')
 
 
 def approved_manifest(tmp_path):
@@ -17,9 +22,12 @@ def approved_manifest(tmp_path):
     asset = Asset(filename=path.name, sha256=sha256(path), license='test-fixture')
     data = manifest.model_dump()
     data['rig'] = asset.model_dump()
+    data['rig_version'] = 'access-hands-v1'
     data['segments'][1].update(status='approved', motion=asset.model_dump(), clip_name='test', natural_duration=2,
-                              review_ref='private-review-reference', consent_ref='private-consent-reference')
-    return SigningManifest.model_validate(data), lesson
+                              presentation='hands-only', approved_render_sha256='0' * 64, **REVIEW_FIXTURE)
+    result = SigningManifest.model_validate(data)
+    result.segments[1].approved_render_sha256 = render_revision(result, result.segments[1])
+    return result, lesson
 
 
 def test_default_manifest_is_source_faithful_and_language_scoped():
@@ -70,7 +78,7 @@ def test_review_and_timing_validation(tmp_path):
 def test_api_keeps_review_references_private_and_blocks_stale_asset(tmp_path, monkeypatch):
     manifest, lesson = approved_manifest(tmp_path)
     data = manifest.model_dump()
-    data['segments'][1].update(review_ref='private-review-reference', consent_ref='private-consent-reference')
+    data['segments'][1].update(**REVIEW_FIXTURE)
     (tmp_path / f'{EXAMPLE_ID}-v1-ethsl.json').write_text(json.dumps(data))
     monkeypatch.setenv('ACCESS_SIGNING_DIR', str(tmp_path))
     client = TestClient(app)
@@ -78,6 +86,8 @@ def test_api_keeps_review_references_private_and_blocks_stale_asset(tmp_path, mo
     assert response.json()['approved_count'] == 1
     assert 'private-review-reference' not in response.text
     assert 'private-consent-reference' not in response.text
+    assert 'test-recording' not in response.text
+    assert 'test-deaf-review' not in response.text
     url = response.json()['segments'][1]['motion']['url']
     assert client.get(url).status_code == 200
     (tmp_path / 'rig.glb').write_bytes(b'tampered')
@@ -85,6 +95,64 @@ def test_api_keeps_review_references_private_and_blocks_stale_asset(tmp_path, mo
     response = client.get(f'/api/v1/lessons/{EXAMPLE_ID}/signing-manifest')
     assert response.json()['approved_count'] == 0
     assert response.json()['segments'][1]['motion'] is None
+
+
+@pytest.mark.parametrize('field,value', [('start', 1.1), ('end', 8.9), ('playback_rate', .8),
+                                        ('clip_name', 'replacement'), ('reference_recording_id', 'different-take')])
+def test_exact_render_binding_invalidates_edits(tmp_path, field, value):
+    manifest, lesson = approved_manifest(tmp_path)
+    setattr(manifest.segments[1], field, value)
+    assert validate_binding(manifest, lesson, tmp_path).segments[1].status == 'stale-needs-revalidation'
+
+
+@pytest.mark.parametrize('field', ['deaf_review_ref', 'interpreter_review_ref', 'reference_recording_id', 'approved_render_sha256'])
+def test_both_reviewers_and_render_revision_required(tmp_path, field):
+    manifest, _ = approved_manifest(tmp_path)
+    data = manifest.model_dump()
+    data['segments'][1].update(**REVIEW_FIXTURE)
+    data['segments'][1][field] = None
+    with pytest.raises(ValidationError):
+        SigningManifest.model_validate(data)
+
+
+@pytest.mark.parametrize('field', ['requires_non_manual', 'hands_ambiguous'])
+def test_hands_only_cannot_hide_required_grammar(tmp_path, field):
+    manifest, _ = approved_manifest(tmp_path)
+    data = manifest.model_dump()
+    data['segments'][1].update(**REVIEW_FIXTURE)
+    data['segments'][1][field] = True
+    with pytest.raises(ValidationError):
+        SigningManifest.model_validate(data)
+
+
+def test_reviewed_video_route_and_stale_video_blocking(tmp_path, monkeypatch):
+    manifest, lesson = approved_manifest(tmp_path)
+    path = tmp_path / 'published-interpretation.mp4'
+    path.write_bytes(b'not-a-real-recording-server-allowlist-test')
+    data = manifest.model_dump()
+    data.update(rig=None, rig_version=None)
+    data['segments'][1].update(**REVIEW_FIXTURE, presentation='interpreter-video', motion=None, clip_name=None,
+                              requires_non_manual=True, interpreter_video=dict(filename=path.name, sha256=sha256(path), license='test'))
+    manifest = SigningManifest.model_validate(data)
+    data['segments'][1]['approved_render_sha256'] = render_revision(manifest, manifest.segments[1])
+    (tmp_path / f'{EXAMPLE_ID}-v1-ethsl.json').write_text(json.dumps(data))
+    monkeypatch.setenv('ACCESS_SIGNING_DIR', str(tmp_path))
+    client = TestClient(app)
+    response = client.get(f'/api/v1/lessons/{EXAMPLE_ID}/signing-manifest').json()
+    assert response['rig'] is None
+    assert response['approved_count'] == 1
+    url = response['segments'][1]['interpreter_video']['url']
+    assert client.get(url).headers['content-type'] == 'video/mp4'
+    path.write_bytes(b'changed')
+    assert client.get(url).status_code == 404
+    assert client.get(f'/api/v1/lessons/{EXAMPLE_ID}/signing-manifest').json()['segments'][1]['interpreter_video'] is None
+
+
+def test_regrouping_requires_unique_adjacent_ordered_source_ids(tmp_path):
+    manifest, lesson = approved_manifest(tmp_path)
+    manifest.segments[1].cue_ids = ['cue-2', 'cue-4']
+    with pytest.raises(ValueError, match='adjacent'):
+        validate_binding(manifest, lesson, tmp_path)
 
 
 def test_one_euro_filter_handles_irregular_timestamps_and_invalid_inputs():

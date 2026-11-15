@@ -84,12 +84,13 @@ def signing_asset(lesson_id: str, filename: str, lang: Language = "ethsl", versi
     except (ValueError, OSError):
         raise HTTPException(503) from None
     approved = [s for s in manifest.segments if s.status == "approved"]
-    assets = [s.motion for s in approved]
-    if approved and manifest.rig:
+    assets = [asset for segment in approved for asset in [segment.motion, segment.interpreter_video] if asset]
+    if any(segment.presentation == 'hands-only' for segment in approved) and manifest.rig:
         assets.append(manifest.rig)
     if not any(a and a.filename == filename for a in assets):
         raise HTTPException(404)
-    return FileResponse(signing_directory() / filename, media_type="model/gltf-binary", headers={"Cache-Control": "no-store"})
+    media_type = 'video/mp4' if filename.endswith('.mp4') else 'model/gltf-binary'
+    return FileResponse(signing_directory() / filename, media_type=media_type, headers={"Cache-Control": "no-store"})
 
 
 @app.middleware("http")

@@ -1,4 +1,6 @@
 import type { TimingAvatar } from './timing-avatar';
+import type { SigningManifest } from './signing-player';
+import { InterpreterVideo } from './interpreter-video';
 
 export interface TimedSegment { id: string; heading: string; text: string; start?: number; end?: number }
 export interface CaptionTrack { language: 'en' | 'am' | 'ti'; label: string; src: string; status: string }
@@ -33,8 +35,7 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
     track.src = resource(definition.src); track.default = index === 0; video.append(track); return track;
   });
   const videoColumn = element('div'); videoColumn.className = 'video-column'; videoColumn.append(video);
-  const cue = element('p', 'Captions will follow the video.'); cue.className = 'active-caption';
-  cue.setAttribute('aria-label', 'Current caption');
+  const cue = element('p', 'Captions will follow the video.'); cue.className = 'active-caption'; cue.setAttribute('aria-label', 'Current caption');
   videoColumn.append(cue);
   const signPanel = element('aside'); signPanel.className = 'sign-panel'; signPanel.hidden = true;
   signPanel.setAttribute('aria-label', 'Ethiopian Sign Language interpretation');
@@ -46,14 +47,16 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
   signPanel.append(signTitle);
   if (media.sign_src) signPanel.append(signVideo);
   signPanel.append(signStatus);
-  const panel = element('aside'); panel.className = 'avatar-panel'; panel.hidden = true;
-  panel.setAttribute('aria-label', '3D avatar timing prototype');
-  const title = element('h3', '3D timing prototype');
-  const warning = element('p', 'Ethiopian Sign Language review pending. Procedural motions demonstrate timing only.'); warning.className = 'prototype-label';
+  const panel = element('aside'); panel.className = 'avatar-panel'; panel.hidden = true; panel.setAttribute('aria-label', 'EthSL hands-only signing view');
+  const title = element('h3', '3D hands preview · EthSL review pending');
+  const warning = element('p', 'Neutral hands only—not EthSL interpretation.'); warning.className = 'prototype-label';
   const canvasHost = element('div'); canvasHost.className = 'avatar-canvas';
+  const interpretation = element('video'); interpretation.className = 'interpreter-video';
   const clock = element('p', 'Video time 0:00'); clock.className = 'avatar-clock';
   const avatarStatus = element('p'); avatarStatus.setAttribute('role', 'status');
-  panel.append(title, warning, canvasHost, clock, avatarStatus);
+  const sizeHelp = element('p', 'Small preview: use landscape or a larger display for detailed handshape review. Captions remain available.');
+  sizeHelp.className = 'hands-size-help';
+  panel.append(title, warning, canvasHost, interpretation, clock, avatarStatus, sizeHelp);
   stage.append(videoColumn, signPanel, panel);
   const controls = element('div'); controls.className = 'media-options';
   const captionLabel = element('label', 'Captions'); const captionSelect = element('select');
@@ -111,37 +114,19 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
   const signSizeLabel = element('label', 'Interpreter size'); const signSize = element('select');
   for (const [value, label] of [['220', 'Compact'], ['300', 'Standard'], ['380', 'Large']]) { const option = element('option', label); option.value = value; signSize.append(option); }
   signSize.value = '300'; signSizeLabel.append(signSize); signSizeLabel.hidden = true;
-  const toggle = element('button', 'Show 3D timing prototype'); toggle.type = 'button'; toggle.setAttribute('aria-pressed', 'false');
-  const dockLabel = element('label', 'Avatar position'); const dock = element('select');
-  const languageLabel = element('label', 'Avatar sign language');
-  const language = element('select');
-  for (const [value, label] of [['ethsl', 'Ethiopian Sign Language'], ['asl', 'American Sign Language (ASL)']]) {
-    const option = element('option', label); option.value = value; language.append(option);
-  }
-  languageLabel.append(language);
-  const generate = element('button', 'Generate avatar preview'); generate.type = 'button';
+  const toggle = element('button', 'Show 3D hands preview'); toggle.type = 'button'; toggle.setAttribute('aria-pressed', 'false');
+  const dockLabel = element('label', 'Signing panel position'); const dock = element('select');
   for (const [value, label] of [['beside', 'Beside video'], ['below', 'Below video']]) {
     const option = element('option', label); option.value = value; dock.append(option);
   }
   dockLabel.append(dock); dockLabel.hidden = true;
-  controls.append(captionLabel, sizeLabel, appearanceLabel, reset, descriptionToggle, signToggle, signDockLabel, signSizeLabel, languageLabel, generate, toggle, dockLabel);
-  const tools = element('details');
-  tools.append(element('summary', 'Free sign-motion authoring tools'));
-  tools.append(element('p', 'Performs is a free MIT-licensed renderer for authored sign motions. Create and review language-specific clips before using them for this lesson.'));
+  controls.append(captionLabel, sizeLabel, appearanceLabel, reset, descriptionToggle, signToggle, signDockLabel, signSizeLabel, toggle, dockLabel);
+  const tools = element('details'); tools.append(element('summary', 'EthSL recording and review'));
+  tools.append(element('p', 'Use a consented fluent EthSL recording and interpreter-approved phrases. No ASL, NGT, automatic fingerspelling or generated lesson gestures are used.'));
   const worksheet = element('button', 'Download caption-to-motion worksheet'); worksheet.type = 'button';
-  const openEditor = element('button', 'Load free Performs workspace'); openEditor.type = 'button';
-  const editorStatus = element('p'); editorStatus.setAttribute('role', 'status');
-  const editorHost = element('div');
-  const fallback = element('a', 'Open Performs in a separate tab');
-  fallback.href = 'https://performs.gti.upf.edu/'; fallback.target = '_blank'; fallback.rel = 'noopener noreferrer';
-  const captureEditor = element('a', 'Open Animics video-to-motion editor');
-  captureEditor.href = 'https://animics.gti.upf.edu/'; captureEditor.target = '_blank'; captureEditor.rel = 'noopener noreferrer';
-  const captureHelp = element('p'); captureHelp.append(captureEditor);
-  const reviewLink = element('a', 'Review local draft avatar motion');
-  reviewLink.href = new URL('/demo/avatar-review', base).href;
-  const reviewHelp = element('p'); reviewHelp.append(reviewLink);
-  tools.append(worksheet, openEditor, editorStatus, editorHost, fallback, captureHelp, reviewHelp);
-  const note = element('p', 'Source captions need wording and timing review. The 3D prototype is awaiting EthSL motion authoring and Deaf review.'); note.className = 'note';
+  const reviewLink = element('a', 'Review the hands rig and local EthSL clips'); reviewLink.href = new URL('/demo/avatar-review', base).href;
+  tools.append(worksheet, element('br'), reviewLink);
+  const note = element('p', 'Source captions need wording and timing review. All source cues await EthSL translation, consented recording and Deaf/interpreter review.'); note.className = 'note';
   const mediaStatus = element('div'); mediaStatus.append(preferenceStatus, descriptionStatus);
   const lowData = element('details'); lowData.append(element('summary', 'Low-data audio and offline media'));
   const lowDataList = element('ul');
@@ -151,99 +136,64 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
   lowData.append(lowDataList, element('p', 'Audio-only files reduce data use. File sizes are also shown in the offline download list.'));
   view.append(stage, controls, mediaStatus, note, lowData, tools);
   let avatar: TimingAvatar | undefined;
+  let manifest: SigningManifest | undefined;
   let active = false;
   let disposed = false;
   let animation = 0;
   let generation = 0;
   let signingController: AbortController | undefined;
   let worksheetUrl: string | undefined;
-  const languageName = () => language.value === 'asl' ? 'ASL' : 'EthSL';
-  const updateLanguage = () => {
-    const fullName = language.value === 'asl' ? 'American Sign Language' : 'Ethiopian Sign Language';
-    warning.textContent = `${fullName} review pending. Procedural motions demonstrate timing only.`;
-    avatarStatus.textContent = active ? `Timing preview ready. ${languageName()} review pending.` : `${languageName()} selected. Reviewed lesson motions are awaiting authoring.`;
-    panel.dataset.signLanguage = language.value;
-  };
-  const loadSigning = async () => {
-    signingController?.abort();
-    const controller = new AbortController(); signingController = controller;
-    const currentAvatar = avatar;
-    if (!currentAvatar) return;
-    currentAvatar.clearSigning();
-    panel.dataset.reviewStatus = 'awaiting-recording';
-    try {
-      const videoUrl = new URL(media.src, base);
-      const url = new URL(videoUrl.href.replace('/media/video', '/signing-manifest'));
-      url.searchParams.set('lang', language.value);
-      const response = await fetch(url, { signal: controller.signal, credentials: 'omit', cache: 'no-store' });
-      if (!response.ok) throw new Error('Signing manifest unavailable');
-      const manifest = await response.json();
-      if (controller.signal.aborted || avatar !== currentAvatar) return;
-      if (manifest.schema_version !== '1.0' || manifest.language !== language.value || manifest.media_id !== media.id || manifest.content_version !== Number(videoUrl.searchParams.get('version'))) throw new Error('Signing context mismatch');
-      await currentAvatar.setManifest(manifest, base, controller.signal);
-    } catch {
-      if (!controller.signal.aborted && active) avatarStatus.textContent = 'Reviewed signing assets unavailable. Timing preview remains available.';
-    }
-  };
-  language.addEventListener('change', () => { updateLanguage(); void loadSigning(); });
-  generate.addEventListener('click', () => { if (!active) toggle.click(); else updateLanguage(); });
-  worksheet.addEventListener('click', () => {
-    if (worksheetUrl) URL.revokeObjectURL(worksheetUrl);
-    const draft = {
-      schema_version: '1.0', media_id: media.id,
-      source_language: 'en', target_sign_language: language.value,
-      review_status: 'awaiting-translation-and-motion-authoring',
-      character: 'African woman',
-      cues: segments.map(segment => ({ id: segment.id, start: segment.start, end: segment.end, source_text: segment.text, approved_gloss: null, motion_asset: null, non_manual_features: null })),
-    };
-    worksheetUrl = URL.createObjectURL(new Blob([JSON.stringify(draft, null, 2)], { type: 'application/json' }));
-    const link = element('a'); link.href = worksheetUrl; link.download = `${media.id}-${language.value}-motion-worksheet.json`;
-    link.click();
-  });
-  openEditor.addEventListener('click', () => {
-    const existing = editorHost.querySelector('iframe');
-    if (existing) { existing.remove(); openEditor.textContent = 'Load free Performs workspace'; editorStatus.textContent = ''; return; }
-    const frame = element('iframe');
-    frame.title = 'Performs free sign-motion authoring workspace';
-    frame.src = 'https://performs.gti.upf.edu/?controls=true&autoplay=false';
-    frame.referrerPolicy = 'no-referrer';
-    frame.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-downloads');
-    frame.style.cssText = 'width:100%;height:520px;border:1px solid #718d90;border-radius:.4rem;margin-block:1rem;';
-    editorHost.append(frame);
-    openEditor.textContent = 'Close Performs workspace';
-    editorStatus.textContent = 'External workspace requires internet. If loading is blocked, use the separate-tab link. Import authored clips or SiGML/BML in Performs.';
-  });
   const activeCue = () => segments.find(segment => segment.start !== undefined && segment.end !== undefined && video.currentTime >= segment.start && video.currentTime < segment.end);
   const captionText = () => {
     const index = definitions.findIndex(definition => optionValue(definition.language) === captionSelect.value);
     const activeCues = index >= 0 ? video.textTracks[index]?.activeCues : null;
-    const selected = activeCues?.[0] as VTTCue | undefined;
+    const selected = Array.from(activeCues || []).find(candidate => video.currentTime >= candidate.startTime && video.currentTime < candidate.endTime) as VTTCue | undefined;
     return selected?.text;
   };
+  let unavailable = false;
+  const signedVideo = new InterpreterVideo(interpretation, base, () => { video.pause(); update(); });
+  const status = (message: string) => { if (avatarStatus.textContent !== message) avatarStatus.textContent = message; };
   const update = () => {
     if (disposed) return;
     const segment = activeCue();
+    const phrase = manifest?.segments.find(item => video.currentTime >= item.start && video.currentTime < item.end);
     cue.textContent = captionText() || segment?.text || 'Captions will follow the video.';
     clock.textContent = `Video time ${Math.floor(video.currentTime / 60)}:${String(Math.floor(video.currentTime % 60)).padStart(2, '0')}`;
-    panel.dataset.videoTime = String(video.currentTime);
-    panel.dataset.cueId = segment?.id || '';
+    panel.dataset.videoTime = String(video.currentTime); panel.dataset.cueId = segment?.id || '';
+    if (!active) return;
     const reviewed = avatar?.update(video.currentTime, Boolean(segment));
-    if (reviewed) {
-      avatarStatus.textContent = `${languageName()} reviewed motion · ${reviewed.id}`;
-      warning.textContent = 'Interpreter-recorded motion with source-bound review.';
-      panel.dataset.reviewStatus = 'approved';
-    } else if (panel.dataset.reviewStatus === 'approved') {
-      panel.dataset.reviewStatus = 'awaiting-recording'; updateLanguage();
+    const hasVideo = phrase?.status === 'approved' && phrase.presentation === 'interpreter-video' && Boolean(phrase.interpreter_video);
+    canvasHost.hidden = hasVideo;
+    if (hasVideo && phrase) {
+      void signedVideo.select(phrase);
+      signedVideo.update(video.currentTime, video.paused || video.seeking || video.readyState < 3 || document.hidden, video.playbackRate);
+      title.textContent = 'Reviewed EthSL interpreter video';
+      warning.textContent = 'The full signed performance preserves non-manual grammar and visible contact points.';
+      panel.dataset.reviewStatus = signedVideo.state === 'ready' ? 'approved-video' : 'unavailable';
+      status(signedVideo.state === 'ready' ? `Reviewed interpreter video · ${phrase.id}` : signedVideo.state === 'loading'
+        ? 'Loading reviewed interpreter video…' : 'EthSL video unavailable or buffering. Playback paused; use captions/transcript or resume when ready.');
+    } else {
+      if (interpretation.hasAttribute('src') || signedVideo.state !== 'unavailable') signedVideo.clear();
+      if (reviewed) {
+        title.textContent = 'Reviewed EthSL · hands-only';
+        warning.textContent = 'Exact rendered revision reviewed by a Deaf EthSL reviewer and interpreter.';
+        panel.dataset.reviewStatus = 'approved';
+        status(`EthSL reviewed hands-only motion · ${reviewed.id}`);
+      } else {
+        title.textContent = '3D hands preview · EthSL review pending';
+        warning.textContent = 'Neutral hands only—not EthSL interpretation. Approved sequences hide hands in gaps.';
+        panel.dataset.reviewStatus = 'awaiting-recording';
+        status(unavailable ? '3D preview or reviewed signing assets unavailable. Use captions and transcript.' : 'EthSL interpretation unavailable for this segment. Use captions and transcript.');
+      }
     }
   };
   const animate = () => {
-    cancelAnimationFrame(animation);
-    update();
+    cancelAnimationFrame(animation); update();
     if (!disposed && active && !video.paused && !document.hidden) animation = requestAnimationFrame(animate);
   };
-  const visibility = () => { cancelAnimationFrame(animation); if (!document.hidden) animate(); };
-  video.addEventListener('timeupdate', update);
-  video.addEventListener('seeked', update);
+  const visibility = () => { cancelAnimationFrame(animation); if (!document.hidden) animate(); else { interpretation.pause(); signVideo.pause(); } };
+  for (const event of ['timeupdate', 'seeking', 'seeked', 'ratechange', 'ended', 'waiting', 'playing', 'canplay']) video.addEventListener(event, update);
+  for (const event of ['loadedmetadata', 'canplay']) interpretation.addEventListener(event, update);
   video.addEventListener('play', () => {
     animate();
     if (!signPanel.hidden && media.sign_src) {
@@ -286,6 +236,8 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
       : 'Standard video selected and restarted from the beginning.';
     if (described && !signPanel.hidden) signToggle.click();
     signToggle.disabled = described || !media.sign_src;
+    if (described && active) toggle.click();
+    toggle.disabled = described;
   });
   signToggle.addEventListener('click', () => {
     const showing = signPanel.hidden;
@@ -300,37 +252,56 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
   signSize.addEventListener('change', () => { signPanel.style.flexBasis = `${signSize.value}px`; });
   applyCaptionSelection();
   dock.addEventListener('change', () => { stage.classList.toggle('avatar-below', dock.value === 'below'); });
+  worksheet.addEventListener('click', () => {
+    if (worksheetUrl) URL.revokeObjectURL(worksheetUrl);
+    const draft = { schema_version: '1.0', media_id: media.id, target_sign_language: 'ethsl',
+      review_status: 'awaiting-translation-and-recording', rig_version: 'access-hands-v1',
+      cues: segments.map(segment => ({ id: segment.id, cue_ids: [segment.id], start: segment.start, end: segment.end,
+        source_text: segment.text, presentation: 'pending', approved_phrase: null, motion: null, interpreter_video: null })) };
+    worksheetUrl = URL.createObjectURL(new Blob([JSON.stringify(draft, null, 2)], { type: 'application/json' }));
+    const link = element('a'); link.href = worksheetUrl; link.download = `${media.id}-ethsl-motion-worksheet.json`; link.click();
+  });
   toggle.addEventListener('click', async () => {
     active = !active;
     const attempt = ++generation;
     panel.hidden = !active; dockLabel.hidden = !active;
     toggle.setAttribute('aria-pressed', String(active));
-    toggle.textContent = active ? 'Hide 3D timing prototype' : 'Show 3D timing prototype';
-    if (!active) { signingController?.abort(); cancelAnimationFrame(animation); avatar?.dispose(); avatar = undefined; return; }
-    avatarStatus.textContent = 'Loading 3D preview…';
+    toggle.textContent = active ? 'Hide 3D hands preview' : 'Show 3D hands preview';
+    if (!active) { signingController?.abort(); signedVideo.clear(); cancelAnimationFrame(animation); avatar?.dispose(); avatar = undefined; return; }
+    status('Loading 3D hands preview…');
+    const controller = new AbortController(); signingController = controller;
+    unavailable = false; manifest = undefined;
     try {
+      const videoUrl = new URL(media.src, base);
+      const url = new URL(videoUrl.href.replace('/media/video', '/signing-manifest')); url.searchParams.set('lang', 'ethsl');
+      const response = await fetch(url, { signal: controller.signal, credentials: 'omit', cache: 'no-store', redirect: 'error' });
+      if (!response.ok) throw new Error('Signing unavailable');
+      const candidate = await response.json();
+      if (disposed || !active || attempt !== generation) return;
+      if (candidate.schema_version !== '1.0' || candidate.language !== 'ethsl' || candidate.media_id !== media.id ||
+        candidate.lesson_id !== videoUrl.pathname.split('/').at(-3) ||
+        candidate.content_version !== Number(videoUrl.searchParams.get('version')) || !Array.isArray(candidate.segments)) throw new Error('Signing context mismatch');
+      manifest = candidate;
       const { TimingAvatar } = await import('./timing-avatar');
       if (disposed || !active || attempt !== generation) return;
       avatar = new TimingAvatar(canvasHost);
-      updateLanguage();
-      await loadSigning();
+      await avatar.setManifest(candidate, base, controller.signal);
       if (disposed || !active || attempt !== generation) return;
-      animate();
     } catch {
-      if (disposed || attempt !== generation) return;
-      avatarStatus.textContent = '3D preview unavailable on this device. Hide and reopen to retry.';
+      if (disposed || !active || attempt !== generation) return;
+      avatar?.clearSigning();
+      unavailable = true;
     }
-    notify({ mediaId: media.id, mode: media.avatar_mode, signLanguage: language.value, status: 'preview' });
+    animate();
+    notify({ mediaId: media.id, mode: 'hands-only', signLanguage: 'ethsl', status: 'preview' });
   });
   return {
     view,
     seek(time: number) { video.currentTime = Math.min(Math.max(0, time), media.duration); update(); },
     dispose() {
-      disposed = true; generation++; cancelAnimationFrame(animation);
-      signingController?.abort();
+      disposed = true; generation++; cancelAnimationFrame(animation); signingController?.abort(); signedVideo.clear();
       document.removeEventListener('visibilitychange', visibility);
       video.pause(); video.removeAttribute('src'); video.load(); avatar?.dispose();
-      editorHost.replaceChildren();
       if (worksheetUrl) URL.revokeObjectURL(worksheetUrl);
     },
   };

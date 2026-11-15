@@ -2,6 +2,100 @@
 
 Access turns one reviewed lesson revision into an accessible media experience that can run inside an existing learning platform or on an independent website. A framework-independent Web Component reads versioned lesson data from a FastAPI service and offers synchronized media, transcripts, downloads and related career resources without taking over the host's enrollment or completion rules.
 
+## Integrate Access
+
+```mermaid
+flowchart LR
+  LMS["E-learning platform"] --> Lesson["Lesson component"]
+  Savanna["Savanna static page"] --> Lesson
+  Board["Job site"] --> Career["Career component"]
+  Lesson --> API["REST API /api/v1"]
+  Career --> API
+  API --> Media["Versioned media and downloads"]
+  API --> Jobs["Job listings and demo verification"]
+```
+
+Add the partner site's exact origin (scheme, hostname and port) to the Access server's comma-separated `ACCESS_ALLOWED_ORIGINS`. For the hosted API, coordinate with its operator. Use a site template that permits module scripts and custom elements. If the site has a Content Security Policy, test its script, API connection and media permissions against the Access origin.
+
+### Embed in an e-learning page
+
+Replace the integrity placeholder with the full `lesson.js` value from the [release integrity manifest](https://access-plugin.onrender.com/components/0.1.0/integrity.json). Load the script once per page. Set `lesson-id` and `content-version` to the desired published lesson revision and keep the fallback on that revision.
+
+```html
+<script type="module"
+  src="https://access-plugin.onrender.com/components/0.1.0/lesson.js"
+  integrity="REPLACE_WITH_LESSON_JS_SRI" crossorigin="anonymous"></script>
+<alx-accessible-lesson api-base="https://access-plugin.onrender.com/api/v1"
+  lesson-id="w3c-colors-with-good-contrast" content-version="1" lang="en">
+  <a href="https://access-plugin.onrender.com/api/v1/lessons/w3c-colors-with-good-contrast/downloads/html?version=1">
+    Download the lesson transcript
+  </a>
+</alx-accessible-lesson>
+```
+
+See the component on an [independent learning platform](https://access-ethioware.vercel.app/) or generate a snippet in the [interactive installer](https://access-plugin.onrender.com/demo/plug-in).
+
+### Savanna static page example
+
+The [original Savanna concept page](Savanna-static-pages/pages/concept-with-navigation.html) is the layout reference. The [Access integration example](examples/savanna/index.html) mounts the component inside the lesson content area. Try the [hosted Savanna demo](https://access-plugin.onrender.com/demo/savanna), or open `http://127.0.0.1:8000/demo/savanna` after starting Compose.
+
+For this sample, use the e-learning script above with the following element. The relative URLs work when Access serves both the demo page and the API. If you serve a copy on another origin, use absolute Access URLs and configure the allowed origin as described above.
+
+```html
+<alx-accessible-lesson api-base="/api/v1"
+  lesson-id="alx-transforming-africa" content-version="1" lang="en">
+  <a href="/api/v1/lessons/alx-transforming-africa/downloads/html?version=1">
+    Download the lesson transcript
+  </a>
+</alx-accessible-lesson>
+```
+
+| Request from the Savanna sample | Purpose |
+| --- | --- |
+| `GET /api/v1/lessons/alx-transforming-africa/manifest?version=1` | Load the lesson, transcript segments and media references |
+| `GET /api/v1/lessons/alx-transforming-africa/exports?version=1` | List the download formats and sizes |
+| `GET /api/v1/lessons/alx-transforming-africa/media/video?version=1` | Play the sample lesson video |
+| `GET /api/v1/lessons/alx-transforming-africa/downloads/html?version=1` | Open the HTML transcript fallback |
+
+These routes belong to the Access public fixture API. The Savanna sample demonstrates the component mount and leaves enrollment and completion with the host platform.
+
+### Embed in a job site
+
+Use the `jobs.js` integrity value from the same manifest. The component provides job search, support filters and recorded summaries. The hosted demo serves fictional listings and certificates.
+
+```html
+<script type="module"
+  src="https://access-plugin.onrender.com/components/0.1.0/jobs.js"
+  integrity="REPLACE_WITH_JOBS_JS_SRI" crossorigin="anonymous"></script>
+<access-career-gateway api-base="https://access-plugin.onrender.com/api/v1">
+  <a href="https://access-plugin.onrender.com/api/v1/jobs">View the fictional job data</a>
+</access-career-gateway>
+```
+
+Try the [Career Gateway demo](https://access-career-gateway.vercel.app/).
+
+### Use the API with your own interface
+
+These public `GET` routes are relative to `/api/v1` and require no learner credentials. Use the same explicit revision across lesson requests. Protected courses require a confirmed host identity integration.
+
+| Route | Response |
+| --- | --- |
+| `/lessons/{lesson_id}/manifest?version=1` | Lesson metadata, transcript segments and available media |
+| `/lessons/{lesson_id}/transcripts/en?version=1` | English transcript, with timestamps when available |
+| `/lessons/{lesson_id}/exports?version=1` | Download links, formats, sizes and SHA-256 hashes |
+| `/jobs` | Fictional job listings and workplace support |
+| `/jobs/{job_id}/structured-data` | Schema.org JobPosting data |
+| `/demo-certificates/{identifier}` | Fictional verification status and available course and issue date |
+
+```sh
+curl --fail-with-body 'https://access-plugin.onrender.com/api/v1/lessons/w3c-colors-with-good-contrast/manifest?version=1'
+curl --fail-with-body 'https://access-plugin.onrender.com/api/v1/jobs'
+```
+
+Check HTTP status before rendering results. Show an unavailable state for missing records and offer retry for temporary failures. Use `error.correlation_id` from API error responses when reporting failures. See the [OpenAPI explorer](https://access-plugin.onrender.com/api/docs).
+
+From the actual partner page, verify keyboard transcript seeking and downloads, or job filtering, details and summary playback. Block the script and verify the fallback remains reachable. Check the browser console for CORS, integrity and content-security errors.
+
 ## 1. Install Docker and run the project
 
 Docker Compose is the recommended first installation path. It builds the Web Component with Node 24, installs the locked Python 3.11 runtime, and starts the API as a non-root user.

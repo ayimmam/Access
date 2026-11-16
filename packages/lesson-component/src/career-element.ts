@@ -68,7 +68,7 @@ function options(label: string, values: string[]) {
 }
 
 export class CareerGateway extends HTMLElement {
-  static observedAttributes = ['api-base', 'certificate-base', 'voice-navigation', 'voice-paused'];
+  static observedAttributes = ['api-base', 'certificate-base', 'voice-navigation', 'voice-auto-start', 'voice-paused'];
   private root = this.attachShadow({ mode: 'open' });
   private controller?: AbortController;
   private saved = new Set<string>();
@@ -262,7 +262,7 @@ export class CareerGateway extends HTMLElement {
         stopRecorded,
         guideActive: enabled => count.setAttribute('aria-live', enabled ? 'off' : 'polite'),
         outputMode: enabled => soundStatus.setAttribute('aria-live', enabled ? 'off' : 'polite'),
-      }, base);
+      }, base, this.hasAttribute('voice-auto-start'));
       this.voice.setPaused(this.hasAttribute('voice-paused'));
     }
     layout.append(filters, results);

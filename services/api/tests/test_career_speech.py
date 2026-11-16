@@ -82,6 +82,12 @@ def test_catalog_is_public_even_when_provider_is_disabled_and_contains_no_creden
     assert "የተወላጅ ተናጋሪ ግምገማ" in catalog["speech_help"]
 
 
+def test_welcome_prompt_is_server_owned_and_contains_no_user_text():
+    messages = prompt_messages(SpeechPrompt(consent=True, kind="welcome"))
+    assert messages[0].startswith("ወደ Access")
+    assert messages[1].startswith("ምን ዓይነት")
+
+
 @pytest.mark.parametrize("overrides", [
     {"consent": False}, {"consent": 1}, {"consent": "true"}, {"kind": "application"}, {"text": "private-draft-do-not-send"},
     {"job_ids": ["real-employer"]}, {"job_ids": [job.id for job in JOBS[:6]]},

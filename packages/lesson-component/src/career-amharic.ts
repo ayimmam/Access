@@ -1,7 +1,7 @@
 import type { Job } from './career-element';
 
 export interface SpeechPrompt {
-  kind: 'role' | 'results' | 'details' | 'saved' | 'shortlist' | 'changed';
+  kind: 'welcome' | 'role' | 'results' | 'details' | 'saved' | 'shortlist' | 'changed';
   job_ids?: string[];
   total?: number;
   start?: number;
@@ -13,6 +13,7 @@ export interface AmharicCatalog {
   privacy: string; help: string; speech_help: string; speech_enabled: boolean;
 }
 
+export const welcomePrompt = 'Welcome to the Access Career Gateway. Voice navigation is ready.';
 export const rolePrompt = 'What role would you like? Say or type a role, or “all jobs” to clear filters and explore every fictional listing.';
 export const resultHelp = 'Use Next, Previous, Repeat, Details with a result number, Save with result numbers, Shortlist, or Stop. Press Listen for a command or use the typed controls.';
 export const emptyResults = '0 jobs found. No results. Try Search followed by another role, or Search all jobs.';
@@ -55,6 +56,7 @@ export async function loadAmharicCatalog(base: URL, signal: AbortSignal): Promis
 }
 
 const commandAliases: Record<string, string> = {
+  'እንግሊዝኛ': 'language english', 'ወደ እንግሊዝኛ': 'language english',
   'አቁም': 'stop', 'ቁም': 'stop', 'ሰርዝ': 'cancel', 'ቀጣይ': 'next', 'ቀጥል': 'next', 'ቀዳሚ': 'previous', 'ያለፈው': 'previous',
   'ድገም': 'repeat', 'ደግመህ አንብብ': 'repeat', 'ዝርዝር': 'details', 'አስቀምጥ': 'save',
   'የተቀመጡ ሥራዎች': 'shortlist', 'የተቀመጡ ስራዎች': 'shortlist', 'የተቀመጡ ሥራዎችን ክፈት': 'shortlist',

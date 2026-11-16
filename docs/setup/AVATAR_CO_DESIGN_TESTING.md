@@ -2,6 +2,12 @@
 
 The current lesson has **no reviewed EthSL recordings**. Its neutral hands preview is not interpretation. The latest hands-only view excludes the historical African-woman/presenter and ASL/NGT studies. Follow the [hands workflow and cue coverage](../architecture/SIGN_AVATAR_WORKFLOW.md) for generation, private review metadata and publication requirements.
 
+## Test the renderer without study files
+
+Open `http://127.0.0.1:8000/demo/avatar-review` and activate **Start motion test**. The separate test panel performs synthetic wrist turns and finger flexes; it is **not sign language**, does not translate the lesson and cannot supply review evidence or approval. No manifest, recording or upload is needed.
+
+Use **Pause motion test** and **Resume motion test** to inspect movement. **Reset motion test** stops it and releases the test canvas. Nothing starts automatically, including with reduced-motion preferences; leaving the tab pauses the test without automatically resuming it. Loading a study resets the diagnostic. The lesson preview and all recording/hash/consent checks remain unchanged.
+
 ## Start a local review
 
 1. Build/start the project with the [root README](../../README.md) commands. Generate the neutral hands GLB and manifest with the hands workflow's commands, using a new output folder.

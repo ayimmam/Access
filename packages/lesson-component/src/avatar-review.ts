@@ -1,5 +1,6 @@
 import type { TimingAvatar } from './timing-avatar';
 import type { SigningAsset, SigningManifest } from './signing-player';
+import { setupHandsMotionTest } from './hands-motion-test';
 
 interface ReviewSegment { id: string; start: number; end: number; source_text: string }
 type ReviewManifest = Omit<SigningManifest, 'segments'> & {
@@ -18,6 +19,7 @@ const notes = document.querySelector<HTMLTextAreaElement>('#notes')!;
 const save = document.querySelector<HTMLButtonElement>('#save')!;
 const download = document.querySelector<HTMLButtonElement>('#download')!;
 const feedbackStatus = document.querySelector<HTMLElement>('#feedback-status')!;
+const motionTest = setupHandsMotionTest(document.querySelector<HTMLElement>('#hands-motion-test')!);
 let avatar: TimingAvatar | undefined;
 let controller: AbortController | undefined;
 let manifest: ReviewManifest | undefined;
@@ -52,6 +54,7 @@ function animate() {
 }
 
 load.addEventListener('click', async () => {
+  motionTest.reset();
   controller?.abort();
   controller = new AbortController();
   const signal = controller.signal;

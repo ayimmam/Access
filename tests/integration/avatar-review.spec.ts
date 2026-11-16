@@ -26,8 +26,11 @@ test('exact local rig review hides source before observation and never grants ap
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.goto('/demo/avatar-review');
+  await page.getByRole('button', { name: 'Start motion test', exact: true }).click();
+  await expect(page.locator('#motion-test-stage canvas')).toBeVisible();
   await page.getByLabel('Load a language manifest and its GLB files').setInputFiles(studyFiles);
   await page.getByRole('button', { name: 'Load draft performance', exact: true }).click();
+  await expect(page.locator('#motion-test-stage canvas')).toHaveCount(0);
   await expect(page.locator('#status')).toContainText('0 draft clips · 16 phrase slots');
   await expect(page.locator('#avatar canvas')).toBeVisible();
   await expect(page.locator('#video')).toBeHidden();
@@ -53,6 +56,7 @@ test('exact local rig review hides source before observation and never grants ap
   expect(report.manifest_sha256).toBe(createHash('sha256').update(await readFile(manifestPath)).digest('hex'));
   expect(report.observations[0].phase).toBe('blind-comprehension');
   expect(report.rig_version).toBe('access-hands-v1');
+  expect(report.clips.every((clip: { glb_sha256: string | null }) => clip.glb_sha256 === null)).toBe(true);
   const scan = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
   expect(scan.violations).toEqual([]);
   expect(errors).toEqual([]);

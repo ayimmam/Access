@@ -11,15 +11,16 @@ export class TimingAvatar {
   private preview = createHandsRig();
   private hasReviewedSequence = false;
 
-  constructor(private container: HTMLElement) {
+  constructor(private container: HTMLElement, private mode: 'lesson' | 'motion-test' = 'lesson') {
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     this.renderer.domElement.setAttribute('aria-hidden', 'true');
     this.renderer.domElement.style.cssText = 'display:block;width:100%;height:100%;border-radius:.5rem;';
     container.append(this.renderer.domElement);
     this.scene.background = new THREE.Color(0xe4ecee);
-    this.camera.position.set(0, 1.55, 6);
-    this.camera.lookAt(0, 1.55, 0);
+    const center = mode === 'motion-test' ? 1.7 : 1.55;
+    this.camera.position.set(0, center, 6);
+    this.camera.lookAt(0, center, 0);
     this.scene.add(new THREE.HemisphereLight(0xffffff, 0x788995, 2));
     const key = new THREE.DirectionalLight(0xfff3e8, 2.1);
     key.position.set(-2, 4, 5);
@@ -37,8 +38,8 @@ export class TimingAvatar {
     const width = Math.max(1, this.container.clientWidth);
     const height = Math.max(1, this.container.clientHeight);
     const aspect = width / height;
-    const spaceWidth = SIGNING_SPACE.right - SIGNING_SPACE.left;
-    const spaceHeight = SIGNING_SPACE.top - SIGNING_SPACE.bottom;
+    const spaceWidth = this.mode === 'motion-test' ? 1.6 : SIGNING_SPACE.right - SIGNING_SPACE.left;
+    const spaceHeight = this.mode === 'motion-test' ? 1.1 : SIGNING_SPACE.top - SIGNING_SPACE.bottom;
     const vertical = Math.max(spaceHeight, spaceWidth / aspect) / 2;
     this.camera.left = -vertical * aspect;
     this.camera.right = vertical * aspect;
@@ -50,6 +51,7 @@ export class TimingAvatar {
   }
 
   async setManifest(manifest: SigningManifest, base: URL, signal: AbortSignal, options?: SigningOptions) {
+    if (this.mode === 'motion-test') throw new Error('A motion test cannot load a signing manifest');
     this.clearSigning();
     const player = new SigningPlayer(this.scene, manifest, options);
     this.signing = player;
@@ -77,6 +79,22 @@ export class TimingAvatar {
     this.preview.root.visible = !this.hasReviewedSequence && !this.signing?.showsRigPreview;
     this.renderer.render(this.scene, this.camera);
     return approved;
+  }
+
+  renderMotionTest(time: number) {
+    if (this.mode !== 'motion-test') throw new Error('Synthetic motion is restricted to the separate test viewer');
+    const phase = time * Math.PI / 2;
+    const flex = (1 - Math.cos(phase)) / 2;
+    for (const [side, direction] of [['Left', 1], ['Right', -1]] as const) {
+      this.preview.bones.get(`${side}Hand`)!.rotation.set(0, direction * .55 * Math.sin(phase), direction * .25 * Math.sin(phase));
+      for (const finger of ['Index', 'Middle', 'Ring', 'Pinky']) {
+        this.preview.bones.get(`${side}Hand${finger}1`)!.rotation.x = -.08 - .45 * flex;
+        this.preview.bones.get(`${side}Hand${finger}2`)!.rotation.x = -.12 - .55 * flex;
+        this.preview.bones.get(`${side}Hand${finger}3`)!.rotation.x = -.08 - .35 * flex;
+      }
+      this.preview.bones.get(`${side}HandThumb1`)!.rotation.x = -.3 - .15 * flex;
+    }
+    this.renderer.render(this.scene, this.camera);
   }
 
   dispose() {

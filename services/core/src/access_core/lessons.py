@@ -217,7 +217,7 @@ def captions_vtt(lesson: Lesson) -> str:
     cues = ["WEBVTT", "NOTE Source-draft captions. Human timing and wording review pending."]
     for segment in lesson.segments:
         if segment.start is not None and segment.end is not None:
-            cues.append(f"{segment.id}\n{clock(segment.start)} --> {clock(segment.end)}\n{html.escape(segment.text)}")
+            cues.append(f"{segment.id}\n{clock(segment.start)} --> {clock(segment.end)}\n{html.escape(segment.text, quote=False)}")
     return "\n\n".join(cues) + "\n"
 
 

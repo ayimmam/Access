@@ -164,15 +164,19 @@ export class CareerGateway extends HTMLElement {
       soundStatus.textContent = `Playing the recorded synthetic demo summary for ${job.title}.`;
       void player.play().catch(() => { soundStatus.textContent = 'Recorded summary could not start. Use the audio controls or read the equivalent text.'; });
     };
-    let trigger: HTMLButtonElement | undefined;
-    dialog.addEventListener('close', () => trigger?.focus());
+    const detailsButtons = new Map<string, HTMLButtonElement>();
+    let openJobId: string | undefined;
+    dialog.addEventListener('close', () => {
+      const returnTarget = openJobId ? detailsButtons.get(openJobId) : undefined;
+      (returnTarget?.isConnected ? returnTarget : search).focus();
+    });
     const dateText = (date: string) => {
       try { return new Intl.DateTimeFormat(calendar.select.value ? 'en-ET-u-ca-ethiopic' : 'en', { year:'numeric', month:'long', day:'numeric', timeZone:'UTC' }).format(new Date(`${date}T12:00:00Z`)) + (calendar.select.value ? ' (Ethiopian)' : ' (Gregorian)'); }
       catch { return `${date} (Gregorian)`; }
     };
-    const detail = (job: Job, opener: HTMLButtonElement) => {
+    const detail = (job: Job) => {
       this.voice?.stop(); stopRecorded();
-      trigger = opener;
+      openJobId = job.id;
       const close = button('Close job details', () => dialog.close()); close.className = 'close';
       const title = el('h2', job.title); title.id = 'job-dialog-title';
       const tasks = el('ul'); job.responsibilities.forEach(task => tasks.append(el('li', task)));
@@ -201,6 +205,7 @@ export class CareerGateway extends HTMLElement {
         (!sector.select.value || sector.select.value === job.sector) && (!view.select.value || this.saved.has(job.id)) &&
         (!wantedTypes.length || wantedTypes.includes(job.employment_type)) && (!wantedSites.length || wantedSites.includes(job.workplace)) && wantedSupport.every(value => job.support.includes(value)));
       count.textContent = `${matches.length} ${matches.length === 1 ? 'job' : 'jobs'} found${view.select.value ? ' in saved jobs' : ''}.`;
+      detailsButtons.clear();
       list.replaceChildren();
       if (!matches.length) { const empty = el('p', 'No jobs match these filters. Clear filters or try another search.'); empty.className = 'empty'; list.append(empty); }
       for (const job of matches) {
@@ -214,7 +219,8 @@ export class CareerGateway extends HTMLElement {
           const group = el('div'); group.append(el('dt',label),el('dd',value)); facts.append(group);
         }
         const actions = el('div'); actions.className = 'actions';
-        const open = button(`View details — ${job.title}`, () => detail(job, open)); open.className = 'primary';
+        const open = button(`View details — ${job.title}`, () => detail(job)); open.className = 'primary';
+        detailsButtons.set(job.id, open);
         const save = button(`Save job — ${job.title}`, () => {
           this.saved.has(job.id) ? this.saved.delete(job.id) : this.saved.add(job.id);
           save.setAttribute('aria-pressed', String(this.saved.has(job.id)));

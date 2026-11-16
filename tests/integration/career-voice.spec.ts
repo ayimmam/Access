@@ -64,6 +64,19 @@ test('voice acceptance: five results, stable saves 3 and 4, paging, shortlist an
   await expect(gateway.getByText('Demo Candidate', { exact: true })).toHaveCount(0);
 });
 
+test('Repeat reads job details again after saving from details', async ({ page }) => {
+  await mockCareerSpeech(page);
+  await page.goto('/demo/careers');
+  const guide = page.getByRole('region', { name: 'Optional voice navigation' });
+  await guide.getByRole('button', { name: 'Use typed search', exact: true }).click();
+  await typedCommand(guide, 'all jobs');
+  await typedCommand(guide, 'details three');
+  await typedCommand(guide, 'save');
+  await expect(guide.getByText(/Saved for this session: CNC bending operator/)).toBeVisible();
+  await typedCommand(guide, 'repeat');
+  await expect(guide.getByText('Details for CNC bending operator. Use Save, Back to results, or Shortlist.')).toBeVisible();
+});
+
 test('permission denial, ambiguous speech, no results and stop all preserve a usable typed path', async ({ page }) => {
   await mockCareerSpeech(page);
   await page.goto('/demo/careers');
@@ -82,6 +95,9 @@ test('permission denial, ambiguous speech, no results and stop all preserve a us
   await expect(guide.getByRole('alert')).toContainText('ambiguous');
   await expect(page.locator('access-career-gateway .results [aria-pressed=true]')).toHaveCount(0);
   await typedCommand(guide, 'save');
+  const input = guide.getByRole('textbox', { name: 'Role or command' });
+  await expect(input).toHaveValue('save');
+  await expect(input).toBeFocused();
   await expect(guide.getByRole('alert')).toContainText('ambiguous');
   await guide.getByRole('button', { name: 'Listen for a command', exact: true }).click();
   await page.evaluate(() => window.__careerSpeech.capture());

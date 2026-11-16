@@ -130,6 +130,8 @@ test('upstream caption controls survive and extended timelines clear the hands p
   await expect(lesson.getByRole('heading', { name: 'Colors with Good Contrast', exact: true })).toBeVisible();
   await lesson.getByRole('combobox', { name: 'Captions', exact: true }).selectOption('am');
   await expect(lesson.getByRole('status').filter({ hasText: 'Amharic · review pending. Human review is pending.' })).toBeVisible();
+  await expect(lesson.locator('.active-caption')).toHaveAttribute('lang', 'am');
+  await expect(lesson.locator('.active-caption')).not.toHaveText(/[A-Za-z]{3}/);
   await lesson.getByRole('combobox', { name: 'Caption appearance', exact: true }).selectOption('yellow');
   await lesson.getByRole('button', { name: 'Reset caption preferences', exact: true }).click();
   await expect(lesson.getByRole('combobox', { name: 'Caption appearance', exact: true })).toHaveValue('default');
@@ -180,6 +182,7 @@ test('changed hashes or legacy rigs fail closed without losing captions', async 
   await page.route('**/signing-manifest?**', route => route.fulfill({ json: changed }));
   await page.goto('/');
   const lesson = page.locator('alx-accessible-lesson');
+  await lesson.getByRole('combobox', { name: 'Captions', exact: true }).selectOption('on');
   await lesson.getByRole('button', { name: 'Show 3D hands preview' }).click();
   await expect(lesson.locator('.avatar-panel').getByRole('status')).toContainText('assets unavailable');
   await lesson.getByRole('button', { name: 'Jump to 0:41', exact: true }).click();
@@ -240,6 +243,7 @@ test('missing interpreter video pauses playback and retains text fallback', asyn
   await page.route('**/api/v1/missing.mp4', route => route.fulfill({ status: 404 }));
   await page.goto('/');
   const lesson = page.locator('alx-accessible-lesson');
+  await lesson.getByRole('combobox', { name: 'Captions', exact: true }).selectOption('on');
   const source = lesson.locator('.video-column video');
   await lesson.getByRole('button', { name: 'Show 3D hands preview' }).click();
   await expect(lesson.locator('.avatar-panel').getByRole('status')).toContainText('unavailable');

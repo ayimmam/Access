@@ -27,6 +27,25 @@ test('job search filters locally, saves and opens accessible details', async ({ 
   await expect(gateway.getByText(/No jobs match/)).toBeVisible();
 });
 
+test('closing details restores focus after the pending search redraws or removes the card', async ({ page }) => {
+  await page.goto('/demo/careers');
+  const gateway = page.locator('access-career-gateway');
+  const search = gateway.getByRole('searchbox');
+  const open = gateway.getByRole('button', { name: 'View details — Copywriter', exact: true });
+  for (const query of ['copywriter', 'no matching vacancies']) {
+    await open.evaluate((button, value) => {
+      const input = (button.getRootNode() as ShadowRoot).querySelector('input[type=search]') as HTMLInputElement;
+      input.value = value;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      (button as HTMLButtonElement).click();
+    }, query);
+    await expect(gateway.getByRole('dialog')).toBeVisible();
+    await expect(gateway.getByText(query === 'copywriter' ? '1 job found.' : '0 jobs found.', { exact: true })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(query === 'copywriter' ? open : search).toBeFocused();
+  }
+});
+
 test('career page and job dialog have no automated accessibility violations', async ({ page }) => {
   await page.goto('/demo/careers');
   await expect(page.getByRole('heading', { name: 'Copywriter', exact: true })).toBeVisible();

@@ -119,7 +119,13 @@ export class CareerVoice {
     this.command.setAttribute('aria-describedby', 'voice-help voice-error'); label.append(this.command);
     this.command.addEventListener('input', () => this.speech.stop());
     const submit = element('button', 'Run typed command'); submit.type = 'submit';
-    form.addEventListener('submit', event => { event.preventDefault(); const value = this.command.value; this.command.value = ''; this.run(value); });
+    form.addEventListener('submit', event => {
+      event.preventDefault();
+      if (this.paused || this.draft || this.languageController) return;
+      this.run(this.command.value);
+      if (this.command.getAttribute('aria-invalid') === 'true') this.command.focus();
+      else this.command.value = '';
+    });
     form.append(label, submit);
     const help = this.help; help.textContent = 'Start with a role, or “all jobs”. Then use Next, Previous, Repeat, Details 3, Save 3 and 4, Shortlist, Search followed by a role, or Stop. Buttons do the same things.'; help.id = 'voice-help'; help.className = 'note';
     const navigation = element('div'); navigation.className = 'actions';
@@ -330,6 +336,7 @@ export class CareerVoice {
     this.clearError();
     if (this.mode === 'results') this.renderResults();
     else if (this.mode === 'shortlist') this.renderShortlist();
+    else if (this.mode === 'details' && this.detailJob) this.details(this.detailJob);
     else { this.message.textContent = this.lastSpeech[0] || this.text('Start a search to hear results.'); this.speak(this.lastSpeech); }
   }
   private setNavigation() {

@@ -36,7 +36,7 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
     track.src = resource(definition.src); video.append(track); return track;
   });
   const videoColumn = element('div'); videoColumn.className = 'video-column'; videoColumn.append(video);
-  const cue = element('p', 'Captions will follow the video.'); cue.className = 'active-caption'; cue.setAttribute('aria-label', 'Current caption');
+  const cue = element('p'); cue.className = 'active-caption'; cue.setAttribute('aria-label', 'Current caption');
   videoColumn.append(cue);
   const signPanel = element('aside'); signPanel.className = 'sign-panel'; signPanel.hidden = true;
   signPanel.setAttribute('aria-label', 'Ethiopian Sign Language interpretation');
@@ -191,7 +191,7 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
     const index = definitions.findIndex(definition => optionValue(definition.language) === captionSelect.value);
     const activeCues = index >= 0 ? video.textTracks[index]?.activeCues : null;
     const selected = Array.from(activeCues || []).find(candidate => video.currentTime >= candidate.startTime && video.currentTime < candidate.endTime) as VTTCue | undefined;
-    return selected?.text;
+    return selected?.getCueAsHTML().textContent;
   };
   let unavailable = false;
   const signedVideo = new InterpreterVideo(interpretation, base, () => { video.pause(); update(); });
@@ -200,7 +200,7 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
     if (disposed) return;
     const segment = activeCue();
     const phrase = manifest?.segments.find(item => video.currentTime >= item.start && video.currentTime < item.end);
-    cue.textContent = captionText() || segment?.text || 'Captions will follow the video.';
+    cue.textContent = captionText() ?? '';
     clock.textContent = `Video time ${Math.floor(video.currentTime / 60)}:${String(Math.floor(video.currentTime % 60)).padStart(2, '0')}`;
     panel.dataset.videoTime = String(video.currentTime); panel.dataset.cueId = segment?.id || '';
     if (!active) return;
@@ -264,6 +264,8 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
     syncNativeTrackModes();
     cue.hidden = captionSelect.value === 'off';
     const definition = definitions.find(item => optionValue(item.language) === captionSelect.value);
+    if (definition) cue.lang = definition.language;
+    else cue.removeAttribute('lang');
     preferenceStatus.textContent = definition?.status.includes('pending') ? `${definition.label}. Human review is pending.` : '';
     savePreferences(); update();
   };

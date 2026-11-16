@@ -30,10 +30,11 @@ test('source playback, caption and transcript controls remain independent', asyn
   await expect.poll(() => video.evaluate(element => element.duration)).toBeGreaterThan(120);
   await lesson.getByRole('button', { name: 'Jump to 0:41', exact: true }).click();
   await expect(lesson.locator('.active-caption')).toContainText("you're going to meet incredible people");
+  expect(await video.evaluate(element => Array.from(element.textTracks, track => track.mode))).toEqual(['hidden']);
   await expect(lesson.getByRole('button', { name: 'Jump to 0:41', exact: true })).toBeFocused();
-  await lesson.getByRole('combobox', { name: 'Captions', exact: true }).selectOption('off');
+  await captions.selectOption('off');
   await expect(lesson.locator('.active-caption')).toBeHidden();
-  await lesson.getByRole('combobox', { name: 'Captions', exact: true }).selectOption('on');
+  await captions.selectOption('on');
   await video.evaluate(async element => { element.muted = true; await element.play(); });
   await expect.poll(() => video.evaluate(element => element.paused)).toBe(false);
   await video.evaluate(element => element.pause());
@@ -46,7 +47,7 @@ test('Savanna comparison shows the reconstructed baseline and returns to Access'
   await expect(page.locator('.comparison-status')).toHaveText('Showing the reconstructed standard Savanna video lesson.');
   await expect(page.getByText('Reconstructed baseline:', { exact: true })).toBeVisible();
   await expect(page.locator('.baseline-video video')).toBeVisible();
-  await expect(page.locator('.baseline-video track')).toHaveAttribute('srclang', 'en');
+  await expect(page.locator('.baseline-video track')).toHaveCount(0);
   await expect(page.locator('alx-accessible-lesson')).toBeHidden();
   const scan = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze();
   expect(scan.violations).toEqual([]);

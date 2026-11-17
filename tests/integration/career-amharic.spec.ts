@@ -160,7 +160,7 @@ test('language changes cancel a late transcript and keep English usable', async 
   await expect(guide).toHaveAttribute('data-speech-state', 'off');
 });
 
-test('switching from Amharic keeps read-aloud active and resumes English listening', async ({ page }) => {
+test('language changes keep existing read-aloud consent and wait for explicit Start', async ({ page }) => {
   await mockCareerSpeech(page);
   await mockAddisSpeech(page);
   await page.goto('/demo/careers');
@@ -170,12 +170,48 @@ test('switching from Amharic keeps read-aloud active and resumes English listeni
   await guide.getByRole('combobox').selectOption('en');
   await expect(guide).toHaveAttribute('lang', 'en');
   await expect(guide.getByLabel('Read prompts and results aloud')).toBeChecked();
+  await expect(guide).toHaveAttribute('data-speech-state', 'off');
+  expect(await page.evaluate(() => [window.__careerSpeech.starts, window.__careerSpeech.spoken])).toEqual([0, []]);
+  await guide.getByRole('button', { name: 'Start voice search', exact: true }).press('Enter');
   await expect(guide).toHaveAttribute('data-speech-state', 'listening');
   expect(await page.evaluate(() => window.__careerSpeech.starts)).toBe(1);
-  expect(await page.evaluate(() => window.__careerSpeech.spoken.slice(-2))).toEqual([
-    'Welcome to the Access Career Gateway. Voice navigation is ready.',
-    'What role would you like? Say or type a role, or “all jobs” to clear filters and explore every fictional listing.',
-  ]);
+});
+
+test('Amharic playback can be recovered manually without starting a recording', async ({ page }) => {
+  const requests = await mockAddisSpeech(page, { playbackError: 'NotAllowedError' });
+  await page.goto('/demo/careers');
+  const guide = page.locator('.voice-guide');
+  await chooseAmharic(guide);
+  const output = guide.getByRole('checkbox');
+  await output.check();
+  await guide.getByRole('button', { name: 'በድምፅ ፍለጋ ጀምር', exact: true }).press('Enter');
+  await expect(guide.getByRole('alert')).toContainText('አሳሽዎ ድምፁ');
+  await expect(guide.getByRole('alert')).toHaveAttribute('aria-live', 'assertive');
+  await expect(output).not.toBeChecked();
+  const player = guide.locator('audio');
+  await expect(player).toBeVisible();
+  await player.evaluate((audio: HTMLAudioElement) => audio.play());
+  await expect(player).toBeHidden();
+  await expect(output).not.toBeChecked();
+  expect(await page.evaluate(() => window.__careerAddis.starts)).toBe(0);
+  expect(requests.map(request => request.operation)).toEqual(['speak']);
+  await guide.getByRole('button', { name: 'ትእዛዝ በድምፅ ስጥ', exact: true }).press('Enter');
+  await expect(guide).toHaveAttribute('data-speech-state', 'listening');
+});
+
+test('unconfigured Amharic playback keeps read-aloud and the microphone off', async ({ page }) => {
+  const requests = await mockAddisSpeech(page, { enabled: false });
+  await page.goto('/demo/careers');
+  const guide = page.locator('.voice-guide');
+  await chooseAmharic(guide);
+  const output = guide.getByRole('checkbox');
+  await output.check();
+  await guide.getByRole('button', { name: 'በድምፅ ፍለጋ ጀምር', exact: true }).press('Enter');
+  await expect(guide.getByRole('alert')).not.toBeEmpty();
+  await expect(output).not.toBeChecked();
+  await expect(guide).toHaveAttribute('data-speech-state', 'off');
+  expect(await page.evaluate(() => window.__careerAddis.starts)).toBe(0);
+  expect(requests).toEqual([]);
 });
 
 test('provider limits restore live errors without automatic retries or speech overlap', async ({ page }) => {

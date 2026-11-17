@@ -3,6 +3,7 @@ import type { SpeechState } from './career-speech';
 
 const noCommand = 'No clear command was recognized. Nothing was changed. Try a shorter recording or type instead.';
 const speechLimit = 'The speech limit was reached. Use typed controls or try again later; no automatic retry occurs.';
+const playbackFailed = 'Read aloud could not finish. Use Listen for a command or typed search.';
 
 function failureMessage(reason: unknown) {
   return reason instanceof Error && [unavailableSpeech, noCommand, speechLimit].includes(reason.message) ? reason.message : unavailableSpeech;
@@ -101,7 +102,7 @@ export class AddisCareerSpeech {
     }).catch(reason => {
       if (generation !== this.generation) return;
       this.stop(); this.error(reason?.name === 'NotAllowedError'
-        ? 'Microphone permission was denied. Type a role or command, or use the buttons. No retry happens automatically.'
+        ? 'Microphone permission was denied. Allow microphone access in your browser settings, then choose Listen for a command, or use typed search.'
         : 'The microphone could not start. Type a role or command, or use the buttons.');
     });
   }
@@ -142,7 +143,7 @@ export class AddisCareerSpeech {
 
   speak(prompt: SpeechPrompt, done?: () => void) {
     this.stop();
-    if (!this.enabled) { this.error(unconfiguredSpeech); done?.(); return; }
+    if (!this.enabled) { this.error(unconfiguredSpeech); return; }
     const generation = this.generation;
     this.state('preparing');
     void this.request('speak', prompt, generation).then(async response => {
@@ -155,10 +156,18 @@ export class AddisCareerSpeech {
       this.player.onplay = () => { if (generation === this.generation) this.state('speaking'); };
       this.player.onpause = () => { if (generation === this.generation) this.state('off'); };
       this.player.onended = () => { if (generation === this.generation) { this.stop(); done?.(); } };
-      this.player.onerror = () => { if (generation === this.generation) { this.stop(); this.error('Read aloud could not finish. Use Repeat, the equivalent text, or your screen reader.'); } };
-      this.timer = setTimeout(() => { if (generation === this.generation) { this.stop(); this.error('Read aloud could not finish. Use Repeat, the equivalent text, or your screen reader.'); } }, 180000);
+      const failPlayback = () => { if (generation === this.generation) { this.stop(); this.error(playbackFailed); } };
+      this.player.onerror = failPlayback;
+      this.timer = setTimeout(failPlayback, 180000);
       try { await this.player.play(); }
-      catch { if (generation === this.generation) { this.state('off'); this.error('Read aloud needs a playback gesture. Use the Amharic audio player\'s Play control, or use the text.'); } }
+      catch (reason) {
+        if (generation !== this.generation) return;
+        if (!(reason instanceof DOMException) || reason.name !== 'NotAllowedError') { failPlayback(); return; }
+        // Manual playback may recover the audio, but it is not an instruction to record.
+        done = undefined;
+        this.state('off');
+        this.error('Your browser blocked automatic playback. Use Play to hear the prompt, then choose Listen for a command, or use typed search.');
+      }
     }).catch(reason => {
       if (generation !== this.generation) return;
       this.stop(); this.error(failureMessage(reason));

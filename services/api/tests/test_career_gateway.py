@@ -41,7 +41,7 @@ def test_career_and_second_provider_pages_use_reusable_components():
     career = client.get("/demo/careers")
     learning = client.get("/demo/ethioware")
     assert career.status_code == learning.status_code == 200
-    assert '<access-career-gateway voice-navigation api-base="/api/v1">' in career.text
+    assert '<access-career-gateway voice-navigation voice-auto-start api-base="/api/v1">' in career.text
     assert '<alx-accessible-lesson api-base="/api/v1"' in learning.text
     assert "live Ethioware site is unchanged" in learning.text
     assert "NOT AN ALX-ISSUED CREDENTIAL" in client.get("/demo/certificates/unknown").text

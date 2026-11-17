@@ -6,9 +6,9 @@ interface AddisHarness {
 }
 declare global { interface Window { __careerAddis: AddisHarness } }
 
-export async function mockAddisSpeech(page: Page, options: { enabled?: boolean; denied?: boolean; pending?: boolean; unsupported?: boolean; speechStatus?: number; transcriptionDelay?: number; catalogDelay?: number; apiBase?: string } = {}) {
+export async function mockAddisSpeech(page: Page, options: { enabled?: boolean; denied?: boolean; pending?: boolean; unsupported?: boolean; speechStatus?: number; playbackError?: string; transcriptionDelay?: number; catalogDelay?: number; apiBase?: string } = {}) {
   const requests: { operation: string; body: Record<string, unknown> }[] = [];
-  await page.addInitScript(({ denied = false, pending = false, unsupported = false }) => {
+  await page.addInitScript(({ denied = false, pending = false, unsupported = false, playbackError }) => {
     const state = {
       transcript: 'ሁሉም ሥራዎች', starts: 0, stops: 0, recording: false, speaking: false, plays: 0, overlaps: [] as string[],
       grant: () => {},
@@ -56,6 +56,10 @@ export async function mockAddisSpeech(page: Page, options: { enabled?: boolean; 
     });
     HTMLMediaElement.prototype.play = function () {
       if (!matches(this)) return original.play.call(this);
+      if (playbackError) {
+        const reason = playbackError; playbackError = undefined;
+        return Promise.reject(new DOMException('Mock playback failure', reason));
+      }
       if (state.recording) state.overlaps.push('Playback during recording');
       if (state.speaking) state.overlaps.push('Two audio responses');
       state.plays++; state.speaking = true; this.dispatchEvent(new Event('play'));

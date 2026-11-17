@@ -1,7 +1,7 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 
-export async function mockCareerSpeech(page: Page, options: { supported?: boolean; localVoice?: boolean; delay?: number; permission?: PermissionState } = {}) {
-  await page.addInitScript(({ supported = true, localVoice = true, delay = 5, permission = 'prompt' }) => {
+export async function mockCareerSpeech(page: Page, options: { supported?: boolean; localVoice?: boolean; delay?: number; permission?: PermissionState; synthesisAvailable?: boolean; blockedOnce?: boolean } = {}) {
+  await page.addInitScript(({ supported = true, localVoice = true, delay = 5, permission = 'prompt', synthesisAvailable = true, blockedOnce = false }) => {
     const state = {
       starts: 0, aborts: 0, cancels: 0, microphone: false, speaking: false, spoken: [] as string[], overlaps: [] as string[],
       current: undefined as MockRecognition | undefined,
@@ -29,16 +29,21 @@ export async function mockCareerSpeech(page: Page, options: { supported?: boolea
     Object.defineProperty(window, 'SpeechRecognition', { configurable: true, value: supported ? MockRecognition : undefined });
     Object.defineProperty(window, 'webkitSpeechRecognition', { configurable: true, value: undefined });
     Object.defineProperty(window, 'SpeechSynthesisUtterance', { configurable: true, value: MockUtterance });
-    Object.defineProperty(window, 'speechSynthesis', { configurable: true, value: {
+    Object.defineProperty(window, 'speechSynthesis', { configurable: true, value: synthesisAvailable ? {
       getVoices: () => localVoice ? [{ localService: true, lang: 'en-US', name: 'Mock on-device voice' }] : [{ localService: false, lang: 'en-US', name: 'Mock remote voice' }],
-      speak(utterance: { text: string; onend?: () => void }) {
+      speak(utterance: { text: string; onend?: () => void; onerror?: (event: { error: string }) => void }) {
+        if (blockedOnce) {
+          blockedOnce = false;
+          state.timer = setTimeout(() => utterance.onerror?.({ error: 'not-allowed' }), delay);
+          return;
+        }
         if (state.microphone) state.overlaps.push('Synthesis started during microphone capture');
         if (state.speaking) state.overlaps.push('Two simultaneous utterances');
         state.speaking = true; state.spoken.push(utterance.text);
         state.timer = setTimeout(() => { state.speaking = false; utterance.onend?.(); }, delay);
       },
       cancel() { state.cancels++; state.speaking = false; clearTimeout(state.timer); },
-    } });
+    } : undefined });
     Object.defineProperty(navigator, 'permissions', { configurable: true, value: { query: async () => ({ state: permission }) } });
     Object.defineProperty(window, '__careerSpeech', { value: state });
   }, options);

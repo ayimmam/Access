@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: access-plugin
+    runtime: python
+    branch: main
+    plan: free
+    numInstances: 1
+    autoDeployTrigger: "off"
+    buildCommand: >-
+      git submodule update --init --depth 1 &&
+      npm ci --include=dev &&
+      npm run build &&
+      uv sync --locked --no-dev --python 3.11
+    startCommand: >-
+      .venv/bin/uvicorn access_api.main:app
+      --host 0.0.0.0 --port "$PORT" --no-access-log
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.18"
+      - key: NODE_VERSION
+        value: "24"
+      - key: UV_VERSION
+        value: "0.13.8"
+      - key: ACCESS_ALLOWED_ORIGINS
+        sync: false

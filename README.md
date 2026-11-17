@@ -2,6 +2,9 @@
 
 Access turns one reviewed lesson revision into an accessible media experience that can run inside an existing learning platform or on an independent website. A framework-independent Web Component reads versioned lesson data from a FastAPI service and offers synchronized media, transcripts, downloads and related career resources without taking over the host's enrollment or completion rules.
 
+https://github.com/user-attachments/assets/8c1a2b8c-c3d1-4de4-9d3b-f80c0ecbde2b
+
+
 ## Integrate Access
 
 ```mermaid

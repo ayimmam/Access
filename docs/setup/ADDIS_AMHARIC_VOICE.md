@@ -48,6 +48,8 @@ For native development, run `uv run uvicorn access_worker.speech_gateway:app --h
 
 For a later Render release, Anteneh configures the provider key on a **private** speech service, not the static Vercel site or public API. The approved worker destinations are loopback, `speech`, and `access-speech`, on port 8010. Any different private hostname requires an explicit allowlist review. Coordinate persistent quota storage, costs, matching API/component releases, and rollback with Biniyam and Hailemichael. Do not horizontally scale independent ledgers; first design a shared budget policy.
 
+The [Render voice-navigation setup](RENDER_CAREER_VOICE.md) provides the public-service Blueprint and the separate private-worker release checklist. The Blueprint does not provision paid speech or bypass the worker hostname review.
+
 The static preview still loads the configured Render API/component release; publishing a Vercel preview does **not** publish this branch's speech worker, API or bundle. Local branch tests are not evidence that the hosted preview has Amharic enabled.
 
 ## Amharic walkthrough

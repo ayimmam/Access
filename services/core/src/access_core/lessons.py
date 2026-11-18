@@ -61,6 +61,7 @@ class Lesson(BaseModel):
     segments: tuple[Segment, ...]
     unavailable: tuple[str, ...]
     media: Media | None = None
+    described_segments: tuple[Segment, ...] = ()
 
 
 DEMO = Lesson(
@@ -88,8 +89,10 @@ W3C_ID = "w3c-colors-with-good-contrast"
 W3C_DIRECTORY = EXAMPLE_DIRECTORY / "w3c-contrast"
 W3C_VIDEO = W3C_DIRECTORY / "standard.mp4"
 W3C_DESCRIBED_VIDEO = W3C_DIRECTORY / "described.mp4"
+W3C_DESCRIBED_CAPTIONS = W3C_DIRECTORY / "captions-described.en.vtt"
 W3C_CAPTIONS = W3C_DIRECTORY / "captions.en.vtt"
 W3C_DURATION = 63.755556
+W3C_DESCRIBED_DURATION = 98.469388
 W3C_PDF = W3C_DIRECTORY / "accessibility-prototype.pdf"
 
 
@@ -183,6 +186,7 @@ def w3c_lesson() -> Lesson:
         title="Colors with Good Contrast", language="en", content_status="review-pending",
         summary="A W3C WAI learning video used with attribution. English source captions are available; Hasab AI Amharic and Tigrigna translations await human review.",
         segments=parse_vtt(W3C_CAPTIONS.read_text(encoding="utf-8"), W3C_DURATION),
+        described_segments=parse_vtt(W3C_DESCRIBED_CAPTIONS.read_text(encoding="utf-8"), W3C_DESCRIBED_DURATION),
         unavailable=("Reviewed Ethiopian Sign Language interpretation", "Human-reviewed Amharic captions", "Human-reviewed Tigrigna captions", "Human-verified tagged PDF", "Human-verified Braille"),
         media=Media(
             id="w3c-contrast-v1", src=f"/api/v1/lessons/{W3C_ID}/media/video?version=1",
@@ -192,8 +196,6 @@ def w3c_lesson() -> Lesson:
             described_captions=f"/api/v1/lessons/{W3C_ID}/media/described-captions?version=1",
             audio_src=f"/api/v1/lessons/{W3C_ID}/media/audio?version=1",
             described_audio_src=f"/api/v1/lessons/{W3C_ID}/media/described-audio?version=1",
-            sign_src=f"/api/v1/lessons/{W3C_ID}/media/sign-video?version=1" if (W3C_DIRECTORY / "ethsl.mp4").is_file() else None,
-            sign_status="review-pending" if (W3C_DIRECTORY / "ethsl.mp4").is_file() else "unavailable",
         ),
     )
 
@@ -205,7 +207,7 @@ def get_lesson(lesson_id: str, version: int) -> Lesson:
             return DEMO
         if lesson_id == EXAMPLE_ID and EXAMPLE_VIDEO.is_file() and EXAMPLE_CAPTIONS.is_file():
             return example_lesson()
-        if lesson_id == W3C_ID and all(path.is_file() for path in (W3C_VIDEO, W3C_DESCRIBED_VIDEO, W3C_CAPTIONS)):
+        if lesson_id == W3C_ID and all(path.is_file() for path in (W3C_VIDEO, W3C_DESCRIBED_VIDEO, W3C_CAPTIONS, W3C_DESCRIBED_CAPTIONS)):
             return w3c_lesson()
     raise KeyError(lesson_id)
 
@@ -263,24 +265,25 @@ def export_lesson(lesson: Lesson, format: str) -> tuple[bytes, str, str]:
         f'<section id="{html.escape(s.id, quote=True)}"><h2>{html.escape(s.heading)}</h2><p>{html.escape(s.text)}</p></section>'
         for s in lesson.segments
     )
-    document = (
-        '<!doctype html><html lang="en"><meta charset="utf-8">'
+    document_start = (
+        f'<!doctype html><html lang="{html.escape(lesson.language, quote=True)}"><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width, initial-scale=1">'
         f'<title>{html.escape(lesson.title)}</title>'
-        '<style>body{max-width:65ch;margin:2rem auto;padding:0 1rem;font:1.125rem/1.7 sans-serif;color:#172d38;background:#fff}h1,h2{line-height:1.3}p{overflow-wrap:anywhere}</style>'
-        f'<main><h1>{html.escape(lesson.title)}</h1><p>{html.escape(lesson.content_status)} · version {lesson.content_version}</p>{sections}</main></html>'
-    ).encode()
+        '<style>body{max-width:65ch;margin:2rem auto;padding:0 1rem;font:1.125rem/1.7 sans-serif;color:#172d38;background:#fff}h1,h2,h3{line-height:1.3}p{overflow-wrap:anywhere}audio{max-width:100%}</style>'
+        f'<main><h1>{html.escape(lesson.title)}</h1><p>{html.escape(lesson.content_status)} · version {lesson.content_version}</p>'
+    )
+    document_end = f"{sections}</main></html>"
     if format == "txt":
         return text.encode(), "text/plain; charset=utf-8", "txt"
     if format == "html":
-        return document, "text/html; charset=utf-8", "html"
+        return (document_start + document_end).encode(), "text/html; charset=utf-8", "html"
     if format == "brf" and lesson.lesson_id == W3C_ID:
         return braille_ready_file(lesson), "application/octet-stream", "brf"
     if format == "pdf" and lesson.lesson_id == W3C_ID and W3C_PDF.is_file():
         return W3C_PDF.read_bytes(), "application/pdf", "pdf"
     if format != "zip":
         raise KeyError(format)
-    files = {"index.html": document, "lesson.txt": text.encode()}
+    files = {"lesson.txt": text.encode()}
     if lesson.lesson_id == W3C_ID:
         for name in ("captions.en.vtt", "captions.am.vtt", "captions.ti.vtt", "captions-described.en.vtt", "audio.mp3", "audio-described.mp3", "accessibility-prototype.pdf"):
             path = W3C_DIRECTORY / name
@@ -289,6 +292,14 @@ def export_lesson(lesson: Lesson, format: str) -> tuple[bytes, str, str]:
         files["transcript.uncontracted-review-pending.brf"] = braille_ready_file(lesson)
     elif lesson.media:
         files["captions.en.vtt"] = captions_vtt(lesson).encode()
+    audio_options = "".join(
+        f'<h3>{label}</h3><audio controls preload="none" src="{name}" aria-label="{label}"></audio>'
+        f'<p><a href="{name}">Open {label.lower()} file</a></p>'
+        for name, label in (("audio.mp3", "Standard audio"), ("audio-described.mp3", "Audio with description"))
+        if name in files
+    )
+    audio_section = f'<section><h2>Listen offline</h2>{audio_options}</section>' if audio_options else ""
+    files["index.html"] = (document_start + audio_section + document_end).encode()
     manifest = {
         "schema_version": "1.0", "lesson_id": lesson.lesson_id,
         "content_version": lesson.content_version, "course_version_id": lesson.course_version_id,

@@ -11,13 +11,22 @@ export interface LessonMedia {
   audio_src?: string; described_audio_src?: string; sign_src?: string; sign_status?: string;
 }
 
+interface MediaViewOptions {
+  showSigningPreview: boolean;
+  notify: (detail: Record<string, unknown>) => void;
+  resizePage: (size: string) => void;
+  onEditionChange: (described: boolean) => void;
+}
+
 function element<K extends keyof HTMLElementTagNameMap>(tag: K, text?: string): HTMLElementTagNameMap[K] {
   const result = document.createElement(tag);
   if (text !== undefined) result.textContent = text;
   return result;
 }
 
-export function createMediaView(media: LessonMedia, segments: TimedSegment[], base: URL, notify: (detail: Record<string, unknown>) => void, resizePage: (size: string) => void) {
+export function createMediaView(media: LessonMedia, segments: TimedSegment[], base: URL, options: MediaViewOptions) {
+  const { showSigningPreview, notify, resizePage, onEditionChange } = options;
+  const signSource = media.sign_status === 'reviewed' ? media.sign_src : undefined;
   const resource = (path: string) => {
     const url = new URL(path, base);
     if (url.origin !== base.origin || !url.pathname.startsWith(base.pathname)) throw new Error('Invalid media address');
@@ -36,7 +45,7 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
     track.src = resource(definition.src); video.append(track); return track;
   });
   const videoColumn = element('div'); videoColumn.className = 'video-column'; videoColumn.append(video);
-  const cue = element('p', 'Captions will follow the video.'); cue.className = 'active-caption'; cue.setAttribute('aria-label', 'Current caption');
+  const cue = element('p'); cue.className = 'active-caption';
   videoColumn.append(cue);
   const signPanel = element('aside'); signPanel.className = 'sign-panel'; signPanel.hidden = true;
   signPanel.setAttribute('aria-label', 'Ethiopian Sign Language interpretation');
@@ -44,9 +53,9 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
   const signStatus = element('p'); signStatus.setAttribute('role', 'status');
   const signVideo = element('video'); signVideo.muted = true; signVideo.playsInline = true; signVideo.preload = 'metadata';
   signVideo.setAttribute('aria-label', 'Ethiopian Sign Language interpretation video');
-  if (media.sign_src) signVideo.src = resource(media.sign_src);
+  if (signSource) signVideo.src = resource(signSource);
   signPanel.append(signTitle);
-  if (media.sign_src) signPanel.append(signVideo);
+  if (signSource) signPanel.append(signVideo);
   signPanel.append(signStatus);
   const panel = element('aside'); panel.className = 'avatar-panel'; panel.hidden = true; panel.setAttribute('aria-label', 'EthSL hands-only signing view');
   const title = element('h3', '3D hands preview · EthSL review pending');
@@ -58,7 +67,8 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
   const sizeHelp = element('p', 'Small preview: use landscape or a larger display for detailed handshape review. Captions remain available.');
   sizeHelp.className = 'hands-size-help';
   panel.append(title, warning, canvasHost, interpretation, clock, avatarStatus, sizeHelp);
-  stage.append(videoColumn, signPanel, panel);
+  stage.append(videoColumn, signPanel);
+  if (showSigningPreview) stage.append(panel);
   const controls = element('div'); controls.className = 'media-options';
   const controlsTitle = element('h3', 'Video accessibility'); controlsTitle.className = 'media-options-title';
   const optionsCard = (heading: string) => {
@@ -123,8 +133,7 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
   descriptionToggle.hidden = !media.described_src;
   descriptionToggle.setAttribute('aria-pressed', 'false');
   const descriptionStatus = element('p'); descriptionStatus.setAttribute('role', 'status');
-  const signToggle = element('button', media.sign_src ? 'Show EthSL interpretation' : 'EthSL recording awaiting review'); signToggle.type = 'button';
-  signToggle.disabled = !media.sign_src;
+  const signToggle = element('button', 'Show EthSL interpretation'); signToggle.type = 'button';
   signToggle.setAttribute('aria-pressed', 'false');
   const signDockLabel = element('label', 'Interpreter position'); const signDock = element('select');
   for (const [value, label] of [['beside', 'Beside video'], ['below', 'Below video']]) { const option = element('option', label); option.value = value; signDock.append(option); }
@@ -143,7 +152,8 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
   const worksheet = element('button', 'Download caption-to-motion worksheet'); worksheet.type = 'button';
   const reviewLink = element('a', 'Review the hands rig and local EthSL clips'); reviewLink.href = new URL('/demo/avatar-review', base).href;
   tools.append(worksheet, element('br'), reviewLink);
-  const note = element('p', 'Source captions need wording and timing review. All source cues await EthSL translation, consented recording and Deaf/interpreter review.'); note.className = 'note';
+  const note = element('p'); note.className = 'note';
+  note.setAttribute('role', 'status');
   const lowData = element('details'); lowData.append(element('summary', 'Low-data audio and offline media'));
   const lowDataList = element('ul');
   for (const [path, label] of [[media.audio_src, 'Download audio only · 48 kbps'], [media.described_audio_src, 'Download described audio · 48 kbps']] as const) {
@@ -175,7 +185,9 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
   signFields.append(signDockLabel, signSizeLabel);
   signToggle.className = 'media-option-action';
   toggle.className = 'media-option-action';
-  signCard.append(signToggle, signFields, toggle, dockLabel, tools);
+  if (signSource) signCard.append(signToggle, signFields);
+  else signCard.append(element('p', 'Reviewed EthSL interpretation is unavailable for this lesson.'));
+  if (showSigningPreview) signCard.append(toggle, dockLabel, tools);
   controls.append(signCard);
   view.append(stage, controls, note);
   let avatar: TimingAvatar | undefined;
@@ -186,12 +198,13 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
   let generation = 0;
   let signingController: AbortController | undefined;
   let worksheetUrl: string | undefined;
+  let described = false;
   const activeCue = () => segments.find(segment => segment.start !== undefined && segment.end !== undefined && video.currentTime >= segment.start && video.currentTime < segment.end);
   const captionText = () => {
     const index = definitions.findIndex(definition => optionValue(definition.language) === captionSelect.value);
     const activeCues = index >= 0 ? video.textTracks[index]?.activeCues : null;
     const selected = Array.from(activeCues || []).find(candidate => video.currentTime >= candidate.startTime && video.currentTime < candidate.endTime) as VTTCue | undefined;
-    return selected?.text;
+    return selected?.getCueAsHTML().textContent;
   };
   let unavailable = false;
   const signedVideo = new InterpreterVideo(interpretation, base, () => { video.pause(); update(); });
@@ -200,7 +213,7 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
     if (disposed) return;
     const segment = activeCue();
     const phrase = manifest?.segments.find(item => video.currentTime >= item.start && video.currentTime < item.end);
-    cue.textContent = captionText() || segment?.text || 'Captions will follow the video.';
+    cue.textContent = captionText() || (legacyCaptionValue && !described && captionSelect.value === 'on' ? segment?.text : '') || '';
     clock.textContent = `Video time ${Math.floor(video.currentTime / 60)}:${String(Math.floor(video.currentTime % 60)).padStart(2, '0')}`;
     panel.dataset.videoTime = String(video.currentTime); panel.dataset.cueId = segment?.id || '';
     if (!active) return;
@@ -239,14 +252,14 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
   for (const event of ['loadedmetadata', 'canplay']) interpretation.addEventListener(event, update);
   video.addEventListener('play', () => {
     animate();
-    if (!signPanel.hidden && media.sign_src) {
+    if (!signPanel.hidden && signSource) {
       signVideo.currentTime = video.currentTime; signVideo.playbackRate = video.playbackRate;
       void signVideo.play().catch(() => { video.pause(); signStatus.textContent = 'Interpretation could not resume. Both videos were paused.'; });
     }
   });
   video.addEventListener('pause', () => { cancelAnimationFrame(animation); signVideo.pause(); update(); });
   video.addEventListener('ratechange', () => { signVideo.playbackRate = video.playbackRate; });
-  video.addEventListener('seeking', () => { if (media.sign_src) signVideo.currentTime = video.currentTime; });
+  video.addEventListener('seeking', () => { if (signSource) signVideo.currentTime = video.currentTime; });
   video.addEventListener('error', () => { note.textContent = 'Video unavailable. Try reloading the lesson or use the transcript below.'; });
   tracks.forEach(track => track.addEventListener('error', () => { note.textContent = 'A caption file is unavailable. Use the timestamped transcript below while we restore it.'; }));
   signVideo.addEventListener('waiting', () => { video.pause(); signStatus.textContent = 'Interpretation is buffering. The lesson video was paused to keep both synchronized.'; });
@@ -264,6 +277,7 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
     syncNativeTrackModes();
     cue.hidden = captionSelect.value === 'off';
     const definition = definitions.find(item => optionValue(item.language) === captionSelect.value);
+    cue.lang = definition?.language || '';
     preferenceStatus.textContent = definition?.status.includes('pending') ? `${definition.label}. Human review is pending.` : '';
     savePreferences(); update();
   };
@@ -271,7 +285,6 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
   video.textTracks.addEventListener('change', syncNativeTrackModes);
   tracks.forEach((_track, index) => video.textTracks[index]?.addEventListener('cuechange', update));
   size.addEventListener('change', () => { applyAppearance(); savePreferences(); resizePage(size.value); });
-  let described = false;
   descriptionToggle.addEventListener('click', () => {
     described = !described; video.pause(); signVideo.pause();
     setOfflineEdition(described);
@@ -288,16 +301,17 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
       ? 'Audio-described video selected. It uses an extended timeline and restarts from the beginning. English captions are available.'
       : 'Standard video selected and restarted from the beginning.';
     if (described && !signPanel.hidden) signToggle.click();
-    signToggle.disabled = described || !media.sign_src;
+    signToggle.disabled = described;
     if (described && active) toggle.click();
     toggle.disabled = described;
+    onEditionChange(described);
   });
   signToggle.addEventListener('click', () => {
     const showing = signPanel.hidden;
     signPanel.hidden = !showing; signDockLabel.hidden = !showing; signSizeLabel.hidden = !showing;
     signToggle.setAttribute('aria-pressed', String(showing));
     signToggle.textContent = showing ? 'Hide EthSL interpretation' : 'Show EthSL interpretation';
-    signStatus.textContent = showing ? 'Interpreter recording loaded. Deaf reviewer approval is pending.' : '';
+    signStatus.textContent = showing ? 'Reviewed interpreter recording selected.' : '';
     if (showing) { signVideo.currentTime = video.currentTime; signVideo.playbackRate = video.playbackRate; if (!video.paused) void signVideo.play(); }
     else signVideo.pause();
   });
@@ -350,7 +364,7 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
   });
   return {
     view,
-    seek(time: number) { video.currentTime = Math.min(Math.max(0, time), media.duration); update(); },
+    seek(time: number) { video.currentTime = Math.max(0, time); update(); },
     dispose() {
       disposed = true; generation++; cancelAnimationFrame(animation); signingController?.abort(); signedVideo.clear();
       document.removeEventListener('visibilitychange', visibility);

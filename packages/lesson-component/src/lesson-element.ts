@@ -4,6 +4,7 @@ interface Segment extends TimedSegment {}
 interface Lesson {
   schema_version: string; lesson_id: string; content_version: number;
   title: string; summary: string; language: string; segments: Segment[]; unavailable: string[];
+  described_segments?: Segment[];
   content_status: string; media?: LessonMedia | null;
 }
 interface ExportItem { format: string; label: string; bytes: number; href: string }
@@ -103,7 +104,7 @@ function node<K extends keyof HTMLElementTagNameMap>(tag: K, text?: string): HTM
 }
 
 export class AccessibleLesson extends HTMLElement {
-  static observedAttributes = ['api-base', 'lesson-id', 'content-version', 'lang'];
+  static observedAttributes = ['api-base', 'lesson-id', 'content-version', 'lang', 'show-signing-preview'];
   private root = this.attachShadow({ mode: 'open' });
   private controller?: AbortController;
   private sequence = 0;
@@ -181,12 +182,6 @@ export class AccessibleLesson extends HTMLElement {
         : 'Synthetic demo';
     article.replaceChildren(node('p', `${statusLabel} · Version ${lesson.content_version}`), node('h2', lesson.title), node('p', lesson.summary));
     let media: ReturnType<typeof createMediaView> | undefined;
-    if (lesson.media) {
-      media = createMediaView(lesson.media, lesson.segments, base,
-        detail => this.emit('alx-avatar-status', detail), size => this.emit('alx-caption-size', { size }));
-      this.disposeMedia = media.dispose;
-      article.append(media.view);
-    }
     const toolbar = node('div'); toolbar.className = 'toolbar';
     const searchLabel = node('label', 'Find text in this lesson');
     const search = node('input'); search.type = 'search'; searchLabel.append(search);
@@ -199,23 +194,49 @@ export class AccessibleLesson extends HTMLElement {
     toolbar.append(searchLabel, sizeLabel);
     const status = node('p'); status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite');
     const reading = node('div'); reading.className = 'reading';
-    if (media) { reading.classList.add('transcript'); reading.setAttribute('role', 'region'); reading.setAttribute('aria-label', 'Transcript passages'); reading.tabIndex = 0; }
-    const sections = lesson.segments.map(segment => {
-      const section = node('section');
-      if (segment.start !== undefined && segment.start !== null && media) {
-        const seek = node('button', `Jump to ${segment.heading}`); seek.type = 'button'; seek.className = 'seek';
-        seek.addEventListener('click', () => media?.seek(segment.start!));
-        section.append(seek, node('p', segment.text));
-      } else section.append(node('h3', segment.heading), node('p', segment.text));
-      reading.append(section);
-      return { section, text: `${segment.heading} ${segment.text}`.toLocaleLowerCase() };
-    });
-    search.addEventListener('input', () => {
+    if (lesson.media) { reading.classList.add('transcript'); reading.setAttribute('role', 'region'); reading.setAttribute('aria-label', 'Transcript passages'); reading.tabIndex = 0; }
+    const transcriptHeading = node('h3', 'Transcript');
+    const timelineNote = node('p', 'This transcript follows the standard edition. Switch to standard video to jump to a passage.');
+    timelineNote.hidden = true;
+    let sections: { section: HTMLElement; text: string }[] = [];
+    const filterSections = () => {
       const query = search.value.trim().toLocaleLowerCase();
       let count = 0;
       for (const item of sections) { item.section.hidden = !item.text.includes(query); if (!item.section.hidden) count++; }
       status.textContent = query ? `${count} of ${sections.length} sections found.` : '';
-    });
+    };
+    const renderSections = (segments: Segment[], canSeek: boolean) => {
+      sections = segments.map(segment => {
+        const section = node('section');
+        const start = segment.start;
+        if (canSeek && media && typeof start === 'number') {
+          const seek = node('button', `Jump to ${segment.heading}`); seek.type = 'button'; seek.className = 'seek';
+          seek.addEventListener('click', () => media?.seek(start));
+          section.append(seek, node('p', segment.text));
+        } else section.append(node('h3', segment.heading), node('p', segment.text));
+        return { section, text: `${segment.heading} ${segment.text}`.toLocaleLowerCase() };
+      });
+      reading.replaceChildren(...sections.map(item => item.section));
+      filterSections();
+    };
+    if (lesson.media) {
+      media = createMediaView(lesson.media, lesson.segments, base, {
+        showSigningPreview: this.hasAttribute('show-signing-preview'),
+        notify: detail => this.emit('alx-avatar-status', detail),
+        resizePage: size => this.emit('alx-caption-size', { size }),
+        onEditionChange: described => {
+          const segments = described && lesson.described_segments?.length ? lesson.described_segments : lesson.segments;
+          const canSeek = !described || segments !== lesson.segments;
+          transcriptHeading.textContent = described && canSeek ? 'Transcript for the audio-described edition' : 'Transcript';
+          timelineNote.hidden = canSeek;
+          renderSections(segments, canSeek);
+        },
+      });
+      this.disposeMedia = media.dispose;
+      article.append(media.view, transcriptHeading, timelineNote);
+    }
+    renderSections(lesson.segments, true);
+    search.addEventListener('input', filterSections);
     size.addEventListener('change', () => { reading.style.setProperty('--reading-size', `${size.value}rem`); });
     const heading = node('h3', 'Save for offline reading');
     const links = node('ul'); links.className = 'exports';
@@ -232,7 +253,6 @@ export class AccessibleLesson extends HTMLElement {
     const list = node('ul');
     for (const format of lesson.unavailable) list.append(node('li', format));
     availability.append(list);
-    if (media) article.append(node('h3', 'Transcript'));
     article.append(toolbar, status, reading, heading, links, availability);
   }
 }

@@ -1,6 +1,8 @@
 # Access
 
-Access turns one reviewed lesson revision into an accessible media experience that can run inside an existing learning platform or on an independent website. A framework-independent Web Component reads versioned lesson data from a FastAPI service and offers synchronized media, transcripts, downloads and related career resources without taking over the host's enrollment or completion rules.
+Access adds captions, audio description, transcripts and offline formats to lessons inside an existing learning platform or an independent website. A framework-independent Web Component reads versioned lesson data from a FastAPI service. The host manages enrollment and completion.
+
+For the hackathon, start the local demo and open `http://127.0.0.1:8000/demo/judging`. The [judging guide](docs/reviews/HACKATHON_JUDGING_GUIDE.md) covers the live walkthrough, panel questions and evidence still needed.
 
 ## Integrate Access
 
@@ -142,6 +144,7 @@ The media assets and their review state are documented in [the complete-media fi
 
 | Route | Purpose |
 |---|---|
+| `/demo/judging` | W3C lesson walkthrough, offline playback and installation of the same lesson in a second host |
 | `/demo/savanna` | Savanna-style host with the supplied ALX video, draft captions, transcript, downloads and optional timing prototype |
 | `/demo/independent` | Two independent lesson-component instances and fallback behavior |
 | `/demo/plug-in` | Install, theme, remove and copy a pinned independent-host embed |

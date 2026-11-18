@@ -9,3 +9,11 @@ a { color: #155e63; }
 :focus-visible { outline: 3px solid #bd4e19; outline-offset: 4px; }
 .host-navigation { padding: 1rem; background: white; border-bottom: 1px solid #b4c6c2; }
 .host-content { padding: 1.5rem; background: white; border-radius: .5rem; }
+.judging .skip { position: absolute; top: .5rem; left: 1rem; padding: .75rem 1rem; background: white; }
+.judging .skip:not(:focus) { transform: translateY(-150%); }
+.judging nav ul { display: flex; flex-wrap: wrap; gap: .25rem 1.25rem; list-style: none; padding: 0; }
+.judging nav a { display: inline-flex; align-items: center; min-height: 2.75rem; }
+.judging main > section { border-top: 1px solid #b4c6c2; margin-top: 2rem; padding-top: 1rem; }
+.judging li, .judging dd { line-height: 1.7; }
+.judging dt { font-weight: 700; }
+.judging dd { margin: .2rem 0 1rem; max-width: 65ch; }

@@ -12,7 +12,7 @@ try {
     script.integrity = manifest[entry]; script.crossOrigin = 'anonymous';
     await new Promise((resolve, reject) => { script.onload = resolve; script.onerror = reject; document.head.append(script); });
   }
-  if (status) status.textContent = 'Access component loaded. This is a local integration demonstration.';
+  if (status) status.textContent = 'Access component loaded.';
 } catch {
   if (status) status.textContent = 'The component could not load. Run npm run build and reload, or use the fallback links.';
 }

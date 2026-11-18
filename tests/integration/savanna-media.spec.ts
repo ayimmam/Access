@@ -180,9 +180,11 @@ test('changed hashes or legacy rigs fail closed without losing captions', async 
   await page.route('**/signing-manifest?**', route => route.fulfill({ json: changed }));
   await page.goto('/');
   const lesson = page.locator('alx-accessible-lesson');
+  await lesson.getByRole('combobox', { name: 'Captions', exact: true }).selectOption('on');
   await lesson.getByRole('button', { name: 'Show 3D hands preview' }).click();
   await expect(lesson.locator('.avatar-panel').getByRole('status')).toContainText('assets unavailable');
   await lesson.getByRole('button', { name: 'Jump to 0:41', exact: true }).click();
+  await expect(lesson.locator('.active-caption')).toBeVisible();
   await expect(lesson.locator('.active-caption')).toContainText('incredible people');
   await lesson.getByRole('button', { name: 'Hide 3D hands preview' }).click();
   changed.rig.sha256 = calibration.rig.sha256;
@@ -241,6 +243,7 @@ test('missing interpreter video pauses playback and retains text fallback', asyn
   await page.goto('/');
   const lesson = page.locator('alx-accessible-lesson');
   const source = lesson.locator('.video-column video');
+  await lesson.getByRole('combobox', { name: 'Captions', exact: true }).selectOption('on');
   await lesson.getByRole('button', { name: 'Show 3D hands preview' }).click();
   await expect(lesson.locator('.avatar-panel').getByRole('status')).toContainText('unavailable');
   await source.evaluate(async element => {
@@ -249,6 +252,7 @@ test('missing interpreter video pauses playback and retains text fallback', asyn
   });
   await expect(lesson.locator('.avatar-panel').getByRole('status')).toContainText('Playback paused');
   await expect.poll(() => source.evaluate(element => element.paused)).toBe(true);
+  await expect(lesson.locator('.active-caption')).toBeVisible();
   await expect(lesson.locator('.active-caption')).toContainText('community');
   await expect(lesson.locator('.interpreter-video')).toBeHidden();
 });

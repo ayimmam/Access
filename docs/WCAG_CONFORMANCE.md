@@ -1,14 +1,30 @@
 # WCAG 2.2 AA conformance record
 
-Last updated: 15 November 2026
+Last updated 18 November 2026
 
 ## Scope and status
 
 This document records evidence for the public-fixture demonstration routes and the two static Vercel demo sites. It is not a claim that Access, ALX Savanna, Ethioware, or the Career Gateway fully conforms to WCAG 2.2 AA. ALX production authentication and protected course integration are outside this scope.
 
-Routes exercised by the browser suites include `/demo/savanna`, `/demo/independent`, `/demo/ethioware`, `/demo/careers`, `/demo/plug-in`, `/demo/privacy`, the fictional certificate route, and the local Ethioware and Career Gateway static sites.
+Routes exercised by the browser suites include `/demo/judging`, `/demo/savanna`, `/demo/independent`, `/demo/ethioware`, `/demo/careers`, `/demo/plug-in`, `/demo/privacy`, the fictional certificate route, and the local Ethioware and Career Gateway static sites.
 
 ## Automated evidence
+
+### 18 November judging build
+
+Local results for the judging changes on `codex/judge-ready-demo`, based on `4465069`.
+
+| Check | Result |
+| --- | --- |
+| `npm run build` and `npm run typecheck` | Passed |
+| `.venv/bin/python -m pytest -q` | 85 passed, including the offline pack hashes and rejection of a draft EthSL file |
+| `UV_CACHE_DIR=/private/tmp/access-uv-cache UV_NO_SYNC=1 npm run test:browser -- --workers=2` | 47 passed. The judging view had zero violations in its tagged axe scan at 320 CSS pixels. The flow verified muted captions, keyboard seeking with retained focus, the longer described timeline and mounting the same lesson in the installer. |
+| `UV_NO_SYNC=1 npm run test:vercel-demos -- --workers=2` | 13 passed against local static hosts |
+| Extracted offline pack in desktop Chromium | Both MP3s played from local files with browser networking disabled. All 10 file hashes matched. |
+
+These results cover the local build and automated browser states. Human assistive-technology, accessibility and release checks remain below. See the [judging walkthrough](reviews/HACKATHON_JUDGING_GUIDE.md).
+
+### 15 November baseline
 
 On 15 November 2026, the repository checks produced:
 
@@ -35,7 +51,7 @@ The `Colors with Good Contrast` public fixture includes W3C source video and Eng
 
 The PDF export is a tagged prototype with document language, title metadata, marked content, and a logical structure tree. It has not been validated as PDF/UA by a human screen-reader tester or a dedicated PDF/UA validator. The BRF export is an uncontracted English prototype and has not been approved by a Braille transcriber.
 
-The player contains synchronization, pause-on-buffer, docking, and size controls for a future EthSL interpreter recording. The EthSL control remains disabled until the consented interpreter recording is supplied and evaluated by a fluent EthSL interpreter and Deaf reviewer. The 3D avatar remains a timing prototype and is not an EthSL translation.
+Reviewed EthSL is unavailable. The player labels the gap and keeps the 3D timing prototype on hosts that explicitly opt in. The signing-asset route requires an approved, revision-bound record. A fluent EthSL interpreter and Deaf reviewer still need to evaluate a consented recording and its learner playback.
 
 ## Keyboard checks represented in the suite
 

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Access · Accessibility Hackathon demo</title>
+  <link rel="stylesheet" href="/demo-assets/demo.css">
+  <script type="module" src="/demo-assets/embed-demo.js"></script>
+</head>
+<body class="judging">
+  <a class="skip" href="#main">Skip to main content</a>
+  <header><strong>Access</strong> <span> / Accessibility Hackathon</span></header>
+  <main id="main" tabindex="-1">
+    <h1>Try an Access lesson</h1>
+    <p>Access adds captions, audio description, a searchable transcript and offline formats to a lesson inside a learning platform. This demo uses public content and requires no sign-in.</p>
+    <nav aria-label="Demo steps">
+      <ul>
+        <li><a href="#lesson">Try the lesson</a></li>
+        <li><a href="#portability">Install in another host</a></li>
+        <li><a href="#evidence">Check what has been verified</a></li>
+      </ul>
+    </nav>
+
+    <section id="lesson" tabindex="-1" aria-labelledby="lesson-task">
+      <h2 id="lesson-task">Find a passage with the sound off</h2>
+      <p>Choose English captions, search the transcript for <strong>poor contrast</strong>, then activate the result to jump to that passage. Switch to the audio-described video and try the same result on its longer timeline.</p>
+      <p id="release-status" role="status">Preparing the lesson player…</p>
+      <alx-accessible-lesson api-base="/api/v1" lesson-id="w3c-colors-with-good-contrast" content-version="1" lang="en">
+        <p><a href="/api/v1/lessons/w3c-colors-with-good-contrast/downloads/html?version=1">Download the lesson transcript</a></p>
+      </alx-accessible-lesson>
+      <p>For offline playback, download the offline pack, extract it and open <code>index.html</code> to read the transcript or play either audio edition. <a href="https://www.w3.org/WAI/perspective-videos/contrast/">W3C WAI lesson source</a></p>
+    </section>
+
+    <section id="portability" tabindex="-1" aria-labelledby="portability-title">
+      <h2 id="portability-title">Install the same lesson in another host</h2>
+      <p>Mount the same lesson in the training-provider page, check the ready event, and copy the embed code. Both hosts read version 1 from the same public API.</p>
+      <ul>
+        <li><a href="/demo/plug-in?lesson=w3c-colors-with-good-contrast">Open the installer with this lesson selected</a></li>
+        <li><a href="/api/v1/lessons/w3c-colors-with-good-contrast/manifest?version=1">Inspect the lesson manifest</a></li>
+        <li><a href="/api/docs">Open the API documentation</a></li>
+      </ul>
+      <p><a href="/demo/careers">Explore fictional job cards</a> and <a href="/demo/certificates/DEMO-LEARNING-001">check a fictional certificate</a>.</p>
+    </section>
+
+    <section id="evidence" tabindex="-1" aria-labelledby="evidence-title">
+      <h2 id="evidence-title">What is ready for review</h2>
+      <dl>
+        <dt>Try now</dt>
+        <dd>W3C English captions and audio description, keyboard transcript jumps, local files in the offline pack, and installation with the public API.</dd>
+        <dt>Content awaiting review</dt>
+        <dd>Amharic and Tigrigna captions are machine-translated drafts. Reviewed Ethiopian Sign Language (EthSL) is unavailable. The tagged PDF awaits accessibility verification.</dd>
+        <dt>Evidence still needed for the hackathon gate</dt>
+        <dd>Unaided tasks with disabled co-designers, including NVDA and TalkBack, plus device and zoom checks and completed WCAG 2.2 AA evaluation.</dd>
+      </dl>
+    </section>
+  </main>
+</body>
+</html>

@@ -2,6 +2,7 @@
 
 ## Start here
 
+- [Hackathon judging guide](reviews/HACKATHON_JUDGING_GUIDE.md) covers the live demo, panel questions and evidence still needed.
 - [Track 2 implementation plan](planning/TRACK_2_IMPLEMENTATION_PLAN.md): current scope, recording lessons, delivery sequence and reconciled security decisions.
 - [Judging pivot and two-day delivery plan](planning/JUDGING_PIVOT_PLAN.md): November 14 scoring/gate reconciliation, portable installation, mandatory media, 3,000-concurrent capacity design and GPT Astra work packages.
 - [Plug-in demonstration](../examples/plug-in-demo/README.md): real install/remove, host theme, copyable embed and component events.

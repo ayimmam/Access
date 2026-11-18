@@ -227,7 +227,8 @@ def transcript(lesson_id: str, language: str, version: int = Query(1, ge=1)):
 @app.get("/api/v1/lessons/{lesson_id}/media/{kind}")
 def media(lesson_id: str, kind: Literal["video", "captions", "captions-am", "captions-ti", "described-video", "described-captions", "audio", "described-audio", "sign-video"], version: int = Query(1, ge=1)):
     lesson = resolve(lesson_id, version)
-    if lesson.media is None:
+    # Public interpretation is delivered by the review-bound signing asset route.
+    if lesson.media is None or kind == "sign-video":
         raise HTTPException(404)
     if lesson_id == W3C_ID:
         assets = {
@@ -239,7 +240,6 @@ def media(lesson_id: str, kind: Literal["video", "captions", "captions-am", "cap
             "described-captions": (W3C_DIRECTORY / "captions-described.en.vtt", "text/vtt"),
             "audio": (W3C_DIRECTORY / "audio.mp3", "audio/mpeg"),
             "described-audio": (W3C_DIRECTORY / "audio-described.mp3", "audio/mpeg"),
-            "sign-video": (W3C_DIRECTORY / "ethsl.mp4", "video/mp4"),
         }
         path, media_type = assets[kind]
         if not path.is_file():
@@ -290,6 +290,11 @@ def download(lesson_id: str, format: Literal["html", "txt", "zip", "pdf", "brf"]
 @app.get("/", include_in_schema=False)
 def demo():
     return FileResponse(ROOT / "examples/savanna/index.html")
+
+
+@app.get("/demo/judging", include_in_schema=False)
+def judging_demo():
+    return FileResponse(ROOT / "examples/judging/index.html")
 
 
 @app.get("/demo/independent", include_in_schema=False)

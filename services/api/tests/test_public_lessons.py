@@ -105,6 +105,8 @@ def test_w3c_media_demo_exposes_review_status_and_equivalent_formats():
     assert [track["language"] for track in lesson["media"]["caption_tracks"]] == ["en", "am", "ti"]
     assert lesson["media"]["caption_tracks"][1]["status"] == "machine-translated-review-pending"
     assert lesson["media"]["described_src"].endswith("described-video?version=1")
+    assert next(segment["start"] for segment in lesson["segments"] if "poor contrast" in segment["text"]) == 15.02
+    assert next(segment["start"] for segment in lesson["described_segments"] if "poor contrast" in segment["text"]) == 23.58
     assert lesson["media"]["sign_src"] is None
     assert client.get(base + "/media/sign-video").status_code == 404
     assert "ጥሩ" in client.get(base + "/media/captions-am").text
@@ -126,6 +128,23 @@ def test_w3c_offline_pack_contains_low_data_and_review_assets_with_hashes():
         manifest = json.loads(archive.read("manifest.json"))
         for entry in manifest["files"]:
             assert hashlib.sha256(archive.read(entry["path"])).hexdigest() == entry["sha256"]
+        index = archive.read("index.html").decode()
+        for audio in ("audio.mp3", "audio-described.mp3"):
+            assert f'<audio controls preload="none" src="{audio}"' in index
+            assert f'href="{audio}"' in index
+        assert "<audio" not in client.get(f"/api/v1/lessons/{W3C_ID}/downloads/html").text
+
+
+def test_w3c_draft_interpreter_file_is_not_published(tmp_path, monkeypatch):
+    monkeypatch.setattr("access_core.lessons.W3C_DIRECTORY", tmp_path)
+    monkeypatch.setattr("access_api.main.W3C_DIRECTORY", tmp_path)
+    (tmp_path / "ethsl.mp4").write_bytes(b"unreviewed interpreter recording fixture")
+
+    base = f"/api/v1/lessons/{W3C_ID}"
+    media = client.get(base + "/manifest").json()["media"]
+    assert media["sign_src"] is None
+    assert media["sign_status"] == "unavailable"
+    assert client.get(base + "/media/sign-video").status_code == 404
 
 
 def test_offline_video_manifest_and_download_are_bound_to_edition_and_version(tmp_path, monkeypatch):

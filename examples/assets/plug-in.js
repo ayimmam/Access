@@ -12,6 +12,11 @@ const events = document.querySelector('#events');
 let integrity;
 let count = 0;
 
+const requestedLesson = new URLSearchParams(window.location.search).get('lesson');
+if (Array.from(lesson.options).some(option => option.value === requestedLesson)) {
+  lesson.value = requestedLesson;
+}
+
 function updateSnippet() {
   if (!integrity) return;
   snippet.value = `<script type="module" src="${bundle}" integrity="${integrity}" crossorigin="anonymous"></script>\n<alx-accessible-lesson api-base="${base}" lesson-id="${lesson.value}" content-version="1" lang="en">\n  <p><a href="${base}/lessons/${lesson.value}/downloads/html?version=1">Download the accessible lesson</a></p>\n</alx-accessible-lesson>`;

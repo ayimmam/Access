@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { readFile, mkdtemp, rm } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -71,10 +71,43 @@ test('Savanna comparison shows the reconstructed baseline and returns to Access'
   await expect(page.locator('alx-accessible-lesson')).toBeVisible();
 });
 
+for (const path of ['/', '/demo/savanna']) {
+  test(`ASL demo opens on ${path} and follows a paused seek`, async ({ page }) => {
+    await page.goto(path);
+    const panel = page.getByRole('complementary', { name: 'American Sign Language animation preview' });
+    const canvas = panel.locator('canvas');
+    await expect(canvas).toBeVisible();
+    const video = page.locator('alx-accessible-lesson').getByLabel('Lesson video', { exact: true });
+    await expect.poll(() => video.evaluate((v: HTMLVideoElement) => v.readyState)).toBeGreaterThan(1);
+    const before = await canvas.screenshot();
+    await video.evaluate((v: HTMLVideoElement) => { v.currentTime = 19.6; });
+    await expect.poll(() => canvas.screenshot().then(image => image.equals(before))).toBe(false);
+    await expect.poll(() => video.evaluate((v: HTMLVideoElement) => v.paused)).toBe(true);
+    const paused = await canvas.screenshot();
+    await video.evaluate(async (v: HTMLVideoElement) => { v.muted = true; await v.play(); });
+    await expect.poll(() => canvas.screenshot().then(image => image.equals(paused))).toBe(false);
+    await video.evaluate((v: HTMLVideoElement) => v.pause());
+    await panel.getByRole('button', { name: 'Hide ASL preview' }).click();
+    await expect(canvas).toHaveCount(0);
+    await panel.getByRole('button', { name: 'Show ASL preview' }).click();
+    await expect(canvas).toBeVisible();
+    await canvas.screenshot({path:test.info().outputPath('asl-preview.png')});
+  });
+}
+
+// Exercise the existing opt-in EthSL review controls on the same media fixture.
+async function openEthslReviewHost(page: Page) {
+  await page.goto('/demo/savanna');
+  await page.locator('alx-accessible-lesson').evaluate(host => {
+    host.removeAttribute('asl-demo-preview');
+    host.setAttribute('show-signing-preview', '');
+  });
+}
+
 test('neutral hands load on demand, remain still, and support keyboard docking', async ({ page }) => {
   const requests: string[] = [];
   page.on('request', request => requests.push(request.url()));
-  await page.goto('/');
+  await openEthslReviewHost(page);
   const lesson = page.locator('alx-accessible-lesson');
   await expect(lesson.locator('.media-view')).toBeVisible();
   await expect.poll(() => lesson.locator('.video-column video').evaluate(element => element.readyState >= 2)).toBe(true);
@@ -107,7 +140,7 @@ test('neutral hands load on demand, remain still, and support keyboard docking',
 });
 
 test('worksheet preserves all 16 cue IDs with empty EthSL motion slots', async ({ page }) => {
-  await page.goto('/');
+  await openEthslReviewHost(page);
   const lesson = page.locator('alx-accessible-lesson');
   await lesson.getByText('EthSL recording and review', { exact: true }).click();
   const pending = page.waitForEvent('download');
@@ -123,7 +156,7 @@ test('worksheet preserves all 16 cue IDs with empty EthSL motion slots', async (
 });
 
 test('upstream caption controls survive and extended timelines clear the hands panel', async ({ page }) => {
-  await page.goto('/');
+  await openEthslReviewHost(page);
   const lesson = page.locator('alx-accessible-lesson');
   await expect(lesson.locator('.media-view')).toBeVisible();
   await lesson.evaluate(element => element.setAttribute('lesson-id', 'w3c-colors-with-good-contrast'));
@@ -147,7 +180,7 @@ test('upstream caption controls survive and extended timelines clear the hands p
 test('synthetic GLB regression follows seeks, holds, gaps, rates and replay', async ({ page }) => {
   await page.route('**/signing-assets/calibration.glb?version=1', route => route.fulfill({ contentType: 'model/gltf-binary', body: bytes }));
   await page.route('**/signing-manifest?**', route => route.fulfill({ json: calibration }));
-  await page.goto('/');
+  await openEthslReviewHost(page);
   const lesson = page.locator('alx-accessible-lesson');
   const source = lesson.locator('.video-column video');
   await lesson.getByRole('button', { name: 'Show 3D hands preview' }).click();
@@ -178,7 +211,7 @@ test('changed hashes or legacy rigs fail closed without losing captions', async 
   changed.rig.sha256 = '0'.repeat(64);
   await page.route('**/signing-assets/calibration.glb?version=1', route => route.fulfill({ contentType: 'model/gltf-binary', body: bytes }));
   await page.route('**/signing-manifest?**', route => route.fulfill({ json: changed }));
-  await page.goto('/');
+  await openEthslReviewHost(page);
   const lesson = page.locator('alx-accessible-lesson');
   await lesson.getByRole('combobox', { name: 'Captions', exact: true }).selectOption('on');
   await lesson.getByRole('button', { name: 'Show 3D hands preview' }).click();
@@ -204,7 +237,7 @@ test('reviewed video works without 3D and follows time, rate, stalls and gaps', 
     interpreter_video: asset, requires_non_manual: true });
   await page.route('**/signing-assets/calibration.mp4?version=1', route => route.fulfill({ contentType: 'video/mp4', body: videoBytes }));
   await page.route('**/signing-manifest?**', route => route.fulfill({ json: manifest }));
-  await page.goto('/');
+  await openEthslReviewHost(page);
   const lesson = page.locator('alx-accessible-lesson');
   const source = lesson.locator('.video-column video');
   const signed = lesson.locator('.interpreter-video');
@@ -240,7 +273,7 @@ test('missing interpreter video pauses playback and retains text fallback', asyn
     interpreter_video: { url: '/api/v1/missing.mp4', sha256: '0'.repeat(64) }, hands_ambiguous: true });
   await page.route('**/signing-manifest?**', route => route.fulfill({ json: manifest }));
   await page.route('**/api/v1/missing.mp4', route => route.fulfill({ status: 404 }));
-  await page.goto('/');
+  await openEthslReviewHost(page);
   const lesson = page.locator('alx-accessible-lesson');
   const source = lesson.locator('.video-column video');
   await lesson.getByRole('combobox', { name: 'Captions', exact: true }).selectOption('on');
@@ -260,7 +293,7 @@ test('missing interpreter video pauses playback and retains text fallback', asyn
 for (const [name, width, height] of [['desktop', 1440, 1100], ['mobile', 320, 900]] as const) {
   test(`capture ${name} hands preview`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height });
-    await page.goto('/');
+    await openEthslReviewHost(page);
     const lesson = page.locator('alx-accessible-lesson');
     await lesson.getByRole('button', { name: 'Show 3D hands preview' }).click();
     await expect(lesson.locator('.avatar-panel canvas')).toBeVisible();

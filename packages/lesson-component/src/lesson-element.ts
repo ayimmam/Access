@@ -104,7 +104,7 @@ function node<K extends keyof HTMLElementTagNameMap>(tag: K, text?: string): HTM
 }
 
 export class AccessibleLesson extends HTMLElement {
-  static observedAttributes = ['api-base', 'lesson-id', 'content-version', 'lang', 'show-signing-preview'];
+  static observedAttributes = ['api-base', 'lesson-id', 'content-version', 'lang', 'show-signing-preview', 'asl-demo-preview'];
   private root = this.attachShadow({ mode: 'open' });
   private controller?: AbortController;
   private sequence = 0;
@@ -221,6 +221,7 @@ export class AccessibleLesson extends HTMLElement {
     };
     if (lesson.media) {
       media = createMediaView(lesson.media, lesson.segments, base, {
+        aslDemo: this.hasAttribute('asl-demo-preview') && lesson.lesson_id === 'alx-transforming-africa' && lesson.content_version === 1,
         showSigningPreview: this.hasAttribute('show-signing-preview'),
         notify: detail => this.emit('alx-avatar-status', detail),
         resizePage: size => this.emit('alx-caption-size', { size }),

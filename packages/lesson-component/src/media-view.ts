@@ -12,6 +12,7 @@ export interface LessonMedia {
 }
 
 interface MediaViewOptions {
+  aslDemo: boolean;
   showSigningPreview: boolean;
   notify: (detail: Record<string, unknown>) => void;
   resizePage: (size: string) => void;
@@ -189,6 +190,43 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
   else signCard.append(element('p', 'Reviewed EthSL interpretation is unavailable for this lesson.'));
   if (showSigningPreview) signCard.append(toggle, dockLabel, tools);
   controls.append(signCard);
+  let demoController: AbortController | undefined;
+  if (options.aslDemo) {
+    const demo = element('aside');
+    demo.className = 'avatar-panel';
+    demo.setAttribute('aria-label', 'American Sign Language animation preview');
+    const canvas = element('div');
+    canvas.className = 'avatar-canvas';
+    const message = element('p');
+    message.setAttribute('role', 'status');
+    const hide = element('button', 'Hide ASL preview');
+    hide.type = 'button';
+    const details = element('div');
+    details.append(element('p', 'This draft animates selected concepts from the captions. A fluent ASL reviewer has yet to verify the signing.'), canvas, message);
+    demo.append(element('h3', 'ASL animation preview'), hide, details);
+    stage.append(demo);
+    const openDemo = () => {
+      const controller = new AbortController();
+      demoController = controller;
+      message.textContent = 'Loading avatar…';
+      void import('./asl-demo').then(async ({ mountAslDemo }) => {
+        if (controller.signal.aborted) return;
+        await mountAslDemo(canvas, video, base, segments, controller.signal);
+        if (!controller.signal.aborted) message.textContent = '';
+      }).catch(() => {
+        if (!controller.signal.aborted) message.textContent = 'The avatar could not load. Use the lesson captions or transcript.';
+      });
+    };
+    hide.setAttribute('aria-expanded', 'true');
+    hide.addEventListener('click', () => {
+      details.hidden = !details.hidden;
+      hide.textContent = details.hidden ? 'Show ASL preview' : 'Hide ASL preview';
+      hide.setAttribute('aria-expanded', String(!details.hidden));
+      if (details.hidden) demoController?.abort();
+      else openDemo();
+    });
+    openDemo();
+  }
   view.append(stage, controls, note);
   let avatar: TimingAvatar | undefined;
   let manifest: SigningManifest | undefined;
@@ -366,6 +404,7 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
     view,
     seek(time: number) { video.currentTime = Math.max(0, time); update(); },
     dispose() {
+      demoController?.abort();
       disposed = true; generation++; cancelAnimationFrame(animation); signingController?.abort(); signedVideo.clear();
       document.removeEventListener('visibilitychange', visibility);
       video.textTracks.removeEventListener('change', syncNativeTrackModes);

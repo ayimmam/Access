@@ -67,7 +67,7 @@ export class CareerSpeech {
         if (!current()) return;
         this.stop();
         this.error(['not-allowed', 'service-not-allowed'].includes(event.error)
-          ? 'Microphone permission was denied. Type a role or command, or use the buttons. No retry happens automatically.'
+          ? 'Microphone permission was denied. Allow microphone access in your browser settings, then choose Listen for a command, or use typed search.'
           : 'Speech could not be recognized. Try Listen for a command again, or type instead.');
       };
       recognition.onend = () => {
@@ -106,8 +106,7 @@ export class CareerSpeech {
     this.stop();
     const synthesis = window.speechSynthesis;
     if (!synthesis || typeof SpeechSynthesisUtterance === 'undefined') {
-      this.error('No English browser voice is available. Turn off Read aloud and use the text or your screen reader.');
-      done?.();
+      this.error('No English browser voice is available. Use Listen for a command, the text, or your screen reader.');
       return;
     }
     const generation = this.generation;
@@ -129,18 +128,19 @@ export class CareerSpeech {
         utterance.voice = voice;
         utterance.lang = voice.lang;
         utterance.onend = next;
-        utterance.onerror = () => {
+        const fail = (message: string) => {
           if (generation !== this.generation) return;
           this.stop();
-          this.error('Read aloud could not finish. Use Repeat, the equivalent text, or your screen reader.');
+          this.error(message);
         };
+        const blocked = 'Your browser blocked read aloud. Turn Read aloud back on and choose Repeat to retry, or use Listen for a command or typed search.';
+        const interrupted = 'Read aloud could not finish. Turn Read aloud back on and choose Repeat to retry, or use Listen for a command or typed search.';
+        utterance.onerror = event => fail(event.error === 'not-allowed' ? blocked : interrupted);
         this.state('speaking');
-        try { synthesis.speak(utterance); } catch { utterance.onerror?.(new Event('error') as SpeechSynthesisErrorEvent); }
-        this.timer = setTimeout(() => {
-          if (generation !== this.generation) return;
-          this.stop();
-          this.error('Read aloud timed out. Use the text or your screen reader.');
-        }, 60000);
+        this.timer = setTimeout(() => fail('Read aloud timed out. Use Listen for a command, the text, or your screen reader.'), 60000);
+        try { synthesis.speak(utterance); } catch (reason) {
+          fail(reason instanceof DOMException && reason.name === 'NotAllowedError' ? blocked : interrupted);
+        }
       };
       next();
       return true;
@@ -151,8 +151,7 @@ export class CareerSpeech {
     this.timer = setTimeout(() => {
       if (generation !== this.generation) return;
       this.stop();
-      this.error('No English browser voice is available. Turn off Read aloud and use the text or your screen reader.');
-      done?.();
+      this.error('No English browser voice is available. Use Listen for a command, the text, or your screen reader.');
     }, 2000);
   }
 }

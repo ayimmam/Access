@@ -4,10 +4,17 @@ import { mockCareerSpeech, respond, typedCommand, voiceCommand } from '../helper
 
 const tags = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
-test('granted microphone permission welcomes and starts listening without pointer input', async ({ page }) => {
+test('saved microphone permission waits for read-aloud consent and keyboard Start', async ({ page }) => {
   await mockCareerSpeech(page, { permission: 'granted' });
   await page.goto('/demo/careers');
   const guide = page.getByRole('region', { name: 'Optional voice navigation' });
+  const start = guide.getByRole('button', { name: 'Start voice search', exact: true });
+  const output = guide.getByLabel('Read prompts and results aloud');
+  await expect(start).toBeFocused();
+  await expect(output).not.toBeChecked();
+  expect(await page.evaluate(() => [window.__careerSpeech.starts, window.__careerSpeech.spoken])).toEqual([0, []]);
+  await output.focus(); await output.press('Space');
+  await start.press('Enter');
   await expect(guide).toHaveAttribute('data-speech-state', 'listening');
   await expect(guide.getByRole('textbox', { name: 'Role or command' })).toBeFocused();
   expect(await page.evaluate(() => window.__careerSpeech.starts)).toBe(1);
@@ -19,6 +26,38 @@ test('granted microphone permission welcomes and starts listening without pointe
   await expect(guide.getByText('11 jobs found. Results 1 to 5.', { exact: true })).toBeVisible();
   await expect(guide).toHaveAttribute('data-speech-state', 'listening');
   expect(await page.evaluate(() => window.__careerSpeech.starts)).toBe(2);
+});
+
+test('missing English synthesis leaves the microphone off until explicit Listen', async ({ page }) => {
+  await mockCareerSpeech(page, { synthesisAvailable: false });
+  await page.goto('/demo/careers');
+  const guide = page.getByRole('region', { name: 'Optional voice navigation' });
+  const output = guide.getByLabel('Read prompts and results aloud');
+  await output.check();
+  await guide.getByRole('button', { name: 'Start voice search', exact: true }).press('Enter');
+  await expect(guide.getByRole('alert')).toContainText('No English browser voice is available');
+  await expect(guide.getByRole('alert')).toHaveAttribute('aria-live', 'assertive');
+  await expect(output).not.toBeChecked();
+  expect(await page.evaluate(() => window.__careerSpeech.starts)).toBe(0);
+  await guide.getByRole('button', { name: 'Listen for a command', exact: true }).press('Enter');
+  await expect(guide).toHaveAttribute('data-speech-state', 'listening');
+});
+
+test('blocked English read-aloud can be repeated by keyboard without starting the microphone', async ({ page }) => {
+  await mockCareerSpeech(page, { permission: 'granted', blockedOnce: true });
+  await page.goto('/demo/careers');
+  const guide = page.getByRole('region', { name: 'Optional voice navigation' });
+  const output = guide.getByLabel('Read prompts and results aloud');
+  await output.check();
+  await guide.getByRole('button', { name: 'Start voice search', exact: true }).press('Enter');
+  await expect(guide.getByRole('alert')).toContainText('Your browser blocked read aloud');
+  await expect(output).not.toBeChecked();
+  expect(await page.evaluate(() => window.__careerSpeech.starts)).toBe(0);
+  await output.check();
+  await guide.getByRole('button', { name: 'Repeat', exact: true }).press('Enter');
+  await expect.poll(() => page.evaluate(() => window.__careerSpeech.spoken.at(-1))).toContain('What role would you like?');
+  await expect(guide).toHaveAttribute('data-speech-state', 'off');
+  expect(await page.evaluate(() => window.__careerSpeech.starts)).toBe(0);
 });
 
 test('voice acceptance: five results, stable saves 3 and 4, paging, shortlist and editable fictional draft', async ({ page }) => {

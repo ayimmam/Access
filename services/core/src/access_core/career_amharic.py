@@ -23,7 +23,6 @@ UI = {
     "Preparing audio. Microphone off.": "ድምፅ በማዘጋጀት ላይ። ማይክሮፎኑ ጠፍቷል።",
     "Choose Start voice search or Use typed search.": "«በድምፅ ፍለጋ ጀምር» ወይም «በጽሑፍ ፈልግ» ይምረጡ።",
     "Welcome to the Access Career Gateway. Voice navigation is ready.": "ወደ Access የሥራ መግቢያ እንኳን ደህና መጡ። የድምፅ አሰሳው ዝግጁ ነው።",
-    "Microphone permission is not active yet. Press Enter on Start voice search to grant permission, or use typed controls.": "የማይክሮፎን ፈቃድ ገና አልተሰጠም። ፈቃድ ለመስጠት «በድምፅ ፍለጋ ጀምር» ላይ Enter ይጫኑ፣ ወይም በጽሑፍ ይቀጥሉ።",
     "What role would you like? Say or type a role, or “all jobs” to clear filters and explore every fictional listing.": "ምን ዓይነት ሥራ ይፈልጋሉ? የሥራውን ዓይነት ይናገሩ ወይም ይጻፉ። ሁሉንም የማሳያ ሥራዎች ለማየት «ሁሉም ሥራዎች» ይበሉ።",
     "Voice navigation stopped. Typed controls still work. Saved jobs stay for this page session.": "የድምፅ አሰሳ ቆሟል። በጽሑፍ መቀጠል ይችላሉ። የተቀመጡ ሥራዎች ይህ ገጽ እስኪዘጋ ድረስ ይቆያሉ።",
     "Guided search results": "የተመራ ፍለጋ ውጤቶች",
@@ -58,14 +57,14 @@ UI = {
     "Amharic voice is not configured. Use typed commands and buttons, or choose English.": "የአማርኛ ድምፅ አገልግሎት አልተዋቀረም። በጽሑፍ ወይም በአዝራሮች ይቀጥሉ፣ ወይም English ይምረጡ።",
     "Amharic voice uses Addis AI. Record one command, then review its text before running it.": "የአማርኛ ድምፅ Addis AIን ይጠቀማል። አንድ ትእዛዝ ይቅረጹ፣ ከማስፈጸምዎ በፊትም ጽሑፉን ይመልከቱ።",
     "Speech recognition is unavailable. Type a role or command, or use the buttons.": "ድምፅን መለየት አይቻልም። በጽሑፍ ወይም በአዝራሮች ይቀጥሉ።",
-    "Microphone permission was denied. Type a role or command, or use the buttons. No retry happens automatically.": "የማይክሮፎን ፈቃድ ተከልክሏል። በጽሑፍ ወይም በአዝራሮች ይቀጥሉ። በራስ ሰር እንደገና አይሞከርም።",
+    "Microphone permission was denied. Allow microphone access in your browser settings, then choose Listen for a command, or use typed search.": "የማይክሮፎን ፈቃድ ተከልክሏል። በአሳሽዎ ቅንብሮች ውስጥ ማይክሮፎኑን ይፍቀዱ፤ ከዚያ «ትእዛዝ በድምፅ ስጥ» ይምረጡ፣ ወይም በጽሑፍ ይፈልጉ።",
     "The microphone could not start. Type a role or command, or use the buttons.": "ማይክሮፎኑን ማስጀመር አልተቻለም። በጽሑፍ ወይም በአዝራሮች ይቀጥሉ።",
     "Listening timed out. The microphone is off. Try again or type a command.": "ጊዜው አልቋል። ማይክሮፎኑ ጠፍቷል። እንደገና ይሞክሩ ወይም ትእዛዝ ይጻፉ።",
     "No clear command was recognized. Nothing was changed. Try a shorter recording or type instead.": "ግልጽ ትእዛዝ አልተለየም። ምንም አልተቀየረም። አጭር ቀረጻ ይሞክሩ ወይም ይጻፉ።",
     "Amharic speech is temporarily unavailable. Nothing was changed. Use typed controls; no automatic retry occurs.": "የአማርኛ ድምፅ አገልግሎት ለጊዜው አይገኝም። በጽሑፍ ይቀጥሉ፤ በራስ ሰር እንደገና አይሞከርም።",
     "The speech limit was reached. Use typed controls or try again later; no automatic retry occurs.": "የድምፅ ገደቡ ላይ ተደርሷል። በጽሑፍ ይቀጥሉ ወይም ቆይተው ይሞክሩ፤ በራስ ሰር እንደገና አይሞከርም።",
-    "Read aloud could not finish. Use Repeat, the equivalent text, or your screen reader.": "በድምፅ ማንበብ አልተጠናቀቀም። «ድገም» ይምረጡ፣ ጽሑፉን ያንብቡ ወይም የስክሪን አንባቢዎን ይጠቀሙ።",
-    "Read aloud needs a playback gesture. Use the Amharic audio player's Play control, or use the text.": "ድምፁን ለመስማት የአማርኛ ድምፅ ማጫወቻውን ይጫኑ፣ ወይም ጽሑፉን ያንብቡ።",
+    "Read aloud could not finish. Use Listen for a command or typed search.": "በድምፅ ማንበብ አልተጠናቀቀም። «ትእዛዝ በድምፅ ስጥ» ይምረጡ ወይም በጽሑፍ ይፈልጉ።",
+    "Your browser blocked automatic playback. Use Play to hear the prompt, then choose Listen for a command, or use typed search.": "አሳሽዎ ድምፁ በራስ ሰር እንዳይጫወት ከልክሏል። ጥያቄውን ለመስማት የማጫወቻውን አዝራር ይጫኑ፤ ከዚያ «ትእዛዝ በድምፅ ስጥ» ይምረጡ፣ ወይም በጽሑፍ ይፈልጉ።",
     "Fictional application draft": "የማሳያ የሥራ ማመልከቻ ረቂቅ",
     "For {title} at {organization}.": "ለ{title} በ{organization}።",
     "Practice only — nothing is submitted. Use fictional information. Fields remain in memory until you close or cancel. The microphone and app speech stay off during drafts; type or use your screen reader.": "ለልምምድ ብቻ — ምንም አይላክም። የፈጠራ መረጃ ይጠቀሙ። መረጃው እስኪዘጉ ድረስ በዚህ ገጽ ማህደረ ትውስታ ብቻ ይቆያል። ማይክሮፎኑና የመተግበሪያው ድምፅ ይጠፋሉ፤ ይጻፉ ወይም የስክሪን አንባቢዎን ይጠቀሙ።",
@@ -94,7 +93,7 @@ UI = {
 
 PRIVACY = "ማይክሮፎኑ አማራጭ ነው። እስከ 15 ሰከንድ ያለ ቀረጻ በAccess በኩል ለAddis AI ይላካል። Addis AI ግልባጮችን ለ24 ሰዓት መልሶ ማግኘት እንደሚቻልና የተፈጠሩ ድምፆችን እንደሚያስቀምጥ ይገልጻል። Access ቀረጻዎችንና ግልባጮችን አያስቀምጥም፤ ወደ ትንታኔ መሣሪያዎችም አይልክም። በድምፅ የሚነበቡት የማሳያ ጥያቄዎችና ሥራዎች ብቻ ናቸው። የማመልከቻ ረቂቅ አይላክም። የፈጠራ መረጃ ብቻ ይጠቀሙ።"
 HELP = "«ሁሉም ሥራዎች»፣ «የድር ገንቢ» ወይም ሌላ የሥራ ዓይነት ይጻፉ። ከዚያ «ቀጣይ»፣ «ድገም»፣ «ዝርዝር 3»፣ «ሶስት እና አራት አስቀምጥ»፣ «የተቀመጡ ሥራዎች»፣ «ረቂቅ አዘጋጅ» ወይም «አቁም» ይጠቀሙ። የተለየውን ጽሑፍ ከማስፈጸምዎ በፊት ይመልከቱ።"
-SPEECH_HELP = "ለስክሪን አንባቢዎች በድምፅ ማንበብ በነባሪነት ጠፍቷል። ሲያበሩት ተደራራቢ ድምፅን ለመቀነስ የዚህ መመሪያ ቀጥታ ማሳወቂያዎች ይቆማሉ። ቀረጻ አንድ ትእዛዝ ብቻ ነው፤ በጊዜ ገደቡ መጨረሻ ወይም «ቀረጻውን ላክ» ሲጫኑ ይላካል። «አቁም» ያልተላከውን ቀረጻ ይሰርዛል። የተላከ ጥያቄ በአገልግሎት ሰጪው ሊጠናቀቅና ክፍያ ሊኖረው ይችላል። ይህ ትርጉም የተወላጅ ተናጋሪ ግምገማ ይጠብቃል።"
+SPEECH_HELP = "በድምፅ ማንበብ በነባሪነት ጠፍቷል። ጥያቄውን ለመስማት «በድምፅ ፍለጋ ጀምር» ከመምረጥዎ በፊት ያብሩት። ሲያበሩት ተደራራቢ ድምፅን ለመቀነስ የዚህ መመሪያ ቀጥታ ማሳወቂያዎች ይቆማሉ። አሳሹ ከጠየቀ ማይክሮፎኑን ይፍቀዱ። ድምፁ ካልተጫወተ ቀረጻ አይጀምርም፤ «ትእዛዝ በድምፅ ስጥ» ይምረጡ ወይም በጽሑፍ ይፈልጉ። ቀረጻ አንድ ትእዛዝ ብቻ ነው፤ በጊዜ ገደቡ መጨረሻ ወይም «ቀረጻውን ላክ» ሲጫኑ ይላካል። «አቁም» ያልተላከውን ቀረጻ ይሰርዛል። የተላከ ጥያቄ በአገልግሎት ሰጪው ሊጠናቀቅና ክፍያ ሊኖረው ይችላል። ይህ ትርጉም የተወላጅ ተናጋሪ ግምገማ ይጠብቃል።"
 
 JOB_TEXT = {
     "demo-copywriter": ("የማስታወቂያ ጽሑፍ አዘጋጅ", "ምሳሌ ፈጠራ ስቱዲዮ", "ለትምህርት ዘመቻዎች ግልጽ የእንግሊዝኛና የአማርኛ ጽሑፍ ያዘጋጁ። ይህ የማሳያ የርቀት ሥራ የጽሑፍ ቃለ መጠይቅና ተለዋዋጭ ሰዓት አለው።", ("አጫጭር የዘመቻ መልዕክቶችን ይጻፉ።", "ጽሑፍን ከአርታዒ ጋር ይገምግሙ።", "በአስተያየት መሠረት ጽሑፍን ያሻሽሉ።")),

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { mockCareerSpeech, typedCommand, voiceCommand } from '../helpers/career-speech';
+import { automaticCommand, mockCareerSpeech, typedCommand } from '../helpers/career-speech';
 import { useDemoApi } from '../helpers/demo-api';
 
 test.use({ video: process.env.ACCESS_RECORD_DEMO ? { mode: 'on', size: { width: 1280, height: 900 } } : 'off', viewport: { width: 1280, height: 900 } });
@@ -56,20 +56,20 @@ test.describe('short demo recording', () => {
     await expect(guide).toHaveAttribute('data-speech-state', 'listening');
     await caption('The microphone listens for one response: “all jobs”.');
     await page.evaluate(() => window.__careerSpeech.respond('all jobs'));
-    await expect(guide).toHaveAttribute('data-speech-state', 'off');
+    await expect(guide).toHaveAttribute('data-speech-state', 'listening');
     await expect(guide.getByText('11 jobs found. Results 1 to 5.', { exact: true })).toBeVisible();
     await caption('11 matches. The first five summaries are queued for read-aloud.');
     await guide.getByRole('button', { name: 'Save result 3 — CNC bending operator' }).scrollIntoViewIfNeeded();
-    await voiceCommand(page, guide, 'save three and four');
+    await automaticCommand(page, guide, 'save three and four');
     await caption('“Save three and four” saves the operator and web developer by stable ID.');
-    await voiceCommand(page, guide, 'next');
+    await automaticCommand(page, guide, 'next');
     await expect(guide.getByText('11 jobs found. Results 6 to 10.', { exact: true })).toBeVisible();
     await caption('“Next” reads five more results. Earlier numbers cannot save a different job.');
-    await voiceCommand(page, guide, 'shortlist');
+    await automaticCommand(page, guide, 'shortlist');
     await expect(guide.getByRole('heading', { name: 'Shortlist 1 of 2 — CNC bending operator' })).toBeVisible();
     await caption('“Shortlist” returns to the same saved jobs, one at a time.');
-    await voiceCommand(page, guide, 'next');
-    await voiceCommand(page, guide, 'prepare draft');
+    await automaticCommand(page, guide, 'next');
+    await automaticCommand(page, guide, 'prepare draft');
     const draft = guide.getByRole('dialog');
     await caption('Microphone off for draft privacy. Required fields are asked individually.');
     await draft.getByLabel('Fictional name (required)', { exact: true }).fill('Demo Candidate');

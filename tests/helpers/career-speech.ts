@@ -61,6 +61,9 @@ export async function respond(page: Page, text: string, confidence = 0.99, secon
 }
 export async function voiceCommand(page: Page, guide: Locator, text: string) {
   await guide.getByRole('button', { name: 'Listen for a command', exact: true }).click();
+  await automaticCommand(page, guide, text);
+}
+export async function automaticCommand(page: Page, guide: Locator, text: string) {
   await expect(guide).toHaveAttribute('data-speech-state', 'listening');
   await respond(page, text);
 }

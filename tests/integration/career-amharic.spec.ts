@@ -10,7 +10,7 @@ test('Amharic opt-in, first five, stable saves 3 and 4, paging, shortlist and pr
   const guide = page.locator('.voice-guide');
   await chooseAmharic(guide);
   const output = guide.getByRole('checkbox', { name: 'ጥያቄዎችንና ውጤቶችን በድምፅ አንብብ' });
-  await expect(output).not.toBeChecked();
+  await expect(output).toBeChecked();
   expect(requests).toHaveLength(0);
   expect(await page.evaluate(() => window.__careerAddis.starts)).toBe(0);
   await output.check();
@@ -78,6 +78,7 @@ test('denied microphone, ambiguous numbers, no results and typed cancellation in
   await page.goto('/demo/careers');
   const guide = page.locator('.voice-guide');
   await chooseAmharic(guide);
+  await guide.getByRole('checkbox').uncheck();
   await guide.getByRole('button', { name: 'በድምፅ ፍለጋ ጀምር', exact: true }).click();
   await expect(guide.getByRole('alert')).toContainText('ፈቃድ ተከልክሏል');
   await typeAmharic(guide, 'የጠፈር ተመራማሪ');
@@ -119,6 +120,7 @@ test('unsupported recording falls back to keyboard, including unexpected role in
   await page.goto('/demo/careers');
   const guide = page.locator('.voice-guide');
   await chooseAmharic(guide);
+  await guide.getByRole('checkbox').uncheck();
   await guide.getByRole('button', { name: 'በድምፅ ፍለጋ ጀምር', exact: true }).click();
   await expect(guide.getByRole('alert')).toContainText('ድምፅን መለየት አይቻልም');
   await typeAmharic(guide, 'constructor');
@@ -133,6 +135,7 @@ test('Stop discards unsubmitted audio and delayed permission cannot restart capt
   await page.goto('/demo/careers');
   const guide = page.locator('.voice-guide');
   await chooseAmharic(guide);
+  await guide.getByRole('checkbox').uncheck();
   await guide.getByRole('button', { name: 'በድምፅ ፍለጋ ጀምር', exact: true }).click();
   await expect(guide).toHaveAttribute('data-speech-state', 'starting');
   await guide.getByRole('button', { name: 'አቁም', exact: true }).click();
@@ -162,19 +165,41 @@ test('language changes cancel a late transcript and keep English usable', async 
 
 test('language changes keep existing read-aloud consent and wait for explicit Start', async ({ page }) => {
   await mockCareerSpeech(page);
-  await mockAddisSpeech(page);
+  const requests = await mockAddisSpeech(page);
   await page.goto('/demo/careers');
   const guide = page.locator('.voice-guide');
   await chooseAmharic(guide);
+  await expect(guide.getByRole('checkbox')).toBeChecked();
+  await expect(guide).toHaveAttribute('data-speech-state', 'off');
+  expect(requests).toEqual([]);
+  expect(await page.evaluate(() => window.__careerAddis.starts)).toBe(0);
   await guide.getByRole('checkbox', { name: 'ጥያቄዎችንና ውጤቶችን በድምፅ አንብብ' }).check();
+  const spokenBeforeSwitch = await page.evaluate(() => [...window.__careerSpeech.spoken]);
   await guide.getByRole('combobox').selectOption('en');
   await expect(guide).toHaveAttribute('lang', 'en');
   await expect(guide.getByLabel('Read prompts and results aloud')).toBeChecked();
   await expect(guide).toHaveAttribute('data-speech-state', 'off');
-  expect(await page.evaluate(() => [window.__careerSpeech.starts, window.__careerSpeech.spoken])).toEqual([0, []]);
+  expect(await page.evaluate(() => [window.__careerSpeech.starts, window.__careerSpeech.spoken])).toEqual([0, spokenBeforeSwitch]);
   await guide.getByRole('button', { name: 'Start voice search', exact: true }).press('Enter');
   await expect(guide).toHaveAttribute('data-speech-state', 'listening');
   expect(await page.evaluate(() => window.__careerSpeech.starts)).toBe(1);
+});
+
+test('language changes preserve an explicitly unchecked read-aloud preference', async ({ page }) => {
+  await mockCareerSpeech(page);
+  const requests = await mockAddisSpeech(page);
+  await page.goto('/demo/careers');
+  const guide = page.locator('.voice-guide');
+  await guide.getByLabel('Read prompts and results aloud').uncheck();
+  await chooseAmharic(guide);
+  await expect(guide.getByRole('checkbox')).not.toBeChecked();
+  await expect(guide).toHaveAttribute('data-speech-state', 'off');
+  expect(requests).toEqual([]);
+  await guide.getByRole('combobox').selectOption('en');
+  await expect(guide).toHaveAttribute('lang', 'en');
+  await expect(guide.getByLabel('Read prompts and results aloud')).not.toBeChecked();
+  await expect(guide).toHaveAttribute('data-speech-state', 'off');
+  expect(await page.evaluate(() => window.__careerSpeech.starts)).toBe(0);
 });
 
 test('Amharic playback can be recovered manually without starting a recording', async ({ page }) => {

@@ -1,22 +1,16 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { mockCareerSpeech, respond, typedCommand, voiceCommand } from '../helpers/career-speech';
+import { automaticCommand, mockCareerSpeech, respond, typedCommand, voiceCommand } from '../helpers/career-speech';
 
 const tags = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 
-test('saved microphone permission waits for read-aloud consent and keyboard Start', async ({ page }) => {
+test('saved microphone permission greets automatically and listens after every spoken response', async ({ page }) => {
   await mockCareerSpeech(page, { permission: 'granted' });
   await page.goto('/demo/careers');
   const guide = page.getByRole('region', { name: 'Optional voice navigation' });
-  const start = guide.getByRole('button', { name: 'Start voice search', exact: true });
   const output = guide.getByLabel('Read prompts and results aloud');
-  await expect(start).toBeFocused();
-  await expect(output).not.toBeChecked();
-  expect(await page.evaluate(() => [window.__careerSpeech.starts, window.__careerSpeech.spoken])).toEqual([0, []]);
-  await output.focus(); await output.press('Space');
-  await start.press('Enter');
+  await expect(output).toBeChecked();
   await expect(guide).toHaveAttribute('data-speech-state', 'listening');
-  await expect(guide.getByRole('textbox', { name: 'Role or command' })).toBeFocused();
   expect(await page.evaluate(() => window.__careerSpeech.starts)).toBe(1);
   expect(await page.evaluate(() => window.__careerSpeech.spoken.slice(0, 2))).toEqual([
     'Welcome to the Access Career Gateway. Voice navigation is ready.',
@@ -26,6 +20,116 @@ test('saved microphone permission waits for read-aloud consent and keyboard Star
   await expect(guide.getByText('11 jobs found. Results 1 to 5.', { exact: true })).toBeVisible();
   await expect(guide).toHaveAttribute('data-speech-state', 'listening');
   expect(await page.evaluate(() => window.__careerSpeech.starts)).toBe(2);
+  await automaticCommand(page, guide, 'save three and four');
+  await expect(guide).toHaveAttribute('data-speech-state', 'listening');
+  expect(await page.evaluate(() => window.__careerSpeech.starts)).toBe(3);
+  expect(await page.evaluate(() => window.__careerSpeech.overlaps)).toEqual([]);
+});
+
+for (const permission of ['prompt', 'denied'] as const) {
+  test(`${permission} microphone permission allows greeting but requires explicit Start for capture`, async ({ page }) => {
+    await mockCareerSpeech(page, { permission });
+    await page.goto('/demo/careers');
+    const guide = page.locator('.voice-guide');
+    await expect(guide.getByLabel('Read prompts and results aloud')).toBeChecked();
+    await expect.poll(() => page.evaluate(() => window.__careerSpeech.spoken.length)).toBe(2);
+    await expect(guide).toHaveAttribute('data-speech-state', 'off');
+    expect(await page.evaluate(() => window.__careerSpeech.starts)).toBe(0);
+    await guide.getByRole('button', { name: 'Start voice search', exact: true }).press('Enter');
+    await automaticCommand(page, guide, 'all jobs');
+    await expect(guide).toHaveAttribute('data-speech-state', 'listening');
+    expect(await page.evaluate(() => window.__careerSpeech.starts)).toBe(2);
+    await automaticCommand(page, guide, 'new search');
+    await expect(guide).toHaveAttribute('data-speech-state', 'listening');
+    await automaticCommand(page, guide, 'stop');
+    await expect(guide).toHaveAttribute('data-speech-state', 'off');
+    expect(await page.evaluate(() => window.__careerSpeech.microphone)).toBe(false);
+    expect(await page.evaluate(() => window.__careerSpeech.overlaps)).toEqual([]);
+  });
+}
+
+test('turning read-aloud off during the greeting cancels automatic capture', async ({ page }) => {
+  await mockCareerSpeech(page, { permission: 'granted', delay: 600 });
+  await page.goto('/demo/careers');
+  const guide = page.locator('.voice-guide');
+  await expect(guide).toHaveAttribute('data-speech-state', 'speaking');
+  await guide.getByLabel('Read prompts and results aloud').uncheck();
+  await expect(guide).toHaveAttribute('data-speech-state', 'off');
+  await expect(guide.getByRole('status').filter({ hasText: 'Microphone off.' })).toHaveAttribute('aria-live', 'polite');
+  expect(await page.evaluate(() => window.__careerSpeech.starts)).toBe(0);
+});
+
+test('a delayed permission check cannot restart voice after Stop', async ({ page }) => {
+  await mockCareerSpeech(page, { permission: 'granted' });
+  await page.addInitScript(() => Object.defineProperty(navigator, 'permissions', { configurable: true, value: {
+    query: () => new Promise(resolve => { Object.assign(window, { resolveVoicePermission: () => resolve({ state: 'granted' }) }); }),
+  } }));
+  await page.goto('/demo/careers');
+  const guide = page.locator('.voice-guide');
+  await guide.getByRole('button', { name: 'Stop', exact: true }).click();
+  await page.evaluate(() => (window as unknown as { resolveVoicePermission(): void }).resolveVoicePermission());
+  await expect(guide).toHaveAttribute('data-speech-state', 'off');
+  expect(await page.evaluate(() => [window.__careerSpeech.starts, window.__careerSpeech.spoken])).toEqual([0, []]);
+});
+
+test('unavailable permission lookup greets without requesting microphone access', async ({ page }) => {
+  await mockCareerSpeech(page);
+  await page.addInitScript(() => Object.defineProperty(navigator, 'permissions', { configurable: true, value: undefined }));
+  await page.goto('/demo/careers');
+  const guide = page.locator('.voice-guide');
+  await expect.poll(() => page.evaluate(() => window.__careerSpeech.spoken.length)).toBe(2);
+  await expect(guide).toHaveAttribute('data-speech-state', 'off');
+  expect(await page.evaluate(() => window.__careerSpeech.starts)).toBe(0);
+  await guide.getByRole('button', { name: 'Start voice search', exact: true }).click();
+  await automaticCommand(page, guide, 'all jobs');
+  await expect(guide).toHaveAttribute('data-speech-state', 'listening');
+});
+
+test('a paused guide greets on first reveal but never restarts after hiding an active session', async ({ page }) => {
+  await mockCareerSpeech(page, { permission: 'granted' });
+  await page.route('**/demo/careers', async route => {
+    const response = await route.fetch();
+    await route.fulfill({ response, body: (await response.text()).replace('voice-auto-start', 'voice-auto-start voice-paused') });
+  });
+  await page.goto('/demo/careers');
+  const gateway = page.locator('access-career-gateway');
+  const guide = page.locator('.voice-guide');
+  await expect(guide).toHaveAttribute('data-speech-state', 'off');
+  expect(await page.evaluate(() => [window.__careerSpeech.starts, window.__careerSpeech.spoken])).toEqual([0, []]);
+  await gateway.evaluate(node => node.removeAttribute('voice-paused'));
+  await expect(guide).toHaveAttribute('data-speech-state', 'listening');
+  expect(await page.evaluate(() => window.__careerSpeech.spoken[0])).toContain('Welcome');
+  await gateway.evaluate(node => { node.setAttribute('voice-paused', ''); node.removeAttribute('voice-paused'); });
+  await expect(guide).toHaveAttribute('data-speech-state', 'off');
+  expect(await page.evaluate(() => window.__careerSpeech.starts)).toBe(1);
+});
+
+test('hosts without automatic startup stay silent but explicit Start still enables follow-up listening', async ({ page }) => {
+  await mockCareerSpeech(page, { permission: 'granted' });
+  await page.route('**/demo/careers', async route => {
+    const response = await route.fetch();
+    await route.fulfill({ response, body: (await response.text()).replace('voice-auto-start', '') });
+  });
+  await page.goto('/demo/careers');
+  const guide = page.locator('.voice-guide');
+  await expect(guide.getByLabel('Read prompts and results aloud')).not.toBeChecked();
+  expect(await page.evaluate(() => [window.__careerSpeech.starts, window.__careerSpeech.spoken])).toEqual([0, []]);
+  await guide.getByLabel('Read prompts and results aloud').check();
+  await guide.getByRole('button', { name: 'Start voice search', exact: true }).click();
+  await automaticCommand(page, guide, 'all jobs');
+  await expect(guide).toHaveAttribute('data-speech-state', 'listening');
+  expect(await page.evaluate(() => window.__careerSpeech.starts)).toBe(2);
+});
+
+test('explicit Listen also continues automatically after spoken results', async ({ page }) => {
+  await mockCareerSpeech(page);
+  await page.goto('/demo/careers');
+  const guide = page.locator('.voice-guide');
+  await voiceCommand(page, guide, 'all jobs');
+  await automaticCommand(page, guide, 'next');
+  await expect(guide).toHaveAttribute('data-speech-state', 'listening');
+  expect(await page.evaluate(() => window.__careerSpeech.starts)).toBe(3);
+  expect(await page.evaluate(() => window.__careerSpeech.overlaps)).toEqual([]);
 });
 
 test('missing English synthesis leaves the microphone off until explicit Listen', async ({ page }) => {
@@ -33,8 +137,6 @@ test('missing English synthesis leaves the microphone off until explicit Listen'
   await page.goto('/demo/careers');
   const guide = page.getByRole('region', { name: 'Optional voice navigation' });
   const output = guide.getByLabel('Read prompts and results aloud');
-  await output.check();
-  await guide.getByRole('button', { name: 'Start voice search', exact: true }).press('Enter');
   await expect(guide.getByRole('alert')).toContainText('No English browser voice is available');
   await expect(guide.getByRole('alert')).toHaveAttribute('aria-live', 'assertive');
   await expect(output).not.toBeChecked();
@@ -48,8 +150,6 @@ test('blocked English read-aloud can be repeated by keyboard without starting th
   await page.goto('/demo/careers');
   const guide = page.getByRole('region', { name: 'Optional voice navigation' });
   const output = guide.getByLabel('Read prompts and results aloud');
-  await output.check();
-  await guide.getByRole('button', { name: 'Start voice search', exact: true }).press('Enter');
   await expect(guide.getByRole('alert')).toContainText('Your browser blocked read aloud');
   await expect(output).not.toBeChecked();
   expect(await page.evaluate(() => window.__careerSpeech.starts)).toBe(0);
@@ -58,6 +158,9 @@ test('blocked English read-aloud can be repeated by keyboard without starting th
   await expect.poll(() => page.evaluate(() => window.__careerSpeech.spoken.at(-1))).toContain('What role would you like?');
   await expect(guide).toHaveAttribute('data-speech-state', 'off');
   expect(await page.evaluate(() => window.__careerSpeech.starts)).toBe(0);
+  await guide.getByRole('button', { name: 'Start voice search', exact: true }).press('Enter');
+  await automaticCommand(page, guide, 'all jobs');
+  await expect(guide).toHaveAttribute('data-speech-state', 'listening');
 });
 
 test('voice acceptance: five results, stable saves 3 and 4, paging, shortlist and editable fictional draft', async ({ page }) => {
@@ -73,26 +176,26 @@ test('voice acceptance: five results, stable saves 3 and 4, paging, shortlist an
   await expect(guide).toHaveAttribute('data-speech-state', 'listening');
   await expect(guide.getByRole('textbox', { name: 'Role or command' })).toBeFocused();
   await respond(page, 'all jobs');
-  await expect(guide).toHaveAttribute('data-speech-state', 'off');
+  await expect(guide).toHaveAttribute('data-speech-state', 'listening');
   await expect(guide.getByText('11 jobs found. Results 1 to 5.', { exact: true })).toBeVisible();
   expect(await page.evaluate(() => window.__careerSpeech.spoken.filter(text => /^Result \d+\./.test(text)))).toHaveLength(5);
-  await voiceCommand(page, guide, 'save three and four');
+  await automaticCommand(page, guide, 'save three and four');
   await expect(gateway.getByRole('button', { name: 'Save job — CNC bending operator', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(gateway.getByRole('button', { name: 'Save job — Junior web developer', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  await voiceCommand(page, guide, 'next');
+  await automaticCommand(page, guide, 'next');
   await expect(guide.getByText('11 jobs found. Results 6 to 10.', { exact: true })).toBeVisible();
-  await expect(guide).toHaveAttribute('data-speech-state', 'off');
+  await expect(guide).toHaveAttribute('data-speech-state', 'listening');
   expect(await page.evaluate(() => window.__careerSpeech.spoken.filter(text => /^Result \d+\./.test(text)))).toHaveLength(10);
-  await voiceCommand(page, guide, 'next');
+  await automaticCommand(page, guide, 'next');
   await expect(guide.getByText('11 jobs found. Results 11 to 11.', { exact: true })).toBeVisible();
   await expect(guide.getByRole('button', { name: 'Next', exact: true })).toBeDisabled();
-  await voiceCommand(page, guide, 'shortlist');
+  await automaticCommand(page, guide, 'shortlist');
   await expect(guide.getByRole('heading', { name: 'Shortlist 1 of 2 — CNC bending operator' })).toBeFocused();
   await expect(gateway.getByLabel('Show jobs')).toHaveValue('Saved jobs');
   await expect(gateway.locator('.results article')).toHaveCount(2);
-  await voiceCommand(page, guide, 'next');
+  await automaticCommand(page, guide, 'next');
   await expect(guide.getByRole('heading', { name: 'Shortlist 2 of 2 — Junior web developer' })).toBeVisible();
-  await voiceCommand(page, guide, 'prepare draft');
+  await automaticCommand(page, guide, 'prepare draft');
   const draft = guide.getByRole('dialog', { name: 'Fictional application draft' });
   await expect(draft.getByLabel('Fictional name (required)', { exact: true })).toBeFocused();
   await expect(draft.getByLabel('Introduction (required)', { exact: true })).toHaveCount(0);
@@ -126,6 +229,7 @@ test('permission denial, ambiguous speech, no results and stop all preserve a us
   await page.goto('/demo/careers');
   const guide = page.getByRole('region', { name: 'Optional voice navigation' });
   await guide.getByRole('button', { name: 'Start voice search', exact: true }).click();
+  await expect(guide).toHaveAttribute('data-speech-state', 'listening');
   await page.evaluate(() => window.__careerSpeech.deny());
   await expect(guide.getByRole('alert')).toContainText('Microphone permission was denied');
   await expect(guide).toHaveAttribute('data-speech-state', 'off');
@@ -250,11 +354,12 @@ test('guided results and draft fields reflow and expose useful live status witho
   await page.goto('/demo/careers');
   const guide = page.getByRole('region', { name: 'Optional voice navigation' });
   await guide.getByRole('button', { name: 'Use typed search', exact: true }).click();
+  const spokenBeforeTypedSearch = await page.evaluate(() => [...window.__careerSpeech.spoken]);
   await page.getByRole('searchbox').fill('developer');
   await expect(page.locator('access-career-gateway .result-header [role=status]')).toHaveText('1 job found.');
   await expect(page.locator('access-career-gateway .result-header [role=status]')).toHaveAttribute('aria-live', 'polite');
   await typedCommand(guide, 'all jobs');
-  expect(await page.evaluate(() => window.__careerSpeech.spoken)).toEqual([]);
+  expect(await page.evaluate(() => window.__careerSpeech.spoken)).toEqual(spokenBeforeTypedSearch);
   await expect(guide.getByRole('status').filter({ hasText: '11 jobs found' })).not.toHaveAttribute('aria-live', 'off');
   await expect(page.locator('access-career-gateway .result-header [role=status]')).toHaveAttribute('aria-live', 'off');
   expect((await new AxeBuilder({ page }).withTags(tags).analyze()).violations).toEqual([]);

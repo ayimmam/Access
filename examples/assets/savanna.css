@@ -1,6 +1,7 @@
 :root { font-family: "Atkinson Hyperlegible Next", Arial, sans-serif; color:#243746; background:#f7f8fa; scroll-behavior:smooth; }
 * { box-sizing:border-box; } body { margin:0; } a { color:#086a91; text-underline-offset:.2em; } p { line-height:1.65; }
 button,input,select,textarea { font:inherit; } button { cursor:pointer; min-height:44px; }
+#demo-lesson { width:100%; max-width:100%; min-height:44px; }
 :focus-visible { outline:3px solid #b65300; outline-offset:3px; } [id] { scroll-margin-top:85px; }
 .skip-link { position:fixed; z-index:100; top:-80px; left:1rem; padding:1rem; background:white; }.skip-link:focus { top:10px; }
 .topbar { height:68px; background:white; border-bottom:1px solid #dde3e7; display:flex; align-items:center; gap:1.3rem; padding:0 1.5rem; position:sticky; top:0; z-index:10; }

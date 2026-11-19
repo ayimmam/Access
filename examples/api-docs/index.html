@@ -41,10 +41,10 @@
       <dl class="routes">
         <dt><code>/manifest?version=1</code></dt>
         <dd>Returns the course and lesson revision, accessible content, media links and review states. Fields such as <code>media</code> and optional asset URLs can be null. A timed segment includes start and end times in seconds.</dd>
-        <dt><code>/transcripts/en?version=1</code></dt>
-        <dd>Returns ordered source-language segments with stable IDs. Other languages return <code>404</code> when the source transcript is unavailable. Discover separately timed caption tracks in the media manifest.</dd>
+        <dt><code>/transcripts/{language}?version=1</code></dt>
+        <dd>Returns ordered segments with stable IDs from the source transcript or the selected caption track. Discover available languages in the media manifest. The <code>status</code> field preserves source and translation review labels; machine-translated transcripts are not human-reviewed. Missing languages and lesson versions return <code>404</code>.</dd>
         <dt><code>/media/{kind}?version=1</code></dt>
-        <dd>Returns WebVTT, MP4, or MP3 according to the asset. Savanna lists <code>captions</code>, <code>captions-am</code>, <code>captions-om</code>, and <code>captions-ti</code>. The translated tracks are labeled <code>machine-translated-review-pending</code>. Discover other media kinds from the selected lesson. File-backed media supports byte ranges.</dd>
+        <dd>Returns WebVTT, MP4, or MP3 according to the asset. Savanna lists <code>captions</code>, <code>captions-am</code>, <code>captions-om</code>, and <code>captions-ti</code>. The translated tracks are labeled <code>machine-translated-review-pending</code>. The W3C lesson provides <code>described-video</code> and <code>described-audio</code>; <code>audio-description</code> is an alias for its described MP3. The ALX introduction has no described recording and returns <code>404</code> for those kinds. Follow optional asset URLs in the manifest. File-backed media supports byte ranges.</dd>
         <dt><code>/offline-video/{edition}?version=1</code></dt>
         <dd>Returns an MP4 download when the requested <code>standard</code> or <code>described</code> rendition is built. Use its advertised URL in the manifest when present.</dd>
         <dt><code>/exports?version=1</code> and <code>/downloads/{format}?version=1</code></dt>

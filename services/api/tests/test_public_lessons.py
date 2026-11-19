@@ -4,6 +4,8 @@ import io
 import json
 import zipfile
 
+import pytest
+
 from fastapi.testclient import TestClient
 
 from access_api.main import app
@@ -51,6 +53,51 @@ def test_unknown_and_unavailable_languages_have_safe_errors():
         assert response.status_code == 404
         assert response.json()["error"]["code"] == "not_found"
         assert response.json()["error"]["correlation_id"] == response.headers["x-correlation-id"]
+
+
+@pytest.mark.parametrize("lesson_id,language", [(EXAMPLE_ID, "am"), (EXAMPLE_ID, "om"), (EXAMPLE_ID, "ti"), (W3C_ID, "am"), (W3C_ID, "ti")])
+def test_translated_transcripts_match_caption_assets_and_keep_review_pending(lesson_id, language):
+    base = f"/api/v1/lessons/{lesson_id}"
+    lesson = client.get(base + "/manifest?version=1").json()
+    track = next(track for track in lesson["media"]["caption_tracks"] if track["language"] == language)
+    expected = parse_vtt(client.get(track["src"]).text, round(lesson["media"]["duration"], 3))
+    response = client.get(base + f"/transcripts/{language}?version=1")
+    assert response.status_code == 200
+    transcript = response.json()
+    assert transcript["lesson_id"] == lesson_id
+    assert transcript["content_version"] == 1
+    assert transcript["language"] == language
+    assert transcript["status"] == "machine-translated-review-pending"
+    assert transcript["segments"] == [segment.model_dump() for segment in expected]
+    assert transcript["segments"] != lesson["segments"]
+    assert client.get(base + f"/transcripts/{language}?version=2").status_code == 404
+
+
+def test_transcripts_preserve_source_review_status_and_reject_unavailable_assets(tmp_path, monkeypatch):
+    assert client.get(BASE + "/transcripts/en").json()["status"] == "synthetic-demo"
+    assert client.get(f"/api/v1/lessons/{EXAMPLE_ID}/transcripts/en").json()["status"] == "source-draft"
+    base = f"/api/v1/lessons/{W3C_ID}"
+    assert client.get(base + "/transcripts/en").json()["status"] == "source-reviewed"
+    for language in ["om", "fr", "am-ET"]:
+        assert client.get(base + f"/transcripts/{language}").status_code == 404
+    monkeypatch.setattr("access_core.lessons.W3C_DIRECTORY", tmp_path)
+    assert client.get(base + "/transcripts/am").status_code == 404
+
+
+def test_audio_description_alias_serves_real_described_audio_with_range_and_version_checks():
+    base = f"/api/v1/lessons/{W3C_ID}"
+    headers = {"Range": "bytes=0-1023"}
+    response = client.get(base + "/media/audio-description?version=1", headers=headers)
+    canonical = client.get(base + "/media/described-audio?version=1", headers=headers)
+    assert response.status_code == canonical.status_code == 206
+    assert response.headers["content-type"] == "audio/mpeg"
+    assert response.headers["content-range"] == canonical.headers["content-range"]
+    assert len(response.content) == 1024
+    assert response.content == canonical.content
+    assert client.get(base + "/media/audio-description?version=2").status_code == 404
+    assert client.get(base + "/media/not-a-format").status_code == 422
+    for lesson_id in [EXAMPLE_ID, "demo-learning-plan", "private-lesson"]:
+        assert client.get(f"/api/v1/lessons/{lesson_id}/media/audio-description").status_code == 404
 
 
 def test_pack_matches_listing_hash_and_has_portable_content():

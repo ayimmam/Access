@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="/demo-assets/demo-language.css">
   <script type="module" src="/demo-assets/demo-language.js"></script>
   <script type="module" src="/components/0.1.0/lesson.js"></script>
-  <script type="module" src="/demo-assets/savanna.js?v=4"></script>
+  <script type="module" src="/demo-assets/savanna.js?v=5"></script>
 </head>
 <body>
   <a class="skip-link" href="#curriculum_navigation_content">Skip to lesson</a>
@@ -24,6 +24,7 @@
     <a class="active" href="#curriculum_navigation_content" aria-current="page">Access my learning</a>
     <a href="#course-outline">Course outline</a>
     <a href="#lesson-resources">Lesson downloads</a>
+    <a data-careers href="/demo/careers?lesson=alx-transforming-africa">Career Gateway</a>
     <a href="/demo/independent">Independent embed</a>
     <a href="/demo/judging">Hackathon walkthrough</a>
     <div class="sidebar-footer"><strong>Learning without barriers</strong><p>Read, watch and revisit at your own pace.</p></div>
@@ -52,6 +53,15 @@
         <a href="#reflection">Your reflection <span>Personal learning notes</span></a>
       </nav>
       <main id="curriculum_navigation_content" tabindex="-1">
+    <details class="access-help" translate="no">
+      <summary><span lang="en">Ask Access</span> · <span lang="am">አክሰስን ይጠይቁ</span></summary>
+      <details lang="en"><summary>How can I find jobs after a lesson?</summary>
+        <p>In Savanna, choose “Mark demo lesson complete”, then “Explore jobs in Career Gateway”. You can also open Career Gateway from the main navigation. <a href="/demo/savanna">Open Savanna</a></p>
+      </details>
+      <details lang="am"><summary>ከትምህርቱ በኋላ ሥራ እንዴት ማግኘት እችላለሁ?</summary>
+        <p>በሳቫና ውስጥ ትምህርቱን እንዳጠናቀቁ ምልክት ያድርጉ። ከዚያ በCareer Gateway ውስጥ ሥራዎችን ለማሰስ የሚለውን አገናኝ ይምረጡ። Career Gatewayን ከዋናው ምናሌም መክፈት ይችላሉ። <a href="/demo/savanna">ሳቫናን ይክፈቱ</a></p>
+      </details>
+    </details>
         <div class="breadcrumb">Introduction / Your community</div>
         <div class="formatted-content">
           <div class="savanna-styles"><h2 class="lesson-heading">We Are Transforming Africa</h2><p>Meet the learners and community behind ALX. Watch the introduction, follow the captions, or jump to a passage in the transcript.</p></div>
@@ -72,15 +82,15 @@
         </div>
         <div data-experience-view="after">
           <alx-accessible-lesson api-base="/api/v1" lesson-id="alx-transforming-africa" content-version="1" lang="en" asl-demo-preview><a href="/api/v1/lessons/alx-transforming-africa/downloads/html?version=1">Download the lesson transcript</a></alx-accessible-lesson>
-          <aside class="change-summary" aria-label="What Access adds"><strong>What changed</strong><ul><li>Searchable, clickable transcript synchronized to the video</li><li>Caption preferences and equivalent downloads</li><li>Original 3D preview of selected ASL concepts from the captions, pending fluent review</li></ul></aside>
+          <aside class="change-summary" aria-label="What Access adds"><strong>What changed</strong><ul><li>Searchable, clickable transcript synchronized to the video</li><li>Caption preferences and equivalent downloads</li><li>EthSL concept animation with an optional ASL draft</li></ul></aside>
           <section id="lesson-resources" class="resource-note"><h2>Keep learning offline</h2><p>Use Download video with captions below the video to save an MP4 with a selectable English subtitle track. The lesson also offers a transcript download.</p><a href="/api/v1/lessons/alx-transforming-africa/media/video?version=1" download>Save lesson video · 20.4 MB</a></section>
         </div>
         <section id="reflection" class="reflection"><h2>Pause and reflect</h2><label for="reflection-note">What would you like to learn with this community?</label><textarea id="reflection-note" rows="3" placeholder="Write a note for this session"></textarea><p>Your note stays in this page session.</p></section>
-        <section class="completion" aria-label="Demo lesson completion"><p id="completion-status" role="status">Completion here applies to this demo session.</p><button type="button" id="mark-complete">Mark demo lesson complete</button></section>
+        <section class="completion" aria-label="Demo lesson completion"><p id="completion-status" role="status">Completion here applies to this demo session.</p><button type="button" id="mark-complete">Mark demo lesson complete</button><a data-careers id="continue-careers" href="/demo/careers?lesson=alx-transforming-africa" hidden>Explore jobs in Career Gateway</a></section>
       </main>
     </div>
     <nav class="demo-links" aria-label="Demo pages">
-      <a href="/demo/careers">Career demo</a>
+      <a data-careers href="/demo/careers?lesson=alx-transforming-africa">Career demo</a>
       <a href="/demo/ethioware">Ethioware demo</a>
       <a href="/docs">API documentation</a>
     </nav>

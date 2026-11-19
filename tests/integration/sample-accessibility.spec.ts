@@ -7,8 +7,7 @@ test('Savanna selects a real described lesson by keyboard and preserves the sele
   await expect(lesson.getByRole('button', { name: 'Use audio-described video' })).toHaveCount(0);
   const selector = page.getByRole('combobox', { name: 'Demo lesson', exact: true });
   await selector.focus();
-  await selector.press('ArrowDown');
-  await selector.press('Enter');
+  await selector.press('c');
   await expect(selector).toBeFocused();
   await expect(page).toHaveURL(/lesson=w3c-colors-with-good-contrast/);
   await expect(lesson.getByRole('heading', { name: 'Colors with Good Contrast' })).toBeVisible();
@@ -37,4 +36,23 @@ test('Savanna selects a real described lesson by keyboard and preserves the sele
   await page.goBack();
   await expect(selector).toHaveValue('alx-transforming-africa');
   await expect(lesson.getByRole('heading', { name: 'We Are Transforming Africa' })).toBeVisible();
+});
+
+test('ask about jobs in both languages and continue from a completed lesson by keyboard', async ({ page }) => {
+  await page.goto('/demo/savanna?lesson=w3c-colors-with-good-contrast');
+  const help = page.locator('.access-help');
+  await help.locator('summary').first().press('Enter');
+  for (const language of ['en', 'am']) {
+    const question = help.locator('details[lang="' + language + '"]');
+    await question.locator('summary').press('Enter');
+    await expect(question.locator('p')).toBeVisible();
+  }
+  await page.getByRole('button', { name: 'Mark demo lesson complete' }).press('Enter');
+  const next = page.getByRole('link', { name: 'Explore jobs in Career Gateway' });
+  await expect(next).toBeFocused();
+  await next.press('Enter');
+  await expect(page.getByRole('heading', {name: 'Find your next opportunity'})).toBeVisible();
+  await page.getByRole('link', { name: 'Return to Savanna' }).press('Enter');
+  await expect(page.locator('#demo-lesson')).toHaveValue('w3c-colors-with-good-contrast');
+  await expect(page.locator('#mark-complete')).toBeDisabled();
 });

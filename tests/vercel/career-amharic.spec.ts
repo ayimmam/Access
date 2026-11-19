@@ -15,6 +15,9 @@ test('Amharic remains With Access only and hiding it stops capture', async ({ pa
   await expect(guide).toBeHidden();
   await page.getByRole('button', { name: 'After With Access' }).click();
   await chooseAmharic(guide);
+  await expect(guide.getByRole('checkbox')).toBeChecked();
+  expect(requests).toEqual([]);
+  await guide.getByRole('checkbox').uncheck();
   await guide.getByRole('button', { name: 'በድምፅ ፍለጋ ጀምር', exact: true }).click();
   await expect(guide).toHaveAttribute('data-speech-state', 'listening');
   await page.getByRole('button', { name: 'Before Standard listings' }).click();

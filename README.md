@@ -4,7 +4,7 @@ Access adds captions, audio description, transcripts and offline formats to less
 
 For the hackathon, start the local demo and open `http://127.0.0.1:8000/demo/judging`. The [judging guide](docs/reviews/HACKATHON_JUDGING_GUIDE.md) covers the live walkthrough, panel questions and evidence still needed.
 
-https://github.com/user-attachments/assets/8c1a2b8c-c3d1-4de4-9d3b-f80c0ecbde2b
+[Watch the narrated Access walkthrough (MP4)](docs/evidence/Access-featured-walkthrough.mp4) · [Download the pitch deck (PowerPoint)](docs/evidence/Access-featured-pitch.pptx)
 
 
 ## Integrate Access

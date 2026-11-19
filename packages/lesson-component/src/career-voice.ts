@@ -69,6 +69,7 @@ export class CareerVoice {
   private numbersReady = false;
   private lastSpeech: string[] = [];
   private handsFree = false;
+  private microphonePermission?: PermissionStatus;
   private draft?: { job: Job; values: Partial<Record<DraftField, string>> };
   private draftOpener?: HTMLElement;
   private paused = false;
@@ -76,7 +77,7 @@ export class CareerVoice {
   private readonly pageHide = () => this.suspend();
 
   constructor(private actions: GatewayActions, private base: URL, private autoStart = false) {
-    this.speech = new CareerSpeech(state => this.speechState(state), message => this.fail(message));
+    this.speech = new CareerSpeech(state => this.speechState(state), message => this.speechFailed(message));
     this.root.className = 'voice-guide';
     this.root.dataset.speechState = 'off';
     this.root.setAttribute('aria-labelledby', 'voice-title');
@@ -96,8 +97,8 @@ export class CareerVoice {
     privacy.className = 'note';
     const outputLabel = element('label'); outputLabel.className = 'check'; this.output.type = 'checkbox';
     outputLabel.append(this.output, element('span', 'Read prompts and results aloud'));
-    const speechHelp = this.speechHelp; speechHelp.textContent = 'Read aloud is off by default for screen readers. Turn it on for an English browser voice; your browser may process the fictional prompt text. This pauses this guide’s live announcements to avoid duplicate speech. Listening is one response at a time, never continuous.'; speechHelp.className = 'note';
-    this.output.addEventListener('change', () => { this.speech.stop(); this.liveMode(); });
+    const speechHelp = this.speechHelp; speechHelp.textContent = 'Read aloud is off by default. Enable it before Start voice search to hear the prompts. Your browser may process the fictional prompt text. This pauses the guide’s live announcements to avoid duplicate speech. Allow microphone access if prompted. If audio does not play, use Listen for a command or type instead. Listening is one response at a time, never continuous.'; speechHelp.className = 'note';
+    this.output.addEventListener('change', () => { this.handsFree = false; this.speech.stop(); this.liveMode(); });
     const controls = element('div'); controls.className = 'actions';
     controls.append(this.startButton, action('Use typed search', () => this.start(false)), this.listenButton, this.finishButton, action('Stop', () => this.stop()));
     this.finishButton.hidden = true;
@@ -119,7 +120,7 @@ export class CareerVoice {
     const form = element('form'); form.autocomplete = 'off';
     const label = element('label'); const commandLabel = element('span', 'Role or command'); label.append(commandLabel); this.command.type = 'text'; this.command.maxLength = 160;
     this.command.setAttribute('aria-describedby', 'voice-help voice-error'); label.append(this.command);
-    this.command.addEventListener('input', () => this.speech.stop());
+    this.command.addEventListener('input', () => { this.handsFree = false; this.speech.stop(); });
     const submit = element('button', 'Run typed command'); submit.type = 'submit';
     form.addEventListener('submit', event => { event.preventDefault(); const value = this.command.value; this.command.value = ''; this.run(value); });
     form.append(label, submit);
@@ -138,7 +139,7 @@ export class CareerVoice {
     this.setNavigation();
     document.addEventListener('visibilitychange', this.visibility);
     window.addEventListener('pagehide', this.pageHide);
-    if (this.autoStart) queueMicrotask(() => void this.launchHandsFree());
+    if (this.autoStart) queueMicrotask(() => void this.offerVoiceStart());
   }
 
   private text(key: string, values: Record<string, string | number> = {}) {
@@ -148,17 +149,15 @@ export class CareerVoice {
   private job(job: Job): Job { return this.language === 'am' && this.catalog?.jobs[job.id] ? { ...job, ...this.catalog.jobs[job.id] } : job; }
   private speechState(state: SpeechState) {
     this.root.dataset.speechState = state;
-    if (state === 'speaking' && this.language === 'am' && !this.output.checked) { this.output.checked = true; this.liveMode(); }
     const message = this.text(({ off: 'Microphone off.', starting: 'Waiting for microphone permission…', listening: 'Microphone listening for one response. Use Stop to cancel.', speaking: 'Reading aloud. Microphone off.', transcribing: 'Transcribing. Microphone off.', preparing: 'Preparing audio. Microphone off.' })[state]);
     if (this.state.textContent !== message) this.state.textContent = message;
     this.finishButton.hidden = this.language !== 'am' || state !== 'listening';
   }
-  private async changeLanguage(resume = this.output.checked) {
-    this.languageController?.abort(); this.speech.stop(); this.liveMode(); this.clearError();
+  private async changeLanguage() {
+    this.handsFree = false; this.languageController?.abort(); this.speech.stop(); this.clearError();
     const selected = this.languageSelect.value === 'am' ? 'am' : 'en';
     const controller = new AbortController(); this.languageController = controller;
     const timer = setTimeout(() => controller.abort(), 10000);
-    let changed = false;
     this.root.setAttribute('aria-busy', 'true');
     try {
       if (selected === 'am') this.catalog = await loadAmharicCatalog(this.base, controller.signal);
@@ -166,43 +165,35 @@ export class CareerVoice {
       this.speech.stop();
       this.language = selected; this.root.lang = selected;
       this.speech = selected === 'am'
-        ? new AddisCareerSpeech(this.base, this.catalog!.speech_enabled, this.player, state => this.speechState(state), message => this.fail(message))
-        : new CareerSpeech(state => this.speechState(state), message => this.fail(message));
+        ? new AddisCareerSpeech(this.base, this.catalog!.speech_enabled, this.player, state => this.speechState(state), message => this.speechFailed(message))
+        : new CareerSpeech(state => this.speechState(state), message => this.speechFailed(message));
       this.root.querySelectorAll<HTMLElement>('[data-voice-label]').forEach(node => { node.textContent = this.text(node.dataset.voiceLabel!); });
       this.privacy.textContent = selected === 'am' ? this.catalog!.privacy : this.privacy.dataset.english!;
       this.help.textContent = selected === 'am' ? this.catalog!.help : this.help.dataset.english!;
       this.speechHelp.textContent = selected === 'am' ? this.catalog!.speech_help : this.speechHelp.dataset.english!;
       this.providerStatus.hidden = selected !== 'am';
       this.providerStatus.textContent = selected === 'am' ? this.text(this.catalog!.speech_enabled ? 'Amharic voice uses Addis AI. Record one command, then review its text before running it.' : unconfiguredSpeech) : '';
-      this.output.checked = resume; this.liveMode();
       this.listenButton.disabled = !this.speech.microphoneAvailable;
       this.mode = 'role'; this.lastSpeech = []; this.lastPrompt = undefined; this.numbersReady = false;
       this.content.replaceChildren(); this.command.value = ''; this.setNavigation(); this.actions.guideActive(false);
       this.message.textContent = this.text('Choose Start voice search or Use typed search.'); this.speechState('off');
-      changed = true;
     } catch {
       if (this.languageController === controller && !this.paused) {
         this.languageSelect.value = this.language;
-        this.fail('Amharic text could not load. Keep using English, or choose Amharic again to retry.');
+        this.speechFailed('Amharic text could not load. Keep using English, or choose Amharic again to retry.');
       }
     } finally {
       clearTimeout(timer);
       if (this.languageController === controller) { this.root.removeAttribute('aria-busy'); this.languageController = undefined; }
-      if (changed && resume && !this.paused) this.start(true, true);
     }
   }
 
-  private async launchHandsFree() {
-    if (this.paused || !this.speech.microphoneAvailable) return;
-    let permission: PermissionState = 'prompt';
-    try { permission = (await navigator.permissions.query({ name: 'microphone' as PermissionName })).state; } catch {}
-    if (this.paused) return;
-    if (permission === 'granted') {
-      this.output.checked = true; this.liveMode(); this.start(true, true);
-      return;
-    }
-    this.message.textContent = `${this.text(welcomePrompt)} ${this.text('Microphone permission is not active yet. Press Enter on Start voice search to grant permission, or use typed controls.')}`;
-    this.startButton.focus();
+  private async offerVoiceStart() {
+    if (this.paused || document.hidden || !this.root.isConnected || !this.speech.microphoneAvailable) return;
+    this.message.textContent = `${this.text(welcomePrompt)} ${this.text('Choose Start voice search or Use typed search.')}`;
+    if (document.activeElement === document.body) this.startButton.focus();
+    // Saved permission only controls follow-up listening after an explicit Start.
+    try { this.microphonePermission = await navigator.permissions.query({ name: 'microphone' as PermissionName }); } catch {}
   }
 
   private liveMode() {
@@ -211,19 +202,25 @@ export class CareerVoice {
   }
 
   private clearError() { this.error.textContent = ''; this.command.removeAttribute('aria-invalid'); }
+  private speechFailed(message: string) {
+    this.handsFree = false;
+    this.output.checked = false; this.liveMode();
+    this.error.textContent = this.text(message);
+  }
   private fail(message: string) {
+    this.handsFree = false;
     if (this.language === 'am') { this.output.checked = false; this.liveMode(); }
     this.error.textContent = this.text(message);
     this.command.setAttribute('aria-invalid', 'true');
-    if (message.startsWith('No English') || message.startsWith('Read aloud')) { this.output.checked = false; this.liveMode(); }
-    else if (this.output.checked) this.speak([message], () => {});
+    if (this.output.checked && this.language === 'en') this.speak([message]);
   }
   private speak(messages: string[], done?: () => void, prompt = this.lastPrompt) {
     this.lastSpeech = messages; this.lastPrompt = prompt;
+    this.setNavigation();
     const completed = done || (this.handsFree ? () => this.listen() : undefined);
     if (this.output.checked && !this.paused && !this.draft) {
       this.actions.stopRecorded();
-      if (this.speech instanceof AddisCareerSpeech) { if (prompt) this.speech.speak(prompt, completed); else completed?.(); }
+      if (this.speech instanceof AddisCareerSpeech) { if (prompt) this.speech.speak(prompt, completed); }
       else this.speech.speak(messages, completed);
     }
     else completed?.();
@@ -239,15 +236,15 @@ export class CareerVoice {
       } else this.run(text);
     });
   }
-  private start(microphone: boolean, welcome = false) {
-    if (this.paused || this.languageController) return;
-    this.handsFree = microphone && welcome && this.output.checked && this.language === 'en';
+  private start(microphone: boolean) {
+    if (this.paused || this.draft || this.languageController) return;
+    this.handsFree = microphone && this.autoStart && this.output.checked && this.language === 'en' && this.microphonePermission?.state === 'granted';
     this.actions.guideActive(false);
     this.speech.stop(); this.clearError(); this.mode = 'role'; this.content.replaceChildren(); this.setNavigation();
     const prompt = this.text(rolePrompt);
-    const messages = welcome ? [this.text(welcomePrompt), prompt] : [prompt];
+    const messages = this.handsFree ? [this.text(welcomePrompt), prompt] : [prompt];
     this.message.textContent = messages.join(' '); this.command.focus();
-    this.speak(messages, microphone ? () => this.listen() : undefined, { kind: welcome ? 'welcome' : 'role' });
+    this.speak(messages, microphone ? () => this.listen() : undefined, { kind: 'role' });
   }
   stop(stopRecording = true) {
     this.handsFree = false;
@@ -393,8 +390,8 @@ export class CareerVoice {
     const language = ['amharic', 'switch to amharic', 'speak amharic', 'language amharic'].includes(text) ? 'am'
       : ['english', 'switch to english', 'speak english', 'language english'].includes(text) ? 'en' : undefined;
     if (language) {
-      if (language === this.language) { this.start(true, true); return; }
-      this.languageSelect.value = language; void this.changeLanguage(true); return;
+      if (language === this.language) { this.start(false); return; }
+      this.languageSelect.value = language; void this.changeLanguage(); return;
     }
     if (['stop', 'cancel'].includes(text)) { this.stop(); return; }
     if (['shortlist', 'open shortlist', 'saved jobs'].includes(text)) { this.openShortlist(); return; }

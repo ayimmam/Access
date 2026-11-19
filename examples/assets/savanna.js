@@ -35,22 +35,35 @@ document.querySelectorAll('[data-mode]').forEach(button => button.addEventListen
 addEventListener('popstate', () => setExperience(new URLSearchParams(location.search).get('mode')));
 
 const completion = document.querySelector('#mark-complete');
+const lessonSelect = document.querySelector('#demo-lesson');
+const continueLink = document.querySelector('#continue-careers');
+const completedLessons = new Set();
+function renderCompletion() {
+  const key = 'access:demo:completed:v1:' + lessonSelect.value;
+  let complete = completedLessons.has(lessonSelect.value);
+  try { complete ||= sessionStorage.getItem(key) === '1'; } catch { /* Storage is optional. */ }
+  completion.disabled = complete;
+  continueLink.hidden = !complete;
+  completion.textContent = complete ? 'Demo lesson completed' : 'Mark demo lesson complete';
+  document.querySelector('#completion-status').textContent = complete ? 'Completed in this demo session.' : 'Completion here applies to this demo session.';
+  document.querySelector('#progress-text').textContent = (complete ? '1' : '0') + ' of 1 lessons completed in this demo';
+  document.querySelector('.progress-fill').style.width = complete ? '100%' : '0%';
+  for (const link of document.querySelectorAll('[data-careers]')) link.href = '/demo/careers?lesson=' + encodeURIComponent(lessonSelect.value);
+}
 completion.addEventListener('click', () => {
-  completion.disabled = true;
-  completion.textContent = 'Demo lesson completed';
-  document.querySelector('#completion-status').textContent = 'Completed in this demo session.';
-  document.querySelector('#progress-text').textContent = '1 of 1 lessons completed in this demo';
-  document.querySelector('.progress-fill').style.width = '100%';
+  completedLessons.add(lessonSelect.value);
+  try { sessionStorage.setItem('access:demo:completed:v1:' + lessonSelect.value, '1'); } catch { /* Use in-memory completion. */ }
+  renderCompletion();
+  continueLink.focus();
 });
 
-const lessonSelect = document.querySelector('#demo-lesson');
 const lessons = {
   'alx-transforming-africa': {
     title: 'We Are Transforming Africa',
     introduction: 'Meet the learners and community behind ALX. Watch the introduction, follow the captions, or jump to a passage in the transcript.',
     duration: '2 min video', download: 'Save lesson video · 20.4 MB',
     excerpt: [[0, '[Music]'], [1, 'I call this the experience of a lifetime.'], [41, "You're going to meet incredible people."]],
-    addition: 'Original 3D preview of selected ASL concepts from the captions, pending fluent review',
+    addition: 'EthSL concept animation with an optional ASL draft',
   },
   'w3c-colors-with-good-contrast': {
     title: 'Colors with Good Contrast',
@@ -93,12 +106,10 @@ function setLesson(lessonId) {
   document.querySelector('.change-summary li:last-child').textContent = details.addition;
   const download = document.querySelector('#lesson-resources a');
   download.href = `${base}/media/video?version=1`; download.textContent = details.download;
-  completion.disabled = false; completion.textContent = 'Mark demo lesson complete';
-  document.querySelector('#completion-status').textContent = 'Completion here applies to this demo session.';
-  document.querySelector('#progress-text').textContent = '0 of 1 lessons completed in this demo';
-  document.querySelector('.progress-fill').style.width = '0%';
+  renderCompletion();
 }
 
+renderCompletion();
 if (new URLSearchParams(location.search).get('lesson') === 'w3c-colors-with-good-contrast') setLesson('w3c-colors-with-good-contrast');
 lessonSelect.addEventListener('change', () => {
   setLesson(lessonSelect.value);

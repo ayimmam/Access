@@ -197,38 +197,39 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
   if (options.aslDemo) {
     const demo = element('aside');
     demo.className = 'avatar-panel';
-    demo.setAttribute('aria-label', 'American Sign Language animation preview');
-    const canvas = element('div');
-    canvas.className = 'avatar-canvas';
-    const message = element('p');
-    message.setAttribute('role', 'status');
-    const hide = element('button', 'Hide ASL preview');
-    hide.type = 'button';
-    const details = element('div');
-    details.append(element('p', 'This draft animates selected concepts from the captions. A fluent ASL reviewer has yet to verify the signing.'), canvas, message);
-    demo.append(element('h3', 'ASL animation preview'), hide, details);
+    demo.setAttribute('aria-label', 'Signing avatar');
+    const label = element('label', 'Avatar language');
+    const language = element('select');
+    language.append(new Option('Ethiopian Sign Language (EthSL)', 'ethsl'), new Option('American Sign Language (ASL)', 'asl'), new Option('Off', 'off'));
+    label.append(language);
+    const canvas = element('div'); canvas.className = 'avatar-canvas';
+    const message = element('p'); message.setAttribute('role', 'status');
+    const description = element('p');
+    demo.append(label, description, canvas, message);
     stage.append(demo);
-    const openDemo = () => {
+    const loadPreview = () => {
+      demoController?.abort();
+      const selected = language.value;
+      canvas.hidden = selected === 'off';
+      description.hidden = canvas.hidden;
+      message.textContent = '';
+      if (selected !== 'asl' && selected !== 'ethsl') return;
+      description.textContent = selected === 'ethsl'
+        ? 'EthSL concept draft · I, you and we in selected passages. Fluent review pending.'
+        : 'This draft animates selected concepts from the captions. A fluent ASL reviewer has yet to verify the signing.';
       const controller = new AbortController();
       demoController = controller;
       message.textContent = 'Loading avatar…';
-      void import('./asl-demo').then(async ({ mountAslDemo }) => {
+      void import('./sign-demo').then(async ({ mountSignDemo }) => {
         if (controller.signal.aborted) return;
-        await mountAslDemo(canvas, video, base, segments, controller.signal);
+        await mountSignDemo(canvas, video, base, segments, selected, controller.signal);
         if (!controller.signal.aborted) message.textContent = '';
       }).catch(() => {
         if (!controller.signal.aborted) message.textContent = 'The avatar could not load. Use the lesson captions or transcript.';
       });
     };
-    hide.setAttribute('aria-expanded', 'true');
-    hide.addEventListener('click', () => {
-      details.hidden = !details.hidden;
-      hide.textContent = details.hidden ? 'Show ASL preview' : 'Hide ASL preview';
-      hide.setAttribute('aria-expanded', String(!details.hidden));
-      if (details.hidden) demoController?.abort();
-      else openDemo();
-    });
-    openDemo();
+    language.addEventListener('change', loadPreview);
+    loadPreview();
   }
   view.append(stage, controls, note);
   let avatar: TimingAvatar | undefined;

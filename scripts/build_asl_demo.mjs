@@ -1,11 +1,13 @@
 // Original, unreviewed ASL concept animation for the ALX fixture.
 // Lexical references: https://www.lifeprint.com/asl101/pages-layout/signs-listedbylesson.htm
-import { readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import * as T from 'three';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { createAvatarRig } from './avatar-rig.mjs';
 
+// Pass --ethsl to bake the independent EthSL pronoun study on the same skeleton.
+const ethsl = process.argv.includes('--ethsl');
 const source = await readFile(new URL('../example lessons/into-caption.txt', import.meta.url));
 const hash = createHash('sha256').update(source).digest('hex');
 if (hash !== '65ac3b3c6101d70ae0aadf286311cd0a2e233f654ef61554da8a0842ee0b3dba') {
@@ -23,12 +25,13 @@ globalThis.FileReader = class {
     });
   }
 };
-const output = new URL('../examples/assets/asl-demo/', import.meta.url);
+const output = new URL(ethsl ? '../examples/assets/ethsl-demo/' : '../examples/assets/asl-demo/', import.meta.url);
+await mkdir(output, { recursive: true });
 async function save(name, scene, animations = []) {
   await writeFile(new URL(name, output), Buffer.from(await exporter.parseAsync(scene, { binary: true, animations })));
 }
-root.userData = { captionSha256: hash, targetLanguage: 'ase', reviewStatus: 'unreviewed-demo' };
-await save('avatar.glb', root);
+root.userData = { captionSha256: hash, targetLanguage: ethsl ? 'ethsl' : 'ase', reviewStatus: 'unreviewed-demo' };
+if (!ethsl) await save('avatar.glb', root);
 
 // Wrist targets in front-view rig coordinates. Hand direction and palm normal
 // are independent so a flat hand can face up, forward, down or inward.
@@ -197,6 +200,22 @@ const phrases = [
   'ALWAYS YOU TRY BEST',
 ];
 if (starts.length !== phrases.length) throw new Error('Caption count differs from authored timeline');
+// EthSL indexing descriptions: Translation of Continuous Signs in Ethiopian Sign
+// Language to Amharic Text, table 2.2. These are original concept studies.
+const ethslReference = 'https://www.academia.edu/64242781/Translation_of_Continuous_Signs_in_Ethiopian_Sign_Language_to_Amharic_Text';
+const ethslSigns = {
+  I: [pose(point(-0.17, 1.58, 0.46, inward)), pose(point(-0.05, 1.58, 0.28, inward))],
+  YOU: [pose(point(-0.16, 1.55, 0.35)), pose(point(-0.08, 1.56, 0.62))],
+  WE: [-0.19, -0.09, 0.02, 0.13, 0.19].map((x, i) =>
+    pose(point(x, 1.55, 0.34 + 0.08 * Math.sin(i * Math.PI / 4), inward))),
+};
+// Offsets are within the original caption window; uncovered time stays neutral.
+const ethslCues = new Map([
+  [1, ['I', 1.7]], [3, ['YOU', 1.3]], [4, ['YOU', 0.7]],
+  [5, ['YOU', 0.5]], [6, ['YOU', 0]], [7, ['I', 0.2]],
+  [9, ['YOU', 0.1]], [11, ['I', 0.2]], [12, ['I', 0.3]], [13, ['WE', 3.4]],
+]);
+if (ethsl) Object.assign(root.userData, { reference: ethslReference, coverage: 'Selected pronouns only' });
 const shapes = {
   flat: [0, 0, 0, 0, 0],
   spread: [0, 0, 0, 0, 0],
@@ -265,20 +284,25 @@ for (const [i, phrase] of phrases.entries()) {
     times.push(time);
     for (const [name, joint] of animated) values.get(name).push(...joint.quaternion.toArray());
   }
-  const tokens = phrase.split(' '),
+  const entry = ethslCues.get(i);
+  if (ethsl && !entry) continue;
+  const tokens = ethsl ? [entry[0]] : phrase.split(' '),
     window = end - starts[i];
   const period = Math.min(1.45, window / tokens.length);
   key(0, pose());
+  const offset = ethsl ? entry[1] : 0;
+  if (offset > 0) key(offset, pose());
+  const vocabulary = ethsl ? ethslSigns : signs;
   tokens.forEach((word, k) =>
-    signs[word].forEach((p, j, poses) => {
+    vocabulary[word].forEach((p, j, poses) => {
       key(
-        (k * window) / tokens.length + period * (0.1 + (0.77 * j) / (poses.length - 1)),
+        offset + (k * window) / tokens.length + period * (0.1 + (0.77 * j) / (poses.length - 1)),
         p,
         word === 'NOT' ? (j === 0 ? -0.23 : 0.23) : 0,
       );
     }),
   );
-  key(((tokens.length - 1) * window) / tokens.length + period, pose());
+  key(offset + ((tokens.length - 1) * window) / tokens.length + period, pose());
   const tracks = animated.map(([name]) => new T.QuaternionKeyframeTrack(name + '.quaternion', times, values.get(name)));
   clips.push(new T.AnimationClip('cue-' + (i + 1), window, tracks));
 }

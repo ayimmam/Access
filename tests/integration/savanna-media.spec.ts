@@ -108,13 +108,20 @@ test('Savanna comparison shows the reconstructed baseline and returns to Access'
 });
 
 for (const path of ['/', '/demo/savanna']) {
-  test(`ASL demo opens on ${path} and follows a paused seek`, async ({ page }) => {
+  test(`EthSL opens by default and ASL can be selected on ${path} and follows a paused seek`, async ({ page }) => {
     await page.goto(path);
-    const panel = page.getByRole('complementary', { name: 'American Sign Language animation preview' });
+    const panel = page.getByRole('complementary', { name: 'Signing avatar' });
+    const language = panel.getByLabel('Avatar language');
+    await expect(language).toHaveValue('ethsl');
     const canvas = panel.locator('canvas');
     await expect(canvas).toBeVisible();
     const video = page.locator('alx-accessible-lesson').getByLabel('Lesson video', { exact: true });
     await expect.poll(() => video.evaluate((v: HTMLVideoElement) => v.readyState)).toBeGreaterThan(1);
+    const neutral = await canvas.screenshot();
+    await video.evaluate((v: HTMLVideoElement) => { v.currentTime = 3.5; });
+    await expect.poll(() => canvas.screenshot().then(image => image.equals(neutral))).toBe(false);
+    await language.selectOption('asl');
+    await expect(panel.getByRole('status')).toBeEmpty();
     const before = await canvas.screenshot();
     await video.evaluate((v: HTMLVideoElement) => { v.currentTime = 19.6; });
     await expect.poll(() => canvas.screenshot().then(image => image.equals(before))).toBe(false);
@@ -123,9 +130,9 @@ for (const path of ['/', '/demo/savanna']) {
     await video.evaluate(async (v: HTMLVideoElement) => { v.muted = true; await v.play(); });
     await expect.poll(() => canvas.screenshot().then(image => image.equals(paused))).toBe(false);
     await video.evaluate((v: HTMLVideoElement) => v.pause());
-    await panel.getByRole('button', { name: 'Hide ASL preview' }).click();
+    await language.selectOption('off');
     await expect(canvas).toHaveCount(0);
-    await panel.getByRole('button', { name: 'Show ASL preview' }).click();
+    await language.selectOption('asl');
     await expect(canvas).toBeVisible();
     await canvas.screenshot({path:test.info().outputPath('asl-preview.png')});
   });

@@ -6,6 +6,18 @@
 
 Open `http://127.0.0.1:8000/demo/judging` after starting the local demo. The first task uses **Colors with Good Contrast**, revision 1. Keep the laptop sound off for the first pass. Use the deployed URL only after checking that it serves the same reviewed build and lesson revision. [Local startup and rollback](../setup/DEPLOYMENT_AND_LOCAL_DEMO.md) · [W3C lesson source](https://www.w3.org/WAI/perspective-videos/contrast/).
 
+## Five-minute pitching-day demo
+
+Open the [hosted Savanna page](https://access-plugin.onrender.com/demo/savanna). Verify the hosted release shows **Ask Access** and **Avatar language** before presenting. The backup recording shows the working branch.
+
+| Time | Learner action |
+| --- | --- |
+| 0:00–1:00 | Use the keyboard throughout. Tab to the skip link and press Enter. Tab to **Ask Access**, open it, and expand the career question in English and then in Amharic. Read the answers and point out the focus indicator. |
+| 1:00–2:00 | In the ALX lesson, search for **incredible** and press Enter on **Jump to 0:41**. Play the passage. Show the EthSL pronoun draft, switch to ASL, then Off. Explain the limited coverage and pending review. |
+| 2:00–3:15 | Choose **Colors with Good Contrast**. Select Amharic captions, search for **poor contrast** in the English transcript, then show the audio-described edition and its separate timing. |
+| 3:15–4:30 | Mark the demo lesson complete. Follow the focused jobs link, search for **data**, and open the fictional Learning data assistant vacancy. |
+| 4:30–5:00 | Press Escape and choose **Return to Savanna**. Show the same completed lesson. Invite questions about signing review, independent installation and testing with learners. |
+
 ## Three-minute walkthrough
 
 1. **Learn without audio.** Use the skip link, select English captions and search the transcript for `poor contrast`. Press Enter on **Jump to 0:15** and show that focus stays on the button. Play the passage with the sound off. Pause, switch to the audio-described video and show that the same search now has a **Jump to 0:23** result. The captions and transcript jump times follow the selected edition.

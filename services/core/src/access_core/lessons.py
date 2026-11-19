@@ -227,6 +227,22 @@ def get_lesson(lesson_id: str, version: int) -> Lesson:
     raise KeyError(lesson_id)
 
 
+def transcript_segments(lesson: Lesson, language: str) -> tuple[Segment, ...]:
+    if language == lesson.language:
+        return lesson.segments
+    if lesson.media is None or not any(track.language == language for track in lesson.media.caption_tracks):
+        raise KeyError(language)
+    if lesson.lesson_id == EXAMPLE_ID:
+        _, path = EXAMPLE_CAPTION_TRANSLATIONS[language]
+    elif lesson.lesson_id == W3C_ID and language in {"am", "ti"}:
+        path = W3C_DIRECTORY / f"captions.{language}.vtt"
+    else:
+        raise KeyError(language)
+    if not path.is_file():
+        raise KeyError(language)
+    return parse_vtt(path.read_text(encoding="utf-8"), round(lesson.media.duration, 3))
+
+
 def captions_vtt(lesson: Lesson) -> str:
     def clock(seconds: float) -> str:
         total = round(seconds * 1000)

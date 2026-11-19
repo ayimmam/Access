@@ -1,4 +1,5 @@
 import hashlib
+import html
 import io
 import json
 import zipfile
@@ -6,7 +7,7 @@ import zipfile
 from fastapi.testclient import TestClient
 
 from access_api.main import app
-from access_core.lessons import EXAMPLE_ID, W3C_ID, parse_caption_source
+from access_core.lessons import EXAMPLE_CAPTIONS, EXAMPLE_ID, W3C_ID, parse_caption_source, parse_vtt
 
 client = TestClient(app)
 BASE = "/api/v1/lessons/demo-learning-plan"
@@ -18,6 +19,30 @@ def test_manifest_and_cache_are_bound_to_version():
     assert response.json()["access"] == "public"
     assert client.get(BASE + "/manifest?version=1", headers={"If-None-Match": response.headers["etag"]}).status_code == 304
     assert client.get(BASE + "/manifest?version=2").status_code == 404
+
+
+def test_developer_docs_and_openapi_describe_live_lesson_resources():
+    guide = client.get("/docs")
+    assert guide.status_code == 200
+    assert guide.headers["content-type"].startswith("text/html")
+    assert 'href="/openapi.json"' in guide.text
+    spec_response = client.get("/openapi.json")
+    assert spec_response.status_code == 200
+    paths = spec_response.json()["paths"]
+    lessons = "/api/v1/lessons/{lesson_id}"
+    manifest = paths[f"{lessons}/manifest"]["get"]["responses"]
+    assert "304" in manifest
+    assert "ETag" in manifest["200"]["headers"]
+    for suffix, model in (("transcripts/{language}", "Transcript"), ("exports", "ExportListing")):
+        result = paths[f"{lessons}/{suffix}"]["get"]["responses"]["200"]
+        assert result["content"]["application/json"]["schema"]["$ref"].endswith(f"/{model}")
+    formats = paths[f"{lessons}/media/{{kind}}"]["get"]["responses"]["200"]["content"]
+    assert set(formats) == {"text/vtt", "video/mp4", "audio/mpeg"}
+    base = f"/api/v1/lessons/{EXAMPLE_ID}"
+    for suffix in ("manifest", "transcripts/en", "exports"):
+        url = f"{base}/{suffix}?version=1"
+        assert f'href="{url}"' in guide.text
+        assert client.get(url).status_code == 200
 
 
 def test_unknown_and_unavailable_languages_have_safe_errors():
@@ -80,6 +105,30 @@ def test_example_media_captions_and_range_requests():
     assert len(response.content) == 1024
     assert response.headers["content-type"] == "video/mp4"
     assert client.get(base + "/media/video?version=2").status_code == 404
+
+
+def test_savanna_translations_keep_the_source_cue_windows():
+    base = f"/api/v1/lessons/{EXAMPLE_ID}"
+    media = client.get(base + "/manifest?version=1").json()["media"]
+    expected = parse_vtt(client.get(media["captions"]).text, round(media["duration"], 3))
+    source_hash = hashlib.sha256(EXAMPLE_CAPTIONS.read_bytes()).hexdigest()
+    assert [track["language"] for track in media["caption_tracks"]] == ["en", "am", "om", "ti"]
+    assert media["caption_tracks"][0]["status"] == "source-draft"
+    for track in media["caption_tracks"][1:]:
+        assert track["status"] == "machine-translated-review-pending"
+        response = client.get(track["src"])
+        assert response.status_code == 200
+        assert response.headers["content-type"].startswith("text/vtt")
+        assert f"Source SHA-256: {source_hash}" in response.text
+        translated = parse_vtt(response.text, round(media["duration"], 3))
+        assert [(cue.id, cue.start, cue.end) for cue in translated] == [
+            (cue.id, cue.start, cue.end) for cue in expected
+        ]
+        for cue, original in zip(translated, expected, strict=True):
+            assert html.unescape(cue.text) != html.unescape(original.text)
+            assert "<" not in cue.text
+        assert client.get(track["src"].replace("version=1", "version=2")).status_code == 404
+    assert client.get(f"/api/v1/lessons/{W3C_ID}/media/captions-om?version=1").status_code == 404
 
 
 def test_caption_parser_rejects_invalid_or_non_monotonic_timestamps():

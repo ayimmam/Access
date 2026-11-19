@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Access API documentation</title>
+  <link rel="stylesheet" href="/demo-assets/api-docs.css">
+</head>
+<body>
+  <a href="#reference" class="skip">Skip to API documentation</a>
+  <header><a href="/demo/savanna">Access learning demo</a></header>
+  <main id="reference" tabindex="-1">
+    <h1>Access API documentation</h1>
+    <p>Use the versioned REST API to load a lesson, discover accessible media, or retrieve portable downloads. The public demo uses allowlisted lessons and fictional career data. ALX authentication and protected course integration are pending.</p>
+    <nav aria-label="On this page">
+      <ul>
+        <li><a href="#quickstart">Make your first request</a></li>
+        <li><a href="#lesson-api">Lesson endpoints</a></li>
+        <li><a href="#failures">Errors and caching</a></li>
+        <li><a href="#embed">Embed in a host page</a></li>
+        <li><a href="#other-demos">Career and privacy demos</a></li>
+      </ul>
+    </nav>
+    <p><a href="/openapi.json">Read the machine-readable OpenAPI JSON</a> or <a href="/api/docs">open the interactive Swagger explorer</a>.</p>
+
+    <section aria-labelledby="quickstart">
+      <h2 id="quickstart">Make your first request</h2>
+      <p>Start with the Savanna lesson manifest. The public lesson reads require no credentials. For these examples, run the repository’s FastAPI service on port 8000. On a hosted install, replace the origin with the URL of this service.</p>
+      <pre><code>curl --fail-with-body 'http://127.0.0.1:8000/api/v1/lessons/alx-transforming-africa/manifest?version=1'</code></pre>
+      <ul>
+        <li><a href="/api/v1/lessons/alx-transforming-africa/manifest?version=1">Read the live Savanna manifest JSON</a>.</li>
+        <li><a href="/api/v1/lessons/alx-transforming-africa/transcripts/en?version=1">Read the live English transcript JSON</a>.</li>
+        <li><a href="/api/v1/lessons/alx-transforming-africa/exports?version=1">Read the live download listing JSON</a>.</li>
+      </ul>
+      <p>Check that <code>schema_version</code> is supported and <code>lesson_id</code> and <code>content_version</code> match your request. Keep the explicit version in subsequent requests. For optional media and downloads, follow the returned URL fields and handle missing entries in the UI.</p>
+    </section>
+
+    <section aria-labelledby="lesson-api">
+      <h2 id="lesson-api">Lesson endpoints</h2>
+      <p>Every operation below uses <code>GET</code> under <code>/api/v1/lessons/{lesson_id}</code>. <code>version</code> is a positive integer and defaults to <code>1</code>. Demo fixtures include <code>alx-transforming-africa</code>, <code>demo-learning-plan</code>, and <code>w3c-colors-with-good-contrast</code>.</p>
+      <dl class="routes">
+        <dt><code>/manifest?version=1</code></dt>
+        <dd>Returns the course and lesson revision, accessible content, media links and review states. Fields such as <code>media</code> and optional asset URLs can be null. A timed segment includes start and end times in seconds.</dd>
+        <dt><code>/transcripts/en?version=1</code></dt>
+        <dd>Returns ordered source-language segments with stable IDs. Other languages return <code>404</code> when the source transcript is unavailable. Discover separately timed caption tracks in the media manifest.</dd>
+        <dt><code>/media/{kind}?version=1</code></dt>
+        <dd>Returns WebVTT, MP4, or MP3 according to the asset. Savanna lists <code>captions</code>, <code>captions-am</code>, <code>captions-om</code>, and <code>captions-ti</code>. The translated tracks are labeled <code>machine-translated-review-pending</code>. Discover other media kinds from the selected lesson. File-backed media supports byte ranges.</dd>
+        <dt><code>/offline-video/{edition}?version=1</code></dt>
+        <dd>Returns an MP4 download when the requested <code>standard</code> or <code>described</code> rendition is built. Use its advertised URL in the manifest when present.</dd>
+        <dt><code>/exports?version=1</code> and <code>/downloads/{format}?version=1</code></dt>
+        <dd>The listing returns the available format, URL, byte count, SHA-256 checksum, and media type. Download the listed URL and compare its bytes to the listed checksum. The ZIP also includes a manifest of its files. The W3C fixture adds PDF and BRF prototypes with verification pending.</dd>
+        <dt><code>/signing-manifest?lang=ethsl&amp;version=1</code> and <code>/signing-assets/{filename}</code></dt>
+        <dd>Inspect the requested language and each segment’s review state. Follow asset URLs included for approved entries. The separate public ASL animation preview in Savanna is a labeled prototype for selected concepts.</dd>
+      </dl>
+    </section>
+
+    <section aria-labelledby="failures">
+      <h2 id="failures">Errors and caching</h2>
+      <ul>
+        <li><code>304</code> on a manifest means reuse the saved representation. Send the returned <code>ETag</code> as <code>If-None-Match</code> on a subsequent request.</li>
+        <li><code>404</code> means the requested lesson, revision, language, or asset is unavailable. Show the user an alternative when the manifest offers one.</li>
+        <li><code>422</code> means a parameter or request body failed validation. Check the OpenAPI contract before retrying.</li>
+        <li><code>429</code> on the optional speech service means respect <code>Retry-After</code> when present. The career demo also offers typed controls.</li>
+        <li><code>500</code> or <code>503</code> means a server error or unavailable service. Provide a retry and preserve the user’s local context.</li>
+      </ul>
+      <p>Application errors use the following envelope. The correlation ID is generated per request. Use it when reporting a failure.</p>
+      <pre><code>{
+  "error": {
+    "code": "not_found",
+    "message": "This resource is unavailable.",
+    "correlation_id": "example-id"
+  }
+}</code></pre>
+    </section>
+
+    <section aria-labelledby="embed">
+      <h2 id="embed">Embed in a host page</h2>
+      <ol>
+        <li>Open the <a href="/demo/plug-in">installation demo</a>, select a lesson, and install the component. The example supplies the versioned module URL and SHA-384 integrity value from the built release.</li>
+        <li>Copy the snippet to your host. It supplies <code>api-base</code>, <code>lesson-id</code>, <code>content-version</code>, and a fallback download link. Use HTTPS for a hosted installation.</li>
+        <li>For a different origin, configure the API’s exact <code>ACCESS_ALLOWED_ORIGINS</code> and allow the component scripts, API calls, and media in the host’s Content Security Policy. Public lesson fetches omit credentials.</li>
+        <li>Listen for <code>alx-media-ready</code> with <code>lessonId</code> and <code>contentVersion</code>. Handle <code>alx-media-error</code> with the <code>code</code> and <code>lessonId</code>. An <code>alx-media-download</code> event reports the requested format and status <code>requested</code>.</li>
+      </ol>
+      <p>Keep one released bundle and its chunks together. The demo installation generates an integrity value for its current build. Freeze those assets before distributing a production embed.</p>
+    </section>
+
+    <section aria-labelledby="other-demos">
+      <h2 id="other-demos">Career and privacy demos</h2>
+      <ul>
+        <li><a href="/api/v1/jobs">Public fictional job data</a> and <a href="/api/v1/jobs/demo-web-developer/structured-data">a JobPosting JSON example</a> power the <a href="/demo/careers">career demo</a>.</li>
+        <li><a href="/api/v1/demo-certificates/DEMO-LEARNING-001">Fictional certificate verification</a> returns a demo status and optional course name and date. An unknown identifier returns <code>200</code> with status <code>unknown</code>.</li>
+        <li><a href="/api/v1/career-speech/catalog">Optional Amharic speech catalog</a> advertises availability. Speech POST requests from permitted origins require validated JSON and a configured private worker. Typed job controls are available without the worker.</li>
+        <li>The <a href="/demo/privacy">privacy demo</a> uses separate same-origin session cookies and checks CSRF for authenticated mutations. Use its demo UI for session and privacy actions. See OpenAPI for operation details.</li>
+      </ul>
+    </section>
+  </main>
+  <footer><a href="/demo/savanna">Savanna lesson</a> <a href="/demo/careers">Career demo</a> <a href="/demo/ethioware">Ethioware demo</a></footer>
+</body>
+</html>

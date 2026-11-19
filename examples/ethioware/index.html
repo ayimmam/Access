@@ -4,6 +4,8 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex"><title>Ethioware-style course · Access integration demo</title>
   <link rel="stylesheet" href="/demo-assets/ethioware.css">
+  <link rel="stylesheet" href="/demo-assets/demo-language.css">
+  <script type="module" src="/demo-assets/demo-language.js"></script>
   <script type="module" src="/demo-assets/embed-demo.js"></script>
 </head>
 <body>
@@ -12,6 +14,16 @@
     <nav aria-label="Demo navigation"><a href="/demo/savanna">Savanna</a><a href="/demo/careers">Career gateway</a><a href="/demo/plug-in">Installation demo</a><a href="/demo/privacy">Privacy and sessions</a></nav>
   </header>
   <main id="main">
+    <div class="demo-language-bar">
+      <label for="demo-language">Page language</label>
+      <select id="demo-language" aria-describedby="demo-language-status" translate="no">
+        <option value="en" lang="en">English</option>
+        <option value="am" lang="am">አማርኛ</option>
+        <option value="om" lang="om">Afaan Oromo</option>
+        <option value="ti" lang="ti">ትግርኛ</option>
+      </select>
+      <p id="demo-language-status" role="status"></p>
+    </div>
     <p class="notice">Independent-provider integration demonstration. The live Ethioware site is unchanged. This page uses Access fixtures, not Ethioware course content or learner accounts.</p>
     <h1>Software Engineering Basics</h1>
     <div class="course-layout">
@@ -40,6 +52,11 @@
       </aside>
     </div>
   </main>
+    <nav class="demo-links" aria-label="Demo pages">
+      <a href="/demo/savanna">Savanna lesson</a>
+      <a href="/demo/careers">Career demo</a>
+      <a href="/docs">API documentation</a>
+    </nav>
   <footer>Access × Ethioware-style demonstration · <a href="/demo/plug-in">Try installation on your platform</a></footer>
 </body>
 </html>

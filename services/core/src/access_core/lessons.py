@@ -23,10 +23,10 @@ class Segment(BaseModel):
 
 class CaptionTrack(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
-    language: Literal["en", "am", "ti"]
+    language: Literal["en", "am", "om", "ti"]
     label: str
     src: str
-    status: Literal["source-reviewed", "machine-translated-review-pending", "human-reviewed"]
+    status: Literal["source-draft", "source-reviewed", "machine-translated-review-pending", "human-reviewed"]
 
 
 class Media(BaseModel):
@@ -85,6 +85,11 @@ EXAMPLE_VIDEO = EXAMPLE_DIRECTORY / "We Are Transforming Africa - ALX Africa (72
 EXAMPLE_CAPTIONS = EXAMPLE_DIRECTORY / "into-caption.txt"
 EXAMPLE_ID = "alx-transforming-africa"
 EXAMPLE_DURATION = 121.496916
+EXAMPLE_CAPTION_TRANSLATIONS = {
+    "am": ("አማርኛ (Amharic)", EXAMPLE_DIRECTORY / "alx-transforming-africa" / "captions.am.vtt"),
+    "om": ("Afaan Oromo", EXAMPLE_DIRECTORY / "alx-transforming-africa" / "captions.om.vtt"),
+    "ti": ("ትግርኛ (Tigrigna)", EXAMPLE_DIRECTORY / "alx-transforming-africa" / "captions.ti.vtt"),
+}
 W3C_ID = "w3c-colors-with-good-contrast"
 W3C_DIRECTORY = EXAMPLE_DIRECTORY / "w3c-contrast"
 W3C_VIDEO = W3C_DIRECTORY / "standard.mp4"
@@ -164,14 +169,24 @@ def parse_caption_source(text: str, duration: float) -> tuple[Segment, ...]:
 
 
 def example_lesson() -> Lesson:
+    captions_url = f"/api/v1/lessons/{EXAMPLE_ID}/media/captions"
+    tracks = (
+        CaptionTrack(language="en", label="English · source draft", src=f"{captions_url}?version=1", status="source-draft"),
+        *(CaptionTrack(
+            language=language,
+            label=f"{label} · review pending",
+            src=f"{captions_url}-{language}?version=1",
+            status="machine-translated-review-pending",
+        ) for language, (label, path) in EXAMPLE_CAPTION_TRANSLATIONS.items() if path.is_file()),
+    )
     return Lesson(
         lesson_id=EXAMPLE_ID, content_version=1, course_version_id="alx-demo-v1",
         title="We Are Transforming Africa", language="en", content_status="source-draft",
         summary="Explore the ALX community, learning opportunities and experiences shared by its members.",
         segments=parse_caption_source(EXAMPLE_CAPTIONS.read_text(encoding="utf-8"), EXAMPLE_DURATION),
-        unavailable=("Reviewed Ethiopian Sign Language interpretation", "Reviewed Amharic captions", "Audio description", "Tagged PDF", "Braille"),
+        unavailable=("Reviewed Ethiopian Sign Language interpretation", "Human-reviewed Amharic, Afaan Oromo and Tigrigna captions", "Audio description", "Tagged PDF", "Braille"),
         media=Media(id="alx-africa-intro-v1", src=f"/api/v1/lessons/{EXAMPLE_ID}/media/video?version=1",
-                    captions=f"/api/v1/lessons/{EXAMPLE_ID}/media/captions?version=1", duration=EXAMPLE_DURATION),
+                    captions=tracks[0].src, duration=EXAMPLE_DURATION, caption_tracks=tracks),
     )
 
 

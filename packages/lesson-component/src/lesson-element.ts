@@ -109,6 +109,7 @@ export class AccessibleLesson extends HTMLElement {
   private controller?: AbortController;
   private sequence = 0;
   private disposeMedia?: () => void;
+  demoTranslation?: (source: string) => string;
 
   connectedCallback() { void this.load(); }
   attributeChangedCallback() { if (this.isConnected) void this.load(); }
@@ -198,11 +199,16 @@ export class AccessibleLesson extends HTMLElement {
     const transcriptHeading = node('h3', 'Transcript');
     const timelineNote = node('p', 'This transcript follows the standard edition. Switch to standard video to jump to a passage.');
     timelineNote.hidden = true;
-    let sections: { section: HTMLElement; text: string }[] = [];
+    let sections: { section: HTMLElement; heading: string; text: string }[] = [];
     const filterSections = () => {
       const query = search.value.trim().toLocaleLowerCase();
       let count = 0;
-      for (const item of sections) { item.section.hidden = !item.text.includes(query); if (!item.section.hidden) count++; }
+      for (const item of sections) {
+        const translated = this.demoTranslation?.(item.heading) || item.heading;
+        const localized = this.demoTranslation?.(item.text) || item.text;
+        item.section.hidden = !`${item.heading} ${item.text} ${translated} ${localized}`.toLocaleLowerCase().includes(query);
+        if (!item.section.hidden) count++;
+      }
       status.textContent = query ? `${count} of ${sections.length} sections found.` : '';
     };
     const renderSections = (segments: Segment[], canSeek: boolean) => {
@@ -214,7 +220,7 @@ export class AccessibleLesson extends HTMLElement {
           seek.addEventListener('click', () => media?.seek(start));
           section.append(seek, node('p', segment.text));
         } else section.append(node('h3', segment.heading), node('p', segment.text));
-        return { section, text: `${segment.heading} ${segment.text}`.toLocaleLowerCase() };
+        return { section, heading: segment.heading, text: segment.text };
       });
       reading.replaceChildren(...sections.map(item => item.section));
       filterSections();
@@ -225,6 +231,7 @@ export class AccessibleLesson extends HTMLElement {
         showSigningPreview: this.hasAttribute('show-signing-preview'),
         notify: detail => this.emit('alx-avatar-status', detail),
         resizePage: size => this.emit('alx-caption-size', { size }),
+        onCaptionLanguage: language => this.emit('alx-caption-language', { language }),
         onEditionChange: described => {
           const segments = described && lesson.described_segments?.length ? lesson.described_segments : lesson.segments;
           const canSeek = !described || segments !== lesson.segments;

@@ -3,7 +3,7 @@ import type { SigningManifest } from './signing-player';
 import { InterpreterVideo } from './interpreter-video';
 
 export interface TimedSegment { id: string; heading: string; text: string; start?: number; end?: number }
-export interface CaptionTrack { language: 'en' | 'am' | 'ti'; label: string; src: string; status: string }
+export interface CaptionTrack { language: 'en' | 'am' | 'om' | 'ti'; label: string; src: string; status: string }
 export interface LessonMedia {
   id: string; src: string; captions: string; duration: number; avatar_mode: string;
   caption_tracks?: CaptionTrack[]; described_src?: string; described_captions?: string;
@@ -16,6 +16,7 @@ interface MediaViewOptions {
   showSigningPreview: boolean;
   notify: (detail: Record<string, unknown>) => void;
   resizePage: (size: string) => void;
+  onCaptionLanguage: (language: string) => void;
   onEditionChange: (described: boolean) => void;
 }
 
@@ -78,6 +79,7 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
     return card;
   };
   const captionLabel = element('label', 'Captions'); const captionSelect = element('select');
+  captionSelect.dataset.captionLanguage = '';
   const off = element('option', 'Off'); off.value = 'off'; captionSelect.append(off);
   for (const definition of definitions) { const option = element('option', definition.label); option.value = optionValue(definition.language); captionSelect.append(option); }
   captionLabel.append(captionSelect);
@@ -124,7 +126,8 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
   });
   try {
     const saved = JSON.parse(localStorage.getItem(preferenceKey) || '{}');
-    if (definitions.some(track => optionValue(track.language) === saved.captions) || saved.captions === 'off') captionSelect.value = saved.captions;
+    const savedLanguage = saved.captions === 'on' ? optionValue('en') : saved.captions;
+    if (definitions.some(track => optionValue(track.language) === savedLanguage) || savedLanguage === 'off') captionSelect.value = savedLanguage;
     if (['1', '1.25', '1.5'].includes(saved.size)) size.value = saved.size;
     if (['default', 'dark', 'yellow'].includes(saved.appearance)) appearance.value = saved.appearance;
     applyAppearance();
@@ -319,7 +322,11 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
     preferenceStatus.textContent = definition?.status.includes('pending') ? `${definition.label}. Human review is pending.` : '';
     savePreferences(); update();
   };
-  captionSelect.addEventListener('change', applyCaptionSelection);
+  captionSelect.addEventListener('change', () => {
+    applyCaptionSelection();
+    const definition = definitions.find(item => optionValue(item.language) === captionSelect.value);
+    if (definition) options.onCaptionLanguage(definition.language);
+  });
   video.textTracks.addEventListener('change', syncNativeTrackModes);
   tracks.forEach((_track, index) => video.textTracks[index]?.addEventListener('cuechange', update));
   size.addEventListener('change', () => { applyAppearance(); savePreferences(); resizePage(size.value); });

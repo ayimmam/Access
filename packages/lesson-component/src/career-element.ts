@@ -75,6 +75,7 @@ export class CareerGateway extends HTMLElement {
   private voice?: CareerVoice;
   private cleanupAudio?: () => void;
   private timer?: ReturnType<typeof setTimeout>;
+  demoTranslation?: (source: string) => string;
 
   connectedCallback() { void this.load(); }
   attributeChangedCallback(name: string) {
@@ -197,9 +198,13 @@ export class CareerGateway extends HTMLElement {
     const update = (notifyVoice = true) => {
       const query = search.value.trim().toLocaleLowerCase();
       const wantedTypes = selected(types), wantedSites = selected(sites), wantedSupport = selected(support);
-      matches = jobs.filter(job => (!query || `${job.title} ${job.organization} ${job.summary} ${job.skills.join(' ')}`.toLocaleLowerCase().includes(query)) &&
+      matches = jobs.filter(job => {
+        const fields = [job.title, job.organization, job.summary, ...job.skills];
+        const searchable = fields.concat(fields.map(text => this.demoTranslation?.(text) || '')).join(' ').toLocaleLowerCase();
+        return (!query || searchable.includes(query)) &&
         (!sector.select.value || sector.select.value === job.sector) && (!view.select.value || this.saved.has(job.id)) &&
-        (!wantedTypes.length || wantedTypes.includes(job.employment_type)) && (!wantedSites.length || wantedSites.includes(job.workplace)) && wantedSupport.every(value => job.support.includes(value)));
+        (!wantedTypes.length || wantedTypes.includes(job.employment_type)) && (!wantedSites.length || wantedSites.includes(job.workplace)) && wantedSupport.every(value => job.support.includes(value));
+      });
       count.textContent = `${matches.length} ${matches.length === 1 ? 'job' : 'jobs'} found${view.select.value ? ' in saved jobs' : ''}.`;
       list.replaceChildren();
       if (!matches.length) { const empty = el('p', 'No jobs match these filters. Clear filters or try another search.'); empty.className = 'empty'; list.append(empty); }

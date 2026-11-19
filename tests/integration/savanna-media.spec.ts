@@ -40,19 +40,55 @@ test('source playback, caption and transcript controls remain independent', asyn
   await lesson.getByRole('button', { name: 'Reset caption preferences' }).click();
   expect(await root.evaluate(element => parseFloat(getComputedStyle(element).fontSize))).toBe(baseSize);
   await expect(captions).toHaveValue('off');
-  await captions.selectOption('on');
+  await captions.selectOption('en');
   await lesson.getByRole('button', { name: 'Jump to 0:41', exact: true }).click();
   await expect(lesson.locator('.active-caption')).toContainText("you're going to meet incredible people");
-  expect(await video.evaluate(element => Array.from(element.textTracks, track => track.mode))).toEqual(['hidden']);
+  expect(await video.evaluate(element => Array.from(element.textTracks, track => track.mode))).toEqual(['hidden', 'disabled', 'disabled', 'disabled']);
   await expect(lesson.getByRole('button', { name: 'Jump to 0:41', exact: true })).toBeFocused();
   await captions.selectOption('off');
   await expect(lesson.locator('.active-caption')).toBeHidden();
-  await captions.selectOption('on');
+  await captions.selectOption('en');
   await video.evaluate(async element => { element.muted = true; await element.play(); });
   await expect.poll(() => video.evaluate(element => element.paused)).toBe(false);
   await video.evaluate(element => element.pause());
   await expect.poll(() => video.evaluate(element => element.paused)).toBe(true);
   await expect(page.getByRole('button', { name: 'Mark demo lesson complete' })).toBeEnabled();
+});
+
+test('Savanna switches translated captions at the current playback position', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('access:alx-africa-intro-v1:media-preferences', JSON.stringify({ captions: 'on' }));
+  });
+  await page.goto('/demo/savanna');
+  const lesson = page.locator('alx-accessible-lesson');
+  const captions = lesson.locator('[data-caption-language]');
+  const cue = lesson.locator('.active-caption');
+  await expect(captions).toHaveValue('en');
+  await lesson.getByRole('button', { name: 'Jump to 0:41', exact: true }).click();
+  await expect(cue).toContainText('incredible people');
+  const languages = [
+    { code: 'am', script: /[\u1200-\u137f]/ },
+    { code: 'om', script: /^[A-Za-z]/ },
+    { code: 'ti', script: /[\u1200-\u137f]/ },
+  ];
+  const english = await cue.textContent();
+  const texts = new Set([english]);
+  for (const { code, script } of languages) {
+    await expect(captions.locator(`option[value="${code}"]`)).toHaveCount(1);
+    await captions.selectOption(code);
+    await expect(page.locator('html')).toHaveAttribute('lang', code);
+    await expect(cue).toHaveAttribute('lang', code);
+    await expect(cue).not.toHaveText(english!);
+    await expect(cue).toHaveText(script);
+    texts.add(await cue.textContent());
+    await expect(page.locator('#demo-language-status')).not.toBeEmpty();
+  }
+  expect(texts.size).toBe(4);
+  await lesson.locator('.seek').filter({ hasText: /0:50$/ }).click();
+  await expect(cue).toHaveText(/[\u1200-\u137f]/);
+  await expect(cue).not.toHaveText([...texts].at(-1)!);
+  await captions.selectOption('off');
+  await expect(cue).toBeHidden();
 });
 
 test('Savanna comparison shows the reconstructed baseline and returns to Access', async ({ page }) => {
@@ -213,7 +249,7 @@ test('changed hashes or legacy rigs fail closed without losing captions', async 
   await page.route('**/signing-manifest?**', route => route.fulfill({ json: changed }));
   await openEthslReviewHost(page);
   const lesson = page.locator('alx-accessible-lesson');
-  await lesson.getByRole('combobox', { name: 'Captions', exact: true }).selectOption('on');
+  await lesson.getByRole('combobox', { name: 'Captions', exact: true }).selectOption('en');
   await lesson.getByRole('button', { name: 'Show 3D hands preview' }).click();
   await expect(lesson.locator('.avatar-panel').getByRole('status')).toContainText('assets unavailable');
   await lesson.getByRole('button', { name: 'Jump to 0:41', exact: true }).click();
@@ -276,7 +312,7 @@ test('missing interpreter video pauses playback and retains text fallback', asyn
   await openEthslReviewHost(page);
   const lesson = page.locator('alx-accessible-lesson');
   const source = lesson.locator('.video-column video');
-  await lesson.getByRole('combobox', { name: 'Captions', exact: true }).selectOption('on');
+  await lesson.getByRole('combobox', { name: 'Captions', exact: true }).selectOption('en');
   await lesson.getByRole('button', { name: 'Show 3D hands preview' }).click();
   await expect(lesson.locator('.avatar-panel').getByRole('status')).toContainText('unavailable');
   await source.evaluate(async element => {

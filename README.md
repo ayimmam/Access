@@ -94,7 +94,7 @@ curl --fail-with-body 'https://access-plugin.onrender.com/api/v1/lessons/w3c-col
 curl --fail-with-body 'https://access-plugin.onrender.com/api/v1/jobs'
 ```
 
-Check HTTP status before rendering results. Show an unavailable state for missing records and offer retry for temporary failures. Use `error.correlation_id` from API error responses when reporting failures. See the [OpenAPI explorer](https://access-plugin.onrender.com/api/docs).
+Check HTTP status before rendering results. Show an unavailable state for missing records and offer retry for temporary failures. Use `error.correlation_id` from API error responses when reporting failures. On the running service, `/docs` provides the HTML developer guide and `/openapi.json` provides the generated contract.
 
 From the actual partner page, verify keyboard transcript seeking and downloads, or job filtering, details and summary playback. Block the script and verify the fallback remains reachable. Check the browser console for CORS, integrity and content-security errors.
 
@@ -153,7 +153,8 @@ The media assets and their review state are documented in [the complete-media fi
 | `/demo/certificates/DEMO-LEARNING-001` | Explicitly fictional valid, revoked and unknown verification states |
 | `/demo/privacy` | Local session and privacy-control demonstration; setup is required |
 | `/demo/avatar-review` | Load local draft motion studies and export timestamped co-design feedback |
-| `/api/docs` | Interactive documentation for the public fixture API |
+| `/docs` | Developer guide with keyboard navigation, request examples, and links to live responses |
+| `/openapi.json` and `/api/docs` | Generated API contract and optional interactive Swagger explorer |
 
 The static sites under `demos/` are separately deployable provider showcases. They are tested with `npm run test:vercel-demos` and are not production account integrations.
 

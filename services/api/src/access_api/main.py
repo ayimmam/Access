@@ -18,7 +18,8 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.staticfiles import StaticFiles
 
 from access_core.lessons import (
-    EXAMPLE_VIDEO, W3C_DIRECTORY, W3C_ID, Lesson, captions_vtt, export_lesson, get_lesson,
+    EXAMPLE_CAPTION_TRANSLATIONS, EXAMPLE_ID, EXAMPLE_VIDEO, W3C_DIRECTORY, W3C_ID, Lesson, Segment,
+    captions_vtt, export_lesson, get_lesson,
 )
 from access_core.offline_video import Edition, offline_video_path
 from access_core.jobs import JOBS, DemoVerification, Job, verify_demo
@@ -40,10 +41,39 @@ class ErrorEnvelope(BaseModel):
     error: ErrorDetail
 
 
+class Transcript(BaseModel):
+    lesson_id: str
+    content_version: int
+    language: str
+    timing: Literal["source-draft", "untimed-text"]
+    segments: tuple[Segment, ...]
+
+
+class ExportItem(BaseModel):
+    format: Literal["html", "txt", "zip", "pdf", "brf"]
+    label: str
+    bytes: int
+    sha256: str
+    media_type: str
+    href: str
+
+
+class ExportListing(BaseModel):
+    lesson_id: str
+    content_version: int
+    language: str
+    items: list[ExportItem]
+
+
+def file_contents(*media_types: str) -> dict:
+    return {media_type: {"schema": {"type": "string", "format": "binary"}} for media_type in media_types}
+
+
 ROOT = Path(__file__).resolve().parents[4]
 security_log = logging.getLogger("access.security")
 app = FastAPI(
-    title="Access public lesson API", version="0.1.0", docs_url="/api/docs", redoc_url=None,
+    title="Access demo API", version="0.1.0", docs_url="/api/docs", redoc_url=None,
+    description="Versioned public lesson fixtures, an independent embed, and fictional career and privacy demos. See the HTML developer guide at /docs.",
     responses={404: {"model": ErrorEnvelope}, 422: {"model": ErrorEnvelope}, 500: {"model": ErrorEnvelope}},
 )
 origins = [origin.strip() for origin in os.environ.get("ACCESS_ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173,http://localhost:8000,http://127.0.0.1:8000").split(",") if origin.strip()]
@@ -67,7 +97,8 @@ def signing_directory() -> Path:
     return Path(os.environ.get("ACCESS_SIGNING_DIR", str(ROOT / "artifacts/signing")))
 
 
-@app.get("/api/v1/lessons/{lesson_id}/signing-manifest")
+@app.get("/api/v1/lessons/{lesson_id}/signing-manifest", tags=["Lessons"],
+         responses={503: {"model": ErrorEnvelope, "description": "Signing metadata unavailable"}})
 def signing_manifest(lesson_id: str, lang: Language = "ethsl", version: int = Query(1, ge=1)):
     lesson = resolve(lesson_id, version)
     if lesson.media is None:
@@ -79,7 +110,10 @@ def signing_manifest(lesson_id: str, lang: Language = "ethsl", version: int = Qu
     return JSONResponse(public_manifest(manifest), headers={"Cache-Control": "no-store"})
 
 
-@app.get("/api/v1/lessons/{lesson_id}/signing-assets/{filename}")
+@app.get("/api/v1/lessons/{lesson_id}/signing-assets/{filename}", tags=["Lessons"], response_class=Response,
+         responses={200: {"content": file_contents("video/mp4", "model/gltf-binary")},
+                    206: {"description": "Partial file response", "content": file_contents("video/mp4", "model/gltf-binary")},
+                    503: {"model": ErrorEnvelope, "description": "Signing metadata unavailable"}})
 def signing_asset(lesson_id: str, filename: str, lang: Language = "ethsl", version: int = Query(1, ge=1)):
     lesson = resolve(lesson_id, version)
     if not lesson.media:
@@ -197,7 +231,9 @@ def demo_certificate(identifier: str):
     return JSONResponse(verify_demo(identifier).model_dump(mode="json"), headers={"Cache-Control": "no-store"})
 
 
-@app.get("/api/v1/lessons/{lesson_id}/manifest", response_model=Lesson)
+@app.get("/api/v1/lessons/{lesson_id}/manifest", response_model=Lesson, tags=["Lessons"],
+         responses={200: {"headers": {"ETag": {"schema": {"type": "string"}}}},
+                    304: {"description": "Manifest unchanged. No response body."}})
 def manifest(request: Request, lesson_id: str, version: int = Query(1, ge=1)):
     lesson = resolve(lesson_id, version)
     if lesson.media:
@@ -216,7 +252,7 @@ def manifest(request: Request, lesson_id: str, version: int = Query(1, ge=1)):
     return Response(body, media_type="application/json", headers=cache_headers)
 
 
-@app.get("/api/v1/lessons/{lesson_id}/transcripts/{language}")
+@app.get("/api/v1/lessons/{lesson_id}/transcripts/{language}", response_model=Transcript, tags=["Lessons"])
 def transcript(lesson_id: str, language: str, version: int = Query(1, ge=1)):
     lesson = resolve(lesson_id, version)
     if language != lesson.language:
@@ -224,8 +260,10 @@ def transcript(lesson_id: str, language: str, version: int = Query(1, ge=1)):
     return {"lesson_id": lesson.lesson_id, "content_version": version, "language": language, "timing": "source-draft" if lesson.media else "untimed-text", "segments": lesson.segments}
 
 
-@app.get("/api/v1/lessons/{lesson_id}/media/{kind}")
-def media(lesson_id: str, kind: Literal["video", "captions", "captions-am", "captions-ti", "described-video", "described-captions", "audio", "described-audio", "sign-video"], version: int = Query(1, ge=1)):
+@app.get("/api/v1/lessons/{lesson_id}/media/{kind}", tags=["Lessons"], response_class=Response,
+         responses={200: {"content": {"text/vtt": {"schema": {"type": "string"}}, **file_contents("video/mp4", "audio/mpeg")}},
+                    206: {"description": "Partial file response", "content": file_contents("video/mp4", "audio/mpeg", "text/vtt")}})
+def media(lesson_id: str, kind: Literal["video", "captions", "captions-am", "captions-om", "captions-ti", "described-video", "described-captions", "audio", "described-audio", "sign-video"], version: int = Query(1, ge=1)):
     lesson = resolve(lesson_id, version)
     # Public interpretation is delivered by the review-bound signing asset route.
     if lesson.media is None or kind == "sign-video":
@@ -241,7 +279,10 @@ def media(lesson_id: str, kind: Literal["video", "captions", "captions-am", "cap
             "audio": (W3C_DIRECTORY / "audio.mp3", "audio/mpeg"),
             "described-audio": (W3C_DIRECTORY / "audio-described.mp3", "audio/mpeg"),
         }
-        path, media_type = assets[kind]
+        asset = assets.get(kind)
+        if asset is None:
+            raise HTTPException(404)
+        path, media_type = asset
         if not path.is_file():
             raise HTTPException(404)
         return FileResponse(path, media_type=media_type, headers={"Cache-Control": "public, max-age=0, must-revalidate"})
@@ -249,10 +290,18 @@ def media(lesson_id: str, kind: Literal["video", "captions", "captions-am", "cap
         return FileResponse(EXAMPLE_VIDEO, media_type="video/mp4", headers={"Cache-Control": "public, max-age=0, must-revalidate"})
     if kind == "captions":
         return Response(captions_vtt(lesson), media_type="text/vtt", headers={"Cache-Control": "public, max-age=0, must-revalidate"})
+    if lesson_id == EXAMPLE_ID and kind.startswith("captions-"):
+        translation = EXAMPLE_CAPTION_TRANSLATIONS.get(kind.removeprefix("captions-"))
+        if translation:
+            _, path = translation
+            if path.is_file():
+                return FileResponse(path, media_type="text/vtt", headers={"Cache-Control": "public, max-age=0, must-revalidate"})
     raise HTTPException(404)
 
 
-@app.get("/api/v1/lessons/{lesson_id}/offline-video/{edition}", response_class=FileResponse)
+@app.get("/api/v1/lessons/{lesson_id}/offline-video/{edition}", response_class=FileResponse, tags=["Lessons"],
+         responses={200: {"content": file_contents("video/mp4")},
+                    206: {"description": "Partial file response", "content": file_contents("video/mp4")}})
 def offline_video(lesson_id: str, edition: Edition, version: int = Query(1, ge=1)):
     resolve(lesson_id, version)
     asset = offline_video_path(lesson_id, version, edition)
@@ -262,7 +311,7 @@ def offline_video(lesson_id: str, edition: Edition, version: int = Query(1, ge=1
                         headers={"Cache-Control": "public, max-age=0, must-revalidate"})
 
 
-@app.get("/api/v1/lessons/{lesson_id}/exports")
+@app.get("/api/v1/lessons/{lesson_id}/exports", response_model=ExportListing, tags=["Lessons"])
 def exports(lesson_id: str, version: int = Query(1, ge=1)):
     lesson = resolve(lesson_id, version)
     items = []
@@ -278,7 +327,8 @@ def exports(lesson_id: str, version: int = Query(1, ge=1)):
     return {"lesson_id": lesson_id, "content_version": version, "language": lesson.language, "items": items}
 
 
-@app.get("/api/v1/lessons/{lesson_id}/downloads/{format}")
+@app.get("/api/v1/lessons/{lesson_id}/downloads/{format}", tags=["Lessons"], response_class=Response,
+         responses={200: {"content": file_contents("text/html", "text/plain", "application/zip", "application/pdf", "application/octet-stream")}})
 def download(lesson_id: str, format: Literal["html", "txt", "zip", "pdf", "brf"], version: int = Query(1, ge=1)):
     try:
         data, media_type, suffix = export_lesson(resolve(lesson_id, version), format)
@@ -290,6 +340,11 @@ def download(lesson_id: str, format: Literal["html", "txt", "zip", "pdf", "brf"]
 @app.get("/", include_in_schema=False)
 def demo():
     return FileResponse(ROOT / "examples/savanna/index.html")
+
+
+@app.get("/docs", include_in_schema=False)
+def developer_docs():
+    return FileResponse(ROOT / "examples/api-docs/index.html")
 
 
 @app.get("/demo/judging", include_in_schema=False)

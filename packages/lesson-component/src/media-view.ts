@@ -7,7 +7,7 @@ export interface CaptionTrack { language: 'en' | 'am' | 'om' | 'ti'; label: stri
 export interface LessonMedia {
   id: string; src: string; captions: string; duration: number; avatar_mode: string;
   caption_tracks?: CaptionTrack[]; described_src?: string; described_captions?: string;
-  offline_video_src?: string; offline_described_src?: string;
+  offline_player_src?: string;
   audio_src?: string; described_audio_src?: string; sign_src?: string; sign_status?: string;
 }
 
@@ -95,15 +95,13 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
   }
   appearanceLabel.append(appearance);
   const reset = element('button', 'Reset caption preferences'); reset.type = 'button';
-  const offlineVideo = element('a', 'Download video with captions');
+  const offlineVideo = element('a', 'Download for offline access');
   offlineVideo.className = 'media-option-download';
-  const setOfflineEdition = (described: boolean) => {
-    const path = described ? media.offline_described_src : media.offline_video_src;
-    offlineVideo.hidden = !path;
-    if (path) offlineVideo.href = resource(path);
-    offlineVideo.textContent = described ? 'Download described video with captions' : 'Download video with captions';
-  };
-  setOfflineEdition(false);
+  offlineVideo.hidden = !media.offline_player_src;
+  if (media.offline_player_src) {
+    offlineVideo.href = resource(media.offline_player_src);
+    offlineVideo.download = '';
+  }
   const preferenceStatus = element('p'); preferenceStatus.setAttribute('role', 'status');
   const preferenceKey = `access:${media.id}:media-preferences`;
   const savePreferences = () => {
@@ -333,7 +331,6 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
   size.addEventListener('change', () => { applyAppearance(); savePreferences(); resizePage(size.value); });
   descriptionToggle.addEventListener('click', () => {
     described = !described; video.pause(); signVideo.pause();
-    setOfflineEdition(described);
     video.src = resource(described ? media.described_src! : media.src);
     tracks.forEach((track, index) => {
       track.src = resource(described && index === 0 && media.described_captions ? media.described_captions : definitions[index].src);

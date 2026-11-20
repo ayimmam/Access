@@ -12,7 +12,7 @@ from urllib.parse import urlsplit
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.staticfiles import StaticFiles
@@ -21,6 +21,7 @@ from access_core.lessons import (
     EXAMPLE_CAPTION_TRANSLATIONS, EXAMPLE_ID, EXAMPLE_VIDEO, W3C_DIRECTORY, W3C_ID, Lesson, Segment,
     captions_vtt, export_lesson, get_lesson, transcript_segments,
 )
+from access_core.offline_player import player_bytes, player_parts
 from access_core.offline_video import Edition, offline_video_path
 from access_core.jobs import JOBS, DemoVerification, Job, verify_demo
 from access_core.speech_transport import SpeechFailure
@@ -238,13 +239,12 @@ def demo_certificate(identifier: str):
 def manifest(request: Request, lesson_id: str, version: int = Query(1, ge=1)):
     lesson = resolve(lesson_id, version)
     if lesson.media:
-        downloads = {}
+        downloads = {"offline_player_src": f"/api/v1/lessons/{lesson_id}/offline-player?version={version}"}
         for edition, field in (("standard", "offline_video_src"), ("described", "offline_described_src")):
             path = offline_video_path(lesson_id, version, edition)
             if path and path.is_file():
                 downloads[field] = f"/api/v1/lessons/{lesson_id}/offline-video/{edition}?version={version}"
-        if downloads:
-            lesson = lesson.model_copy(update={"media": lesson.media.model_copy(update=downloads)})
+        lesson = lesson.model_copy(update={"media": lesson.media.model_copy(update=downloads)})
     body = lesson.model_dump_json().encode()
     tag = '"' + hashlib.sha256(body).hexdigest() + '"'
     cache_headers = {"ETag": tag, "Cache-Control": "public, max-age=0, must-revalidate"}
@@ -302,6 +302,20 @@ def media(lesson_id: str, kind: Literal["video", "captions", "captions-am", "cap
             if path.is_file():
                 return FileResponse(path, media_type="text/vtt", headers={"Cache-Control": "public, max-age=0, must-revalidate"})
     raise HTTPException(404)
+
+
+@app.get("/api/v1/lessons/{lesson_id}/offline-player", response_class=StreamingResponse, tags=["Lessons"],
+         responses={200: {"content": file_contents("text/html")}})
+def offline_player(lesson_id: str, version: int = Query(1, ge=1)):
+    lesson = resolve(lesson_id, version)
+    try:
+        parts, size = player_parts(lesson)
+    except (KeyError, FileNotFoundError):
+        raise HTTPException(404) from None
+    return StreamingResponse(player_bytes(parts), media_type="text/html", headers={
+        "Content-Disposition": f'attachment; filename="{lesson_id}-v{version}-player.html"',
+        "Content-Length": str(size),
+    })
 
 
 @app.get("/api/v1/lessons/{lesson_id}/offline-video/{edition}", response_class=FileResponse, tags=["Lessons"],

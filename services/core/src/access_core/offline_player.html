@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; media-src data: blob:; img-src data: blob:; base-uri 'none'; form-action 'none'">
+<title>{{title}} · Offline player</title>
+<style>
+* {box-sizing:border-box}
+body {margin:auto;max-width:56rem;padding:1rem;font:1rem/1.5 system-ui,sans-serif;color:#172933;background:#fafbf9}
+h1 {line-height:1.15}
+video {width:100%;max-height:60vh;background:#111}
+video::cue {font-size:var(--caption-size,1em);color:var(--ink,white);background:var(--paper,#14232c)}
+fieldset {display:flex;flex-wrap:wrap;gap:.75rem;margin:1rem 0;padding:1rem;border:1px solid #81908c}
+label {display:grid;gap:.2rem}
+button,select,input {font:inherit;max-width:100%;min-height:2.75rem}
+button {cursor:pointer}
+:focus-visible {outline:3px solid #005ab3;outline-offset:2px}
+li {margin:.6rem 0} [hidden] {display:none}
+</style></head><body><main>
+<h1>{{title}}</h1>
+<video controls playsinline preload="metadata" aria-label="Lesson playback"></video>
+<p id="status" role="status"></p>
+<fieldset><legend>Playback and accessibility</legend>
+<label id="edition-label">Media edition<select id="edition"></select></label>
+<label>Caption and transcript language<select id="language"></select></label>
+<label><span>Show captions</span><input type="checkbox" id="captions" checked></label>
+<label>Caption size<select id="size"><option value="1">Standard</option><option value="1.25">Large</option><option value="1.5">Extra large</option></select></label>
+<label>Caption appearance<select id="appearance"><option value="default">Default</option><option value="white">White on black</option><option value="yellow">Yellow on black</option></select></label>
+<label>Playback speed<select id="speed"><option>0.75</option><option selected>1</option><option>1.25</option><option>1.5</option><option>2</option></select></label>
+<button id="reset">Reset caption preferences</button>
+</fieldset>
+<p>Reviewed Ethiopian Sign Language interpretation is unavailable for this lesson.</p>
+<section id="preview" hidden><h2>Signing concept preview</h2>
+<p>These drafts animate selected concepts. Fluent sign-language review is pending.</p>
+<label>Avatar language<select id="avatar"><option value="off">Off</option><option value="ethsl">Ethiopian Sign Language (EthSL)</option><option value="asl">American Sign Language (ASL)</option></select></label>
+<div id="canvas" style="height:18rem" hidden></div><p id="avatar-status" role="status"></p></section>
+<h2>Transcript</h2>
+<label>Transcript text size<select id="text-size"><option value="1">Standard</option><option value="1.25">Large</option><option value="1.5">Extra large</option></select></label>
+<label>Find text in the transcript<input type="search" id="search"></label>
+<p id="matches" role="status"></p><ol id="passages"></ol>
+<noscript>Open this file in a browser with JavaScript enabled to use the offline player.</noscript>
+</main><script type="application/json" id="metadata">{{metadata}}</script>
+<!-- embedded media -->
+<script>
+'use strict';
+const byId = id => document.getElementById(id);
+const media = document.querySelector('video');
+const data = JSON.parse(byId('metadata').textContent);
+const edition = byId('edition'), language = byId('language');
+const captions = byId('captions'), size = byId('size'), appearance = byId('appearance');
+const search = byId('search'), passages = byId('passages');
+const editions = {standard:'Standard video', described:'Audio-described video', audio:'Audio only', 'described-audio':'Audio only with description'};
+for (const key of Object.keys(editions).filter(key => data.assets[key])) edition.add(new Option(editions[key], key));
+byId('edition-label').hidden = edition.length === 1;
+const tracks = () => data.timeline[edition.value.startsWith('described') ? 'described' : 'standard'];
+let captionUrl;
+function timestamp(seconds) {
+  return new Date(Math.round(seconds * 1000)).toISOString().slice(11,23);
+}
+function filterTranscript() {
+  let count = 0;
+  for (const item of passages.children) {
+    item.hidden = !item.textContent.toLocaleLowerCase().includes(search.value.trim().toLocaleLowerCase());
+    if (!item.hidden) count++;
+  }
+  byId('matches').textContent = search.value ? count + ' matching passages' : '';
+}
+function setTrack() {
+  const track = tracks().find(t => t.language === language.value);
+  passages.replaceChildren();
+  passages.lang = track.language;
+  const lines = ['WEBVTT',''];
+  for (const segment of track.segments) {
+    const item = document.createElement('li'), jump = document.createElement('button');
+    jump.textContent = segment.heading;
+    jump.setAttribute('aria-label', 'Jump to ' + segment.heading);
+    jump.onclick = () => { media.currentTime = segment.start; };
+    item.append(jump, ' ' + segment.text);
+    passages.append(item);
+    const cue = segment.text.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
+    lines.push(timestamp(segment.start) + ' --> ' + timestamp(segment.end), cue, '');
+  }
+  media.querySelector('track')?.remove();
+  if (captionUrl) URL.revokeObjectURL(captionUrl);
+  captionUrl = URL.createObjectURL(new Blob([lines.join('\n')], {type:'text/vtt'}));
+  const nativeTrack = document.createElement('track');
+  nativeTrack.kind = 'captions'; nativeTrack.label = track.label; nativeTrack.srclang = track.language;
+  nativeTrack.src = captionUrl; media.append(nativeTrack);
+  nativeTrack.track.mode = captions.checked ? 'showing' : 'disabled';
+  filterTranscript();
+}
+function setEdition() {
+  const previous = language.value;
+  media.pause();
+  const audioOnly = edition.value.includes('audio');
+  media.src = 'data:' + (audioOnly ? 'audio/mpeg' : 'video/mp4') + ';base64,' + byId('asset-' + edition.value).textContent;
+  media.playbackRate = Number(byId('speed').value);
+  language.replaceChildren();
+  for (const track of tracks()) language.add(new Option(track.label, track.language));
+  if (tracks().some(t => t.language === previous)) language.value = previous;
+  setTrack();
+}
+function applyStyle() {
+  media.style.setProperty('--caption-size', size.value + 'em');
+  media.style.setProperty('--ink', appearance.value === 'yellow' ? 'yellow' : 'white');
+  media.style.setProperty('--paper', appearance.value === 'default' ? '#14232c' : 'black');
+}
+edition.onchange = () => { setEdition(); byId('status').textContent = editions[edition.value] + ' selected. Playback starts from the beginning.'; };
+media.onerror = () => { byId('status').textContent = 'Playback failed. Open the complete download in a browser with MP4 support. You can still read the transcript.'; };
+language.onchange = setTrack;
+captions.onchange = () => { media.querySelector('track').track.mode = captions.checked ? 'showing' : 'disabled'; };
+media.textTracks.onchange = () => { const track = media.querySelector('track'); if (track) captions.checked = track.track.mode === 'showing'; };
+size.onchange = appearance.onchange = applyStyle;
+byId('speed').onchange = () => { media.playbackRate = Number(byId('speed').value); };
+byId('reset').onclick = () => { size.value = '1'; appearance.value = 'default'; language.selectedIndex = 0; captions.checked = true; applyStyle(); setTrack(); };
+search.oninput = filterTranscript;
+byId('text-size').onchange = event => { passages.style.fontSize = event.target.value + 'rem'; };
+if (typeof OfflineSigning !== 'undefined') {
+  const canvas = byId('canvas'), avatar = byId('avatar'), message = byId('avatar-status');
+  byId('preview').hidden = false;
+  let controller;
+  const readModel = path => Uint8Array.from(atob(byId('asset-' + path).textContent), c => c.charCodeAt(0)).buffer;
+  avatar.onchange = async () => {
+    controller?.abort();
+    canvas.hidden = avatar.value === 'off';
+    message.textContent = '';
+    if (canvas.hidden) return;
+    controller = new AbortController();
+    const signal = controller.signal;
+    try {
+      await OfflineSigning.mountSignDemo(canvas, media, readModel, data.timeline.standard[0].segments, avatar.value, signal);
+    } catch {
+      if (!signal.aborted) message.textContent = 'The signing preview could not open on this device.';
+    }
+  };
+}
+setEdition();
+</script></body></html>

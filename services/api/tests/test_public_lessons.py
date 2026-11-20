@@ -259,3 +259,12 @@ def test_offline_video_manifest_and_download_are_bound_to_edition_and_version(tm
     assert response.content == asset.read_bytes()
     assert client.get(base + "/offline-video/described?version=1").status_code == 404
     assert client.get(base + "/offline-video/standard?version=2").status_code == 404
+
+
+@pytest.mark.parametrize("lesson_id,version", [
+    ("demo-learning-plan", 1), (EXAMPLE_ID, 2), ("unknown-lesson", 1),
+])
+def test_offline_player_requires_a_matching_video_revision(lesson_id, version):
+    response = client.get(f"/api/v1/lessons/{lesson_id}/offline-player?version={version}")
+    assert response.status_code == 404
+    assert "content-disposition" not in response.headers

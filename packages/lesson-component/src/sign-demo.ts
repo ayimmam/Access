@@ -6,13 +6,14 @@ import type { TimedSegment } from './media-view';
 export async function mountSignDemo(
   host: HTMLElement,
   video: HTMLVideoElement,
-  base: URL,
+  base: URL | ((path: string) => ArrayBuffer),
   cues: TimedSegment[],
   language: 'asl' | 'ethsl',
   signal: AbortSignal,
 ) {
   const loader = new GLTFLoader();
   const load = async (path: string) => {
+    if (typeof base === 'function') return loader.parseAsync(base(path), '');
     const response = await fetch(new URL('/demo-assets/' + path, base), { signal, credentials: 'omit' });
     if (!response.ok) throw new Error('Animation unavailable');
     return loader.parseAsync(await response.arrayBuffer(), '');

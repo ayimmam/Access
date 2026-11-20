@@ -41,6 +41,7 @@ class Media(BaseModel):
     caption_tracks: tuple[CaptionTrack, ...] = ()
     described_src: str | None = None
     described_captions: str | None = None
+    offline_player_src: str | None = None
     offline_video_src: str | None = None
     offline_described_src: str | None = None
     audio_src: str | None = None

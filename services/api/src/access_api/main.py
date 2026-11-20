@@ -28,6 +28,7 @@ from access_core.speech_transport import SpeechFailure
 from access_api.career_speech import router as career_speech_router
 from access_core.signing import Language, load_manifest, public_manifest
 from access_api.body_limit import SecurityBodyLimit
+from access_api.observability import PublicMetrics, PublicMetricsMiddleware
 from access_api.security import configured_store, origin as security_origin, router as security_router
 from access_api.security_store import SecurityError
 
@@ -83,6 +84,8 @@ if "*" in origins:
     raise RuntimeError("ACCESS_ALLOWED_ORIGINS must contain explicit origins")
 app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=False, allow_methods=["GET", "POST"], allow_headers=["If-None-Match", "Content-Type"], expose_headers=["ETag", "X-Correlation-ID", "Retry-After"])
 app.add_middleware(SecurityBodyLimit)
+public_metrics = PublicMetrics()
+app.add_middleware(PublicMetricsMiddleware, metrics=public_metrics)
 app.state.security_store = configured_store(ROOT)
 app.include_router(security_router)
 app.state.career_speech_origins = origins
@@ -200,6 +203,18 @@ def resolve(lesson_id: str, version: int) -> Lesson:
         return get_lesson(lesson_id, version)
     except KeyError:
         raise HTTPException(404) from None
+
+
+@app.get("/api/dashboard", include_in_schema=False)
+def api_dashboard():
+    return FileResponse(ROOT / "examples/api-dashboard/index.html", headers={
+        "Content-Security-Policy": "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; frame-ancestors 'none'",
+    })
+
+
+@app.get("/api/dashboard/metrics", include_in_schema=False)
+def api_dashboard_metrics():
+    return JSONResponse(public_metrics.snapshot(), headers={"Cache-Control": "no-store"})
 
 
 @app.get("/healthz")

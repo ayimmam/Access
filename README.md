@@ -121,6 +121,8 @@ docker compose up --build --detach --wait
 curl --fail http://127.0.0.1:8000/healthz
 ```
 
+Open the API dashboard at `/api/dashboard` on the demo server to inspect health and recent public lesson, job, and certificate requests. Metrics cover the current process, retain a rolling hour, and reset on restart.
+
 For an existing checkout, run `git submodule update --init` before `docker compose up`. Open [http://127.0.0.1:8000/demo/savanna](http://127.0.0.1:8000/demo/savanna) for the main lesson or [http://127.0.0.1:8000/api/docs](http://127.0.0.1:8000/api/docs) for the API. Stop the stack with:
 
 ```sh

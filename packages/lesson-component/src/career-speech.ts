@@ -22,7 +22,7 @@ export class CareerSpeech {
   private timer?: ReturnType<typeof setTimeout>;
   private readonly recognitionType = (window as SpeechWindow).SpeechRecognition || (window as SpeechWindow).webkitSpeechRecognition;
 
-  constructor(private state: (state: SpeechState) => void, private error: (message: string) => void) {}
+  constructor(private state: (state: SpeechState) => void, private error: (message: string) => void, private locale: 'en-US' | 'am-ET' = 'en-US') {}
 
   get microphoneAvailable() { return !!this.recognitionType; }
 
@@ -58,7 +58,7 @@ export class CareerSpeech {
     try {
       const recognition = new this.recognitionType();
       this.recognition = recognition;
-      recognition.lang = 'en-US';
+      recognition.lang = this.locale;
       recognition.continuous = false;
       recognition.interimResults = false;
       recognition.maxAlternatives = 2;
@@ -104,14 +104,17 @@ export class CareerSpeech {
 
   speak(messages: string[], done?: () => void) {
     this.stop();
+    const missingVoice = this.locale === 'am-ET'
+      ? 'የአማርኛ ንባብ ድምፅ አልተገኘም። በድምፅ ለመፈለግ ወይም በጽሑፍ ለማስገባት ይችላሉ።'
+      : 'No English browser voice is available. Use Listen for a command, the text, or your screen reader.';
     const synthesis = window.speechSynthesis;
     if (!synthesis || typeof SpeechSynthesisUtterance === 'undefined') {
-      this.error('No English browser voice is available. Use Listen for a command, the text, or your screen reader.');
+      this.error(missingVoice);
       return;
     }
     const generation = this.generation;
     const launch = () => {
-      const voices = synthesis.getVoices().filter(candidate => /^en(?:-|$)/i.test(candidate.lang));
+      const voices = synthesis.getVoices().filter(candidate => candidate.lang.toLowerCase().split('-')[0] === this.locale.slice(0, 2));
       const voice = voices.find(candidate => candidate.localService) || voices[0];
       if (!voice) return false;
       clearTimeout(this.timer);
@@ -151,7 +154,7 @@ export class CareerSpeech {
     this.timer = setTimeout(() => {
       if (generation !== this.generation) return;
       this.stop();
-      this.error('No English browser voice is available. Use Listen for a command, the text, or your screen reader.');
+      this.error(missingVoice);
     }, 2000);
   }
 }

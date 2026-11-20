@@ -98,6 +98,7 @@ test('denied microphone, ambiguous numbers, no results and typed cancellation in
 });
 
 test('unconfigured Amharic speech preserves typed search and stable numbering', async ({ page }) => {
+  await mockCareerSpeech(page, { supported: false });
   await mockAddisSpeech(page, { enabled: false });
   await page.goto('/demo/careers');
   const guide = page.locator('.voice-guide');
@@ -225,6 +226,7 @@ test('Amharic playback can be recovered manually without starting a recording', 
 });
 
 test('unconfigured Amharic playback keeps read-aloud and the microphone off', async ({ page }) => {
+  await mockCareerSpeech(page, { supported: false });
   const requests = await mockAddisSpeech(page, { enabled: false });
   await page.goto('/demo/careers');
   const guide = page.locator('.voice-guide');
@@ -253,4 +255,27 @@ test('provider limits restore live errors without automatic retries or speech ov
   expect(await page.evaluate(() => window.__careerAddis.starts)).toBe(0);
   await typeAmharic(guide, 'ሁሉም ሥራዎች');
   await expect(guide.locator('ol li')).toHaveCount(5);
+});
+
+
+test('browser voice search starts without narration and searches in each selected language', async ({ page }) => {
+  await mockCareerSpeech(page, { synthesisAvailable: false });
+  const requests = await mockAddisSpeech(page, { enabled: false });
+  await page.goto('/demo/careers');
+  const guide = page.locator('.voice-guide');
+  await guide.getByRole('checkbox').check();
+  await guide.getByRole('button', { name: 'Start voice search', exact: true }).click();
+  await expect(guide).toHaveAttribute('data-speech-state', 'listening');
+  expect(await page.evaluate(() => window.__careerSpeech.current?.lang)).toBe('en-US');
+  await page.evaluate(() => window.__careerSpeech.respond('library'));
+  await expect(guide.locator('ol li')).toHaveCount(1);
+  await chooseAmharic(guide);
+  await guide.getByRole('button', { name: 'በድምፅ ፍለጋ ጀምር', exact: true }).click();
+  await expect(guide).toHaveAttribute('data-speech-state', 'listening');
+  expect(await page.evaluate(() => window.__careerSpeech.current?.lang)).toBe('am-ET');
+  await page.evaluate(() => window.__careerSpeech.respond('የድር ገንቢ'));
+  await expect(guide.getByRole('textbox')).toHaveValue('የድር ገንቢ');
+  await guide.getByRole('button', { name: 'ትእዛዙን አስፈጽም', exact: true }).click();
+  await expect(guide.getByRole('heading', { name: 'ጀማሪ የድር ገንቢ' })).toBeVisible();
+  expect(requests).toEqual([]);
 });

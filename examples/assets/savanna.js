@@ -61,14 +61,14 @@ const lessons = {
   'alx-transforming-africa': {
     title: 'We Are Transforming Africa',
     introduction: 'Meet the learners and community behind ALX. Watch the introduction, follow the captions, or jump to a passage in the transcript.',
-    duration: '2 min video', download: 'Save lesson video · 20.4 MB',
+    duration: '2 min video',
     excerpt: [[0, '[Music]'], [1, 'I call this the experience of a lifetime.'], [41, "You're going to meet incredible people."]],
     addition: 'EthSL concept animation with an optional ASL draft',
   },
   'w3c-colors-with-good-contrast': {
     title: 'Colors with Good Contrast',
     introduction: 'An attributed W3C WAI practice lesson with Amharic and Tigrigna captions awaiting human review, and standard and audio-described editions.',
-    duration: '1 min video', download: 'Save standard lesson video',
+    duration: '1 min video',
     excerpt: [[5, "There's something about great design"], [7, 'that allows it to go practically unnoticed.'], [15, 'Choosing colors with poor contrast makes navigating, reading, and interacting a real pain.']],
     addition: 'Audio-described video and low-data described audio from the attributed W3C source',
   },
@@ -104,8 +104,6 @@ function setLesson(lessonId) {
   component.setAttribute('lesson-id', selected);
   component.querySelector('a').href = `${base}/downloads/html?version=1`;
   document.querySelector('.change-summary li:last-child').textContent = details.addition;
-  const download = document.querySelector('#lesson-resources a');
-  download.href = `${base}/media/video?version=1`; download.textContent = details.download;
   renderCompletion();
 }
 

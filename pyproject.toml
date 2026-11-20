@@ -17,3 +17,6 @@ where = ["services/core/src", "services/api/src", "services/worker/src"]
 
 [tool.pytest.ini_options]
 testpaths = ["services/api/tests"]
+
+[tool.setuptools.package-data]
+access_core = ["offline_player.html"]

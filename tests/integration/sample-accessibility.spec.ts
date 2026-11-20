@@ -1,0 +1,58 @@
+import { expect, test } from '@playwright/test';
+
+test('Savanna selects a real described lesson by keyboard and preserves the selected lesson URL', async ({ page, request }) => {
+  await page.goto('/demo/savanna');
+  const lesson = page.locator('alx-accessible-lesson');
+  await expect(lesson.getByRole('heading', { name: 'We Are Transforming Africa' })).toBeVisible();
+  await expect(lesson.getByRole('button', { name: 'Use audio-described video' })).toHaveCount(0);
+  const selector = page.getByRole('combobox', { name: 'Demo lesson', exact: true });
+  await selector.focus();
+  await selector.press('c');
+  await expect(selector).toBeFocused();
+  await expect(page).toHaveURL(/lesson=w3c-colors-with-good-contrast/);
+  await expect(lesson.getByRole('heading', { name: 'Colors with Good Contrast' })).toBeVisible();
+  await expect(page.locator('.lesson-heading')).toHaveText('Colors with Good Contrast');
+  await page.setViewportSize({ width: 320, height: 800 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await expect(page.locator('.baseline-video source')).toHaveAttribute('src', /w3c-colors-with-good-contrast\/media\/video\?version=1$/);
+  const transcript = await request.get('/api/v1/lessons/w3c-colors-with-good-contrast/transcripts/am?version=1');
+  expect(transcript.status()).toBe(200);
+  expect((await transcript.json()).status).toBe('machine-translated-review-pending');
+  const described = lesson.getByRole('button', { name: 'Use audio-described video', exact: true });
+  await described.press('Enter');
+  await expect(lesson.getByRole('heading', { name: 'Transcript for the audio-described edition' })).toBeVisible();
+  const video = lesson.getByLabel('Lesson video', { exact: true });
+  await expect.poll(() => video.evaluate((element: HTMLVideoElement) => element.duration)).toBeGreaterThan(98);
+  await video.evaluate(async (element: HTMLVideoElement) => { element.muted = true; await element.play(); });
+  await expect.poll(() => video.evaluate((element: HTMLVideoElement) => element.paused)).toBe(false);
+  await video.evaluate((element: HTMLVideoElement) => element.pause());
+  const audio = await request.get('/api/v1/lessons/w3c-colors-with-good-contrast/media/audio-description?version=1', { headers: { Range: 'bytes=0-1023' } });
+  expect(audio.status()).toBe(206);
+  expect(audio.headers()['content-type']).toBe('audio/mpeg');
+  await page.reload();
+  await expect(selector).toHaveValue('w3c-colors-with-good-contrast');
+  await expect(lesson.getByRole('heading', { name: 'Colors with Good Contrast' })).toBeVisible();
+  await page.goBack();
+  await expect(selector).toHaveValue('alx-transforming-africa');
+  await expect(lesson.getByRole('heading', { name: 'We Are Transforming Africa' })).toBeVisible();
+});
+
+test('ask about jobs in both languages and continue from a completed lesson by keyboard', async ({ page }) => {
+  await page.goto('/demo/savanna?lesson=w3c-colors-with-good-contrast');
+  const help = page.locator('.access-help');
+  await help.locator('summary').first().press('Enter');
+  for (const language of ['en', 'am']) {
+    const question = help.locator('details[lang="' + language + '"]');
+    await question.locator('summary').press('Enter');
+    await expect(question.locator('p')).toBeVisible();
+  }
+  await page.getByRole('button', { name: 'Mark demo lesson complete' }).press('Enter');
+  const next = page.getByRole('link', { name: 'Explore jobs in Career Gateway' });
+  await expect(next).toBeFocused();
+  await next.press('Enter');
+  await expect(page.getByRole('heading', {name: 'Find your next opportunity'})).toBeVisible();
+  await page.getByRole('link', { name: 'Return to Savanna' }).press('Enter');
+  await expect(page.locator('#demo-lesson')).toHaveValue('w3c-colors-with-good-contrast');
+  await expect(page.locator('#mark-complete')).toBeDisabled();
+});

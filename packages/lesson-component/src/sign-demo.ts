@@ -2,23 +2,29 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import type { TimedSegment } from './media-view';
 
-// This demo loads two project-authored assets, both pinned to the ALX fixture.
-export async function mountAslDemo(
+// Both drafts animate the same character and are pinned to the ALX caption revision.
+export async function mountSignDemo(
   host: HTMLElement,
   video: HTMLVideoElement,
   base: URL,
   cues: TimedSegment[],
+  language: 'asl' | 'ethsl',
   signal: AbortSignal,
 ) {
   const loader = new GLTFLoader();
-  const load = async (name: string) => {
-    const response = await fetch(new URL('/demo-assets/asl-demo/' + name, base), { signal, credentials: 'omit' });
+  const load = async (path: string) => {
+    const response = await fetch(new URL('/demo-assets/' + path, base), { signal, credentials: 'omit' });
     if (!response.ok) throw new Error('Animation unavailable');
     return loader.parseAsync(await response.arrayBuffer(), '');
   };
-  const [rig, motion] = await Promise.all([load('avatar.glb'), load('lesson-motion.glb')]);
+  const [rig, motion] = await Promise.all([
+    load('asl-demo/avatar.glb'),
+    load(language + '-demo/lesson-motion.glb'),
+  ]);
   if (signal.aborted) return;
-  const passages = motion.scene.getObjectByName('AccessWoman')?.userData.sourcePassages;
+  const metadata = motion.scene.getObjectByName('AccessWoman')?.userData;
+  if (metadata?.targetLanguage !== (language === 'ethsl' ? 'ethsl' : 'ase')) throw new Error('Unexpected motion language');
+  const passages = metadata.sourcePassages;
   if (!Array.isArray(passages) || passages.length !== cues.length || cues.some((cue, i) => cue.text !== passages[i])) {
     throw new Error('The demo animation belongs to a different caption revision');
   }

@@ -19,7 +19,7 @@ from starlette.staticfiles import StaticFiles
 
 from access_core.lessons import (
     EXAMPLE_CAPTION_TRANSLATIONS, EXAMPLE_ID, EXAMPLE_VIDEO, W3C_DIRECTORY, W3C_ID, Lesson, Segment,
-    captions_vtt, export_lesson, get_lesson,
+    captions_vtt, export_lesson, get_lesson, transcript_segments,
 )
 from access_core.offline_video import Edition, offline_video_path
 from access_core.jobs import JOBS, DemoVerification, Job, verify_demo
@@ -46,6 +46,7 @@ class Transcript(BaseModel):
     content_version: int
     language: str
     timing: Literal["source-draft", "untimed-text"]
+    status: Literal["source-draft", "source-reviewed", "machine-translated-review-pending", "human-reviewed", "synthetic-demo"]
     segments: tuple[Segment, ...]
 
 
@@ -255,15 +256,18 @@ def manifest(request: Request, lesson_id: str, version: int = Query(1, ge=1)):
 @app.get("/api/v1/lessons/{lesson_id}/transcripts/{language}", response_model=Transcript, tags=["Lessons"])
 def transcript(lesson_id: str, language: str, version: int = Query(1, ge=1)):
     lesson = resolve(lesson_id, version)
-    if language != lesson.language:
-        raise HTTPException(404)
-    return {"lesson_id": lesson.lesson_id, "content_version": version, "language": language, "timing": "source-draft" if lesson.media else "untimed-text", "segments": lesson.segments}
+    try:
+        segments = transcript_segments(lesson, language)
+    except KeyError:
+        raise HTTPException(404) from None
+    status = next(track.status for track in lesson.media.caption_tracks if track.language == language) if lesson.media else "synthetic-demo"
+    return {"lesson_id": lesson.lesson_id, "content_version": version, "language": language, "timing": "source-draft" if lesson.media else "untimed-text", "status": status, "segments": segments}
 
 
 @app.get("/api/v1/lessons/{lesson_id}/media/{kind}", tags=["Lessons"], response_class=Response,
          responses={200: {"content": {"text/vtt": {"schema": {"type": "string"}}, **file_contents("video/mp4", "audio/mpeg")}},
                     206: {"description": "Partial file response", "content": file_contents("video/mp4", "audio/mpeg", "text/vtt")}})
-def media(lesson_id: str, kind: Literal["video", "captions", "captions-am", "captions-om", "captions-ti", "described-video", "described-captions", "audio", "described-audio", "sign-video"], version: int = Query(1, ge=1)):
+def media(lesson_id: str, kind: Literal["video", "captions", "captions-am", "captions-om", "captions-ti", "described-video", "described-captions", "audio", "described-audio", "audio-description", "sign-video"], version: int = Query(1, ge=1)):
     lesson = resolve(lesson_id, version)
     # Public interpretation is delivered by the review-bound signing asset route.
     if lesson.media is None or kind == "sign-video":
@@ -278,6 +282,7 @@ def media(lesson_id: str, kind: Literal["video", "captions", "captions-am", "cap
             "described-captions": (W3C_DIRECTORY / "captions-described.en.vtt", "text/vtt"),
             "audio": (W3C_DIRECTORY / "audio.mp3", "audio/mpeg"),
             "described-audio": (W3C_DIRECTORY / "audio-described.mp3", "audio/mpeg"),
+            "audio-description": (W3C_DIRECTORY / "audio-described.mp3", "audio/mpeg"),
         }
         asset = assets.get(kind)
         if asset is None:

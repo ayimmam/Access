@@ -85,6 +85,8 @@ const styles = `
   .sign-panel { flex:0 0 300px; padding:1rem; color:#fff; background:#172d38; border-radius:.5rem; }
   .sign-panel h3 { margin:.25rem 0 .75rem; } .sign-panel p { font-size:.85rem; }
   .sign-below { flex-wrap:wrap; } .sign-below .sign-panel { flex-basis:100% !important; }
+  .avatar-panel label { grid-template-columns:minmax(0,1fr); }
+  .avatar-panel select { width:100%; min-width:0; }
   .avatar-panel h3 { margin:.25rem 0; } .avatar-panel p { font-size:.8rem; line-height:1.5; }
   .prototype-label { color:#633a13; } .avatar-canvas { width:100%; aspect-ratio:1.1; } .avatar-clock { font-variant-numeric:tabular-nums; }
   .interpreter-video { width:100%; aspect-ratio:1; object-fit:contain; }

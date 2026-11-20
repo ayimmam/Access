@@ -42,7 +42,7 @@ See the component on an [independent learning platform](https://access-ethioware
 
 ### Savanna static page example
 
-The [original Savanna concept page](Savanna-static-pages/pages/concept-with-navigation.html) is the layout reference. The [Access integration example](examples/savanna/index.html) mounts the component inside the lesson content area. Try the [hosted Savanna demo](https://access-plugin.onrender.com/demo/savanna), or open `http://127.0.0.1:8000/demo/savanna` after starting Compose.
+The [original Savanna concept page](Savanna-static-pages/pages/concept-with-navigation.html) is the layout reference. The [Access integration example](examples/savanna/index.html) mounts the component inside the lesson content area. Try the [hosted Savanna demo](https://access-plugin.onrender.com/demo/savanna), or open `http://127.0.0.1:8000/demo/savanna` after starting Compose. Use the **Demo lesson** selector to choose the attributed W3C lesson for audio description, or open `/demo/savanna?lesson=w3c-colors-with-good-contrast` directly. The ALX introduction has no described recording; translated captions and transcripts remain review pending.
 
 For this sample, use the e-learning script above with the following element. The relative URLs work when Access serves both the demo page and the API. If you serve a copy on another origin, use absolute Access URLs and configure the allowed origin as described above.
 
@@ -86,7 +86,7 @@ These public `GET` routes are relative to `/api/v1` and require no learner crede
 | Route | Response |
 | --- | --- |
 | `/lessons/{lesson_id}/manifest?version=1` | Lesson metadata, transcript segments and available media |
-| `/lessons/{lesson_id}/transcripts/en?version=1` | English transcript, with timestamps when available |
+| `/lessons/{lesson_id}/transcripts/{language}?version=1` | Source or available translated caption segments, with timestamps and explicit review status |
 | `/lessons/{lesson_id}/exports?version=1` | Download links, formats, sizes and SHA-256 hashes |
 | `/jobs` | Fictional job listings and workplace support |
 | `/jobs/{job_id}/structured-data` | Schema.org JobPosting data |

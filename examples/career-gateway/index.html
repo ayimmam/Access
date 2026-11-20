@@ -12,9 +12,18 @@
   <a class="skip" href="#jobs">Skip to jobs</a>
   <div class="announcement">A career gateway for everyone. <a href="#accessibility">Explore the accessibility tools</a></div>
   <header><a class="brand" href="/demo/careers">afriwork<span> × Access demo</span></a>
-    <nav aria-label="Demo navigation"><a href="#jobs" aria-current="page">Explore jobs</a><a href="/demo/ethioware">Learning</a><a href="/demo/plug-in">Install Access</a><a href="/demo/privacy">Privacy and sessions</a></nav>
+    <nav aria-label="Demo navigation"><a href="#jobs" aria-current="page">Explore jobs</a><a data-savanna-return href="/demo/savanna">Return to Savanna</a><a href="/demo/plug-in">Install Access</a><a href="/demo/privacy">Privacy and sessions</a></nav>
   </header>
   <main id="jobs">
+    <details class="access-help" translate="no">
+      <summary><span lang="en">Ask Access</span> · <span lang="am">አክሰስን ይጠይቁ</span></summary>
+      <details lang="en"><summary>How can I find jobs after a lesson?</summary>
+        <p>In Savanna, choose “Mark demo lesson complete”, then “Explore jobs in Career Gateway”. You can also open Career Gateway from the main navigation. <a href="/demo/savanna">Open Savanna</a></p>
+      </details>
+      <details lang="am"><summary>ከትምህርቱ በኋላ ሥራ እንዴት ማግኘት እችላለሁ?</summary>
+        <p>በሳቫና ውስጥ ትምህርቱን እንዳጠናቀቁ ምልክት ያድርጉ። ከዚያ በCareer Gateway ውስጥ ሥራዎችን ለማሰስ የሚለውን አገናኝ ይምረጡ። Career Gatewayን ከዋናው ምናሌም መክፈት ይችላሉ። <a href="/demo/savanna">ሳቫናን ይክፈቱ</a></p>
+      </details>
+    </details>
     <div class="demo-language-bar">
       <label for="demo-language">Page language</label>
       <select id="demo-language" aria-describedby="demo-language-status" translate="no">
@@ -36,7 +45,7 @@
     </section>
   </main>
     <nav class="demo-links" aria-label="Demo pages">
-      <a href="/demo/savanna">Savanna lesson</a>
+      <a data-savanna-return href="/demo/savanna">Savanna lesson</a>
       <a href="/demo/ethioware">Ethioware demo</a>
       <a href="/docs">API documentation</a>
     </nav>

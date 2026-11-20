@@ -1,5 +1,11 @@
 // Shared demo loader. Hosts use the same versioned artifacts and integrity file.
 const origin = new URL(import.meta.url).origin;
+const sourceLesson = new URLSearchParams(location.search).get('lesson');
+if (['alx-transforming-africa', 'w3c-colors-with-good-contrast'].includes(sourceLesson)) {
+  for (const link of document.querySelectorAll('[data-savanna-return]')) {
+    link.href = '/demo/savanna?lesson=' + sourceLesson + '#curriculum_navigation_content';
+  }
+}
 const status = document.querySelector('#release-status');
 try {
   const response = await fetch(`${origin}/components/0.1.0/integrity.json`, { credentials: 'omit' });

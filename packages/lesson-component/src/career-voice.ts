@@ -108,7 +108,7 @@ export class CareerVoice {
     const englishLabel = element('span', 'Voice language / '); englishLabel.lang = 'en';
     const amharicLabel = element('span', 'የድምፅ ቋንቋ'); amharicLabel.lang = 'am';
     const languageText = element('span'); languageText.append(englishLabel, amharicLabel);
-    for (const [value, label] of [['en', 'English'], ['am', 'አማርኛ (Addis AI)']]) {
+    for (const [value, label] of [['en', 'English'], ['am', 'አማርኛ']]) {
       const option = element('option', label); option.value = value; option.lang = value; this.languageSelect.append(option);
     }
     languageLabel.append(languageText, this.languageSelect);
@@ -154,7 +154,7 @@ export class CareerVoice {
     this.root.dataset.speechState = state;
     const message = this.text(({ off: 'Microphone off.', starting: 'Waiting for microphone permission…', listening: 'Microphone listening for one response. Use Stop to cancel.', speaking: 'Reading aloud. Microphone off.', transcribing: 'Transcribing. Microphone off.', preparing: 'Preparing audio. Microphone off.' })[state]);
     if (this.state.textContent !== message) this.state.textContent = message;
-    this.finishButton.hidden = this.language !== 'am' || state !== 'listening';
+    this.finishButton.hidden = !(this.speech instanceof AddisCareerSpeech) || state !== 'listening';
   }
   private async changeLanguage() {
     this.launchGeneration++; this.handsFree = false; this.languageController?.abort(); this.speech.stop(); this.clearError();
@@ -168,15 +168,23 @@ export class CareerVoice {
       this.speech.stop();
       this.language = selected; this.root.lang = selected;
       this.liveMode();
-      this.speech = selected === 'am'
+      const browserSpeech = new CareerSpeech(state => this.speechState(state), message => this.speechFailed(message),
+        selected === 'am' ? 'am-ET' : 'en-US');
+      const browserAmharic = selected === 'am' && !this.catalog!.speech_enabled && browserSpeech.microphoneAvailable;
+      this.speech = selected === 'am' && !browserAmharic
         ? new AddisCareerSpeech(this.base, this.catalog!.speech_enabled, this.player, state => this.speechState(state), message => this.speechFailed(message))
-        : new CareerSpeech(state => this.speechState(state), message => this.speechFailed(message));
+        : browserSpeech;
       this.root.querySelectorAll<HTMLElement>('[data-voice-label]').forEach(node => { node.textContent = this.text(node.dataset.voiceLabel!); });
       this.privacy.textContent = selected === 'am' ? this.catalog!.privacy : this.privacy.dataset.english!;
       this.help.textContent = selected === 'am' ? this.catalog!.help : this.help.dataset.english!;
       this.speechHelp.textContent = selected === 'am' ? this.catalog!.speech_help : this.speechHelp.dataset.english!;
       this.providerStatus.hidden = selected !== 'am';
       this.providerStatus.textContent = selected === 'am' ? this.text(this.catalog!.speech_enabled ? 'Amharic voice uses Addis AI. Record one command, then review its text before running it.' : unconfiguredSpeech) : '';
+      if (browserAmharic) {
+        this.privacy.textContent = 'ድምፅዎን ለመለየት አሳሹ ቀረጻውን ወደ ድምፅ አገልግሎቱ ሊልክ ይችላል። የግል መረጃ አይናገሩ።';
+        this.providerStatus.textContent = 'የአሳሹ የአማርኛ ድምፅ ፍለጋ';
+        this.speechHelp.textContent = 'በድምፅ ፍለጋ ጀምር ይጫኑ፣ የሥራውን ስም ይናገሩ፣ ከዚያ ጽሑፉን ያረጋግጡ።';
+      }
       this.listenButton.disabled = !this.speech.microphoneAvailable;
       this.mode = 'role'; this.lastSpeech = []; this.lastPrompt = undefined; this.numbersReady = false;
       this.content.replaceChildren(); this.command.value = ''; this.setNavigation(); this.actions.guideActive(false);
@@ -259,6 +267,11 @@ export class CareerVoice {
     const prompt = this.text(rolePrompt);
     const messages = this.handsFree ? [this.text(welcomePrompt), prompt] : [prompt];
     this.message.textContent = messages.join(' '); this.command.focus();
+    if (microphone && this.speech instanceof CareerSpeech) {
+      this.lastSpeech = messages; this.lastPrompt = { kind: 'role' };
+      this.listen();
+      return;
+    }
     this.speak(messages, microphone ? () => this.listen() : undefined, { kind: 'role' });
   }
   stop(stopRecording = true) {

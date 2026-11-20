@@ -330,9 +330,10 @@ test('speech is serialized, stopped on hide, and uses an available English brows
   const guide = page.getByRole('region', { name: 'Optional voice navigation' });
   await guide.getByLabel('Read prompts and results aloud').check();
   await guide.getByRole('button', { name: 'Start voice search', exact: true }).click();
+  await automaticCommand(page, guide, 'all jobs');
   await expect(guide).toHaveAttribute('data-speech-state', 'speaking');
   await guide.getByRole('button', { name: 'Stop', exact: true }).click();
-  expect(await page.evaluate(() => window.__careerSpeech.starts)).toBe(0);
+  expect(await page.evaluate(() => window.__careerSpeech.starts)).toBe(1);
   await guide.getByRole('button', { name: 'Listen for a command', exact: true }).click();
   await page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: true }); document.dispatchEvent(new Event('visibilitychange')); });
   await expect(guide).toHaveAttribute('data-speech-state', 'off');

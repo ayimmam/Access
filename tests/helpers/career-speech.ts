@@ -15,6 +15,7 @@ export async function mockCareerSpeech(page: Page, options: { supported?: boolea
       deliverLate(text: string) { this.late?.({ resultIndex: 0, results: [{ isFinal: true, length: 1, 0: { transcript: text, confidence: 0.99 } }] }); },
     };
     class MockRecognition {
+      lang = "";
       onstart?: () => void;
       onresult?: (event: unknown) => void;
       onerror?: (event: { error: string }) => void;
@@ -50,6 +51,7 @@ export async function mockCareerSpeech(page: Page, options: { supported?: boolea
 }
 
 type SpeechHarness = {
+  current?: { lang: string };
   respond(text: string, confidence?: number, second?: string): void;
   deny(): void; capture(): void; deliverLate(text: string): void;
   spoken: string[]; overlaps: string[]; starts: number; aborts: number; cancels: number; microphone: boolean; speaking: boolean;

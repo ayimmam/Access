@@ -12,6 +12,7 @@ function pauseLessonMedia(mode) {
 function setExperience(mode, announce = true) {
   const selected = mode === 'before' ? 'before' : 'after';
   document.documentElement.dataset.accessMode = selected;
+  document.querySelector('alx-accessible-lesson')?.toggleAttribute('voice-paused', selected === 'before');
   document.querySelectorAll('[data-experience-view]').forEach(view => { view.hidden = view.dataset.experienceView !== selected; });
   document.querySelectorAll('[data-mode]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.mode === selected)));
   pauseLessonMedia(selected);

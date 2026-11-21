@@ -26,6 +26,10 @@ test('exact local rig review hides source before observation and never grants ap
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.goto('/demo/avatar-review');
+  await expect(page.locator('#avatar canvas')).toBeVisible();
+  await expect(page.locator('#motion')).toContainText('Neutral 3D hands preview');
+  await expect(page.locator('#play')).toBeDisabled();
+  await expect(page.locator('#save')).toBeDisabled();
   await page.getByLabel('Load a language manifest and its GLB files').setInputFiles(studyFiles);
   await page.getByRole('button', { name: 'Load draft performance', exact: true }).click();
   await expect(page.locator('#status')).toContainText('0 draft clips · 16 phrase slots');
@@ -69,7 +73,8 @@ test('local importer rejects changed rig bytes and ASL studies', async ({ page }
     ]);
     await page.getByRole('button', { name: 'Load draft performance' }).click();
     await expect(page.locator('#status')).toContainText(expected);
-    await expect(page.locator('#avatar canvas')).toHaveCount(0);
+    await expect(page.locator('#avatar canvas')).toHaveCount(1);
+    await expect(page.locator('#motion')).toContainText('Neutral 3D hands preview');
     data.language = 'asl';
   }
 });
@@ -90,7 +95,8 @@ test('local importer preserves source phrase traceability', async ({ page }) => 
     ]);
     await page.getByRole('button', { name: 'Load draft performance' }).click();
     await expect(page.locator('#status')).toContainText('Study unavailable.');
-    await expect(page.locator('#avatar canvas')).toHaveCount(0);
+    await expect(page.locator('#avatar canvas')).toHaveCount(1);
+    await expect(page.locator('#motion')).toContainText('Neutral 3D hands preview');
   }
 });
 

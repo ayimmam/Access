@@ -1,7 +1,8 @@
 import type { Job } from './career-element';
-import { CareerSpeech, type SpeechState } from './career-speech';
-import { AddisCareerSpeech } from './career-addis-speech';
-import { amharicCommand, emptyResults, loadAmharicCatalog, resultHelp, rolePrompt, unconfiguredSpeech, welcomePrompt, type AmharicCatalog, type SpeechPrompt } from './career-amharic';
+import type { SpeechState } from './career-speech';
+import { speechStatus, VoiceSession } from './voice-session';
+import { emptyResults, loadAmharicCatalog, resultHelp, rolePrompt, unconfiguredSpeech, welcomePrompt, type AmharicCatalog, type SpeechPrompt } from './career-amharic';
+import { careerCommandKey, parseCareerCommand } from './career-command';
 
 interface GatewayActions {
   search(query: string): Job[];
@@ -20,7 +21,6 @@ const fields: { key: DraftField; label: string; question: string; limit: number;
   { key: 'introduction', label: 'Introduction', question: 'What would you like this fictional employer to know about you?', limit: 600, required: true },
   { key: 'experience', label: 'Relevant experience', question: 'Would you like to add an example of relevant experience? You can skip this.', limit: 600, required: false },
 ];
-const numbers = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen'];
 
 function element<K extends keyof HTMLElementTagNameMap>(tag: K, text?: string): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag);
@@ -46,7 +46,7 @@ export class CareerVoice {
   private readonly previousButton = action('Previous', () => this.move(-1));
   private readonly repeatButton = action('Repeat', () => this.repeat());
   private readonly finishButton = action('Use recording', () => {
-    if (this.speech instanceof AddisCareerSpeech) { this.speech.finishRecording(); this.command.focus(); }
+    this.session.finishRecording(); this.command.focus();
   });
   private readonly languageSelect = element('select');
   private readonly player = element('audio');
@@ -54,7 +54,7 @@ export class CareerVoice {
   private readonly privacy = element('p');
   private readonly speechHelp = element('p');
   private readonly help = element('p');
-  private speech: CareerSpeech | AddisCareerSpeech;
+  private readonly session: VoiceSession;
   private language: 'en' | 'am' = 'en';
   private catalog?: AmharicCatalog;
   private languageController?: AbortController;
@@ -68,8 +68,6 @@ export class CareerVoice {
   private pageIds = new Map<number, Job>();
   private numbersReady = false;
   private lastSpeech: string[] = [];
-  private handsFree = false;
-  private launchGeneration = 0;
   private voiceOffered = false;
   private draft?: { job: Job; values: Partial<Record<DraftField, string>> };
   private draftOpener?: HTMLElement;
@@ -78,7 +76,12 @@ export class CareerVoice {
   private readonly pageHide = () => this.suspend();
 
   constructor(private actions: GatewayActions, private base: URL, private autoStart = false) {
-    this.speech = new CareerSpeech(state => this.speechState(state), message => this.speechFailed(message));
+    this.session = new VoiceSession({
+      player: this.player, base: this.base,
+      available: () => !this.paused && !document.hidden && this.root.isConnected && !this.draft && !this.languageController,
+      readAloud: () => this.output.checked, beforeAudio: () => this.actions.stopRecorded(),
+      state: state => this.speechState(state), error: message => this.speechFailed(message),
+    });
     this.root.className = 'voice-guide';
     this.root.dataset.speechState = 'off';
     this.root.setAttribute('aria-labelledby', 'voice-title');
@@ -100,7 +103,7 @@ export class CareerVoice {
     this.output.checked = this.autoStart;
     outputLabel.append(this.output, element('span', 'Read prompts and results aloud'));
     const speechHelp = this.speechHelp; speechHelp.textContent = 'On hosts with automatic voice startup, English read-aloud is on when the page loads. Turn it off or choose Use typed search for screen-reader announcements. Your browser may process fictional prompt text. After each spoken response, the microphone listens for one command, then switches off while the guide speaks. First-time microphone access still needs Start voice search and browser permission. Stop, errors or hiding the guide end listening. If playback is blocked, turn read-aloud back on and choose Start voice search, or use typed search.'; speechHelp.className = 'note';
-    this.output.addEventListener('change', () => { this.launchGeneration++; this.handsFree = false; this.speech.stop(); this.liveMode(); });
+    this.output.addEventListener('change', () => { this.session.stop(); this.liveMode(); });
     const controls = element('div'); controls.className = 'actions';
     controls.append(this.startButton, action('Use typed search', () => this.start(false)), this.listenButton, this.finishButton, action('Stop', () => this.stop()));
     this.finishButton.hidden = true;
@@ -122,7 +125,7 @@ export class CareerVoice {
     const form = element('form'); form.autocomplete = 'off';
     const label = element('label'); const commandLabel = element('span', 'Role or command'); label.append(commandLabel); this.command.type = 'text'; this.command.maxLength = 160;
     this.command.setAttribute('aria-describedby', 'voice-help voice-error'); label.append(this.command);
-    this.command.addEventListener('input', () => { this.launchGeneration++; this.handsFree = false; this.speech.stop(); });
+    this.command.addEventListener('input', () => { this.session.stop(); });
     const submit = element('button', 'Run typed command'); submit.type = 'submit';
     form.addEventListener('submit', event => { event.preventDefault(); const value = this.command.value; this.command.value = ''; this.run(value); });
     form.append(label, submit);
@@ -137,8 +140,8 @@ export class CareerVoice {
     this.root.lang = 'en';
     this.root.append(style, title, languageLabel, privacy, this.providerStatus, outputLabel, speechHelp, controls, this.player, this.state, this.message, this.error, form, help, navigation, this.content, this.dialog);
     this.liveMode();
-    this.listenButton.disabled = !this.speech.microphoneAvailable;
-    if (!this.speech.microphoneAvailable) this.state.textContent = 'Speech recognition unavailable. Use typed search and keyboard controls.';
+    this.listenButton.disabled = !this.session.microphoneAvailable;
+    if (!this.session.microphoneAvailable) this.state.textContent = 'Speech recognition unavailable. Use typed search and keyboard controls.';
     this.setNavigation();
     document.addEventListener('visibilitychange', this.visibility);
     window.addEventListener('pagehide', this.pageHide);
@@ -152,12 +155,12 @@ export class CareerVoice {
   private job(job: Job): Job { return this.language === 'am' && this.catalog?.jobs[job.id] ? { ...job, ...this.catalog.jobs[job.id] } : job; }
   private speechState(state: SpeechState) {
     this.root.dataset.speechState = state;
-    const message = this.text(({ off: 'Microphone off.', starting: 'Waiting for microphone permission…', listening: 'Microphone listening for one response. Use Stop to cancel.', speaking: 'Reading aloud. Microphone off.', transcribing: 'Transcribing. Microphone off.', preparing: 'Preparing audio. Microphone off.' })[state]);
+    const message = this.text(speechStatus[state]);
     if (this.state.textContent !== message) this.state.textContent = message;
-    this.finishButton.hidden = !(this.speech instanceof AddisCareerSpeech) || state !== 'listening';
+    this.finishButton.hidden = !this.session.usesAddis || state !== 'listening';
   }
   private async changeLanguage() {
-    this.launchGeneration++; this.handsFree = false; this.languageController?.abort(); this.speech.stop(); this.clearError();
+    this.languageController?.abort(); this.session.stop(); this.clearError();
     const selected = this.languageSelect.value === 'am' ? 'am' : 'en';
     const controller = new AbortController(); this.languageController = controller;
     const timer = setTimeout(() => controller.abort(), 10000);
@@ -165,15 +168,10 @@ export class CareerVoice {
     try {
       if (selected === 'am') this.catalog = await loadAmharicCatalog(this.base, controller.signal);
       if (controller.signal.aborted || this.paused) return;
-      this.speech.stop();
       this.language = selected; this.root.lang = selected;
       this.liveMode();
-      const browserSpeech = new CareerSpeech(state => this.speechState(state), message => this.speechFailed(message),
-        selected === 'am' ? 'am-ET' : 'en-US');
-      const browserAmharic = selected === 'am' && !this.catalog!.speech_enabled && browserSpeech.microphoneAvailable;
-      this.speech = selected === 'am' && !browserAmharic
-        ? new AddisCareerSpeech(this.base, this.catalog!.speech_enabled, this.player, state => this.speechState(state), message => this.speechFailed(message))
-        : browserSpeech;
+      this.session.configure(selected, this.catalog?.speech_enabled);
+      const browserAmharic = selected === 'am' && !this.session.usesAddis;
       this.root.querySelectorAll<HTMLElement>('[data-voice-label]').forEach(node => { node.textContent = this.text(node.dataset.voiceLabel!); });
       this.privacy.textContent = selected === 'am' ? this.catalog!.privacy : this.privacy.dataset.english!;
       this.help.textContent = selected === 'am' ? this.catalog!.help : this.help.dataset.english!;
@@ -185,7 +183,7 @@ export class CareerVoice {
         this.providerStatus.textContent = 'የአሳሹ የአማርኛ ድምፅ ፍለጋ';
         this.speechHelp.textContent = 'በድምፅ ፍለጋ ጀምር ይጫኑ፣ የሥራውን ስም ይናገሩ፣ ከዚያ ጽሑፉን ያረጋግጡ።';
       }
-      this.listenButton.disabled = !this.speech.microphoneAvailable;
+      this.listenButton.disabled = !this.session.microphoneAvailable;
       this.mode = 'role'; this.lastSpeech = []; this.lastPrompt = undefined; this.numbersReady = false;
       this.content.replaceChildren(); this.command.value = ''; this.setNavigation(); this.actions.guideActive(false);
       this.message.textContent = this.text('Choose Start voice search or Use typed search.'); this.speechState('off');
@@ -203,16 +201,14 @@ export class CareerVoice {
   private async offerVoiceStart() {
     if (this.voiceOffered || this.paused || document.hidden || !this.root.isConnected) return;
     this.voiceOffered = true;
-    const generation = this.launchGeneration;
     this.message.textContent = `${this.text(welcomePrompt)} ${this.text('Choose Start voice search or Use typed search.')}`;
     if (document.activeElement === document.body) this.startButton.focus();
-    let permission: PermissionState | undefined;
-    try { permission = (await navigator.permissions.query({ name: 'microphone' as PermissionName })).state; } catch {}
-    if (generation !== this.launchGeneration || this.paused || document.hidden || !this.root.isConnected || !this.output.checked) return;
-    this.handsFree = permission === 'granted' && this.speech.microphoneAvailable;
     const messages = [this.text(welcomePrompt), this.text(rolePrompt)];
-    this.message.textContent = messages.join(' ');
-    this.speak(messages, undefined, { kind: 'welcome' });
+    const prompt = { kind: 'welcome' } as const;
+    await this.session.offerEnglishGreeting(messages, () => this.listen(), prompt, () => {
+      this.message.textContent = messages.join(' ');
+      this.lastSpeech = messages; this.lastPrompt = prompt; this.setNavigation();
+    });
   }
 
   private liveMode() {
@@ -222,12 +218,12 @@ export class CareerVoice {
 
   private clearError() { this.error.textContent = ''; this.command.removeAttribute('aria-invalid'); }
   private speechFailed(message: string) {
-    this.handsFree = false;
+    this.session.handsFree = false;
     this.output.checked = false; this.liveMode();
     this.error.textContent = this.text(message);
   }
   private fail(message: string) {
-    this.handsFree = false;
+    this.session.handsFree = false;
     if (this.language === 'am') { this.output.checked = false; this.liveMode(); }
     this.error.textContent = this.text(message);
     this.command.setAttribute('aria-invalid', 'true');
@@ -236,38 +232,30 @@ export class CareerVoice {
   private speak(messages: string[], done?: () => void, prompt = this.lastPrompt) {
     this.lastSpeech = messages; this.lastPrompt = prompt;
     this.setNavigation();
-    const completed = done || (this.handsFree ? () => this.listen() : undefined);
-    if (this.output.checked && !this.paused && !this.draft) {
-      this.actions.stopRecorded();
-      if (this.speech instanceof AddisCareerSpeech) { if (prompt) this.speech.speak(prompt, completed); }
-      else this.speech.speak(messages, completed);
-    }
-    else completed?.();
+    this.session.speak(messages, prompt, () => this.listen(), done);
   }
   private listen() {
     if (this.paused || document.hidden || !this.root.isConnected || this.draft || this.languageController) return;
-    this.launchGeneration++;
-    this.handsFree = this.output.checked && this.language === 'en';
-    this.clearError(); this.actions.stopRecorded();
-    this.speech.listen(text => {
+    this.clearError();
+    this.session.listen(text => {
       if (this.language === 'am') {
         this.command.value = text;
         this.message.textContent = this.text('Heard: {command}. Review or edit it, then choose Run typed command. Nothing has changed yet.', { command: text });
         this.command.focus();
       } else this.run(text);
-    });
+    }, text => careerCommandKey(text, this.language, this.mode === 'role'));
   }
   private start(microphone: boolean) {
     if (this.paused || this.draft || this.languageController) return;
-    this.launchGeneration++;
+    this.session.stop();
     if (!microphone) { this.output.checked = false; this.liveMode(); }
-    this.handsFree = microphone && this.output.checked && this.language === 'en';
+    this.session.handsFree = microphone && this.output.checked && this.language === 'en';
     this.actions.guideActive(false);
-    this.speech.stop(); this.clearError(); this.mode = 'role'; this.content.replaceChildren(); this.setNavigation();
+    this.clearError(); this.mode = 'role'; this.content.replaceChildren(); this.setNavigation();
     const prompt = this.text(rolePrompt);
-    const messages = this.handsFree ? [this.text(welcomePrompt), prompt] : [prompt];
+    const messages = this.session.handsFree ? [this.text(welcomePrompt), prompt] : [prompt];
     this.message.textContent = messages.join(' '); this.command.focus();
-    if (microphone && this.speech instanceof CareerSpeech) {
+    if (microphone && !this.session.usesAddis) {
       this.lastSpeech = messages; this.lastPrompt = { kind: 'role' };
       this.listen();
       return;
@@ -275,9 +263,7 @@ export class CareerVoice {
     this.speak(messages, microphone ? () => this.listen() : undefined, { kind: 'role' });
   }
   stop(stopRecording = true) {
-    this.launchGeneration++;
-    this.handsFree = false;
-    this.speech.stop(); if (stopRecording) this.actions.stopRecorded();
+    this.session.stop(); if (stopRecording) this.actions.stopRecorded();
     this.command.value = '';
     this.message.textContent = this.text('Voice navigation stopped. Typed controls still work. Saved jobs stay for this page session.');
   }
@@ -297,9 +283,9 @@ export class CareerVoice {
     window.removeEventListener('pagehide', this.pageHide);
   }
 
-  resultsWillChange() { this.speech.stop(); this.numbersReady = false; }
+  resultsWillChange() { this.session.stop(); this.numbersReady = false; }
   resultsChanged(jobs: Job[]) {
-    this.speech.stop(); this.matches = [...jobs]; this.page = 0;
+    this.session.interrupt(); this.matches = [...jobs]; this.page = 0;
     if (this.draft) return;
     if (this.mode === 'role') return;
     this.mode = 'results'; this.renderResults(false, false);
@@ -311,7 +297,7 @@ export class CareerVoice {
     const saved = new Set(this.actions.savedJobs().map(job => job.id));
     this.content.querySelectorAll<HTMLButtonElement>('[data-save-id]').forEach(button => button.setAttribute('aria-pressed', String(saved.has(button.dataset.saveId!))));
     if (this.mode === 'shortlist' && !this.draft) {
-      this.speech.stop();
+      this.session.interrupt();
       const index = this.actions.savedJobs().findIndex(job => job.id === this.shortlistId);
       if (index >= 0) this.shortlistIndex = index;
       this.renderShortlist(false, false);
@@ -320,7 +306,7 @@ export class CareerVoice {
 
   private search(query: string) {
     this.actions.guideActive(true);
-    this.speech.stop(); this.matches = this.actions.search(query); this.page = 0; this.mode = 'results'; this.renderResults();
+    this.session.interrupt(); this.matches = this.actions.search(query); this.page = 0; this.mode = 'results'; this.renderResults();
   }
   private pageMessage() {
     if (this.language === 'am') return this.matches.length ? this.text('{count} jobs found. Results {first} to {last}.', { count: this.matches.length, first: this.page * 5 + 1, last: Math.min(this.page * 5 + 5, this.matches.length) }) : this.text(emptyResults);
@@ -328,7 +314,7 @@ export class CareerVoice {
   }
   private focusTitle(title: HTMLElement, focus: boolean) { title.tabIndex = -1; if (focus) title.focus(); }
   private renderResults(focus = true, read = true) {
-    this.speech.stop(); this.numbersReady = true;
+    this.session.interrupt(); this.numbersReady = true;
     const title = element('h4', this.text('Guided search results'));
     const list = element('ol'); list.start = this.page * 5 + 1;
     this.pageIds = new Map(this.matches.slice(this.page * 5, this.page * 5 + 5).map((job, index) => [this.page * 5 + index + 1, job]));
@@ -351,12 +337,12 @@ export class CareerVoice {
     if (read) this.speak(spoken);
   }
   private saveJobs(jobs: Job[]) {
-    this.speech.stop(); this.clearError(); jobs.forEach(job => this.actions.save(job.id)); this.savedChanged();
+    this.session.interrupt(); this.clearError(); jobs.forEach(job => this.actions.save(job.id)); this.savedChanged();
     const message = this.text('Saved for this session: {titles}. Use Shortlist to review saved jobs.', { titles: jobs.map(job => this.job(job).title).join(this.language === 'am' ? '፤ ' : '; ') });
     this.message.textContent = message; this.speak([message], undefined, { kind: 'saved', job_ids: jobs.map(job => job.id) });
   }
   private details(job: Job) {
-    this.speech.stop(); this.clearError(); this.mode = 'details'; this.detailJob = job;
+    this.session.interrupt(); this.clearError(); this.mode = 'details'; this.detailJob = job;
     const copy = this.job(job);
     const title = element('h4', this.text('Details — {title}', { title: copy.title }));
     const tasks = element('ul'); copy.responsibilities.forEach(task => tasks.append(element('li', task)));
@@ -370,7 +356,7 @@ export class CareerVoice {
   }
   private backToResults() { this.actions.guideActive(true); this.clearError(); this.matches = this.actions.showResults(); this.page = Math.min(this.page, Math.max(0, Math.ceil(this.matches.length / 5) - 1)); this.mode = 'results'; this.renderResults(); }
   private move(direction: number) {
-    this.speech.stop(); this.clearError();
+    this.session.interrupt(); this.clearError();
     if (this.mode === 'shortlist') {
       const next = this.shortlistIndex + direction;
       if (next < 0 || next >= this.actions.savedJobs().length) { this.fail('There are no more jobs in that direction.'); return; }
@@ -397,7 +383,7 @@ export class CareerVoice {
   }
   private openShortlist() {
     this.actions.guideActive(true);
-    this.speech.stop(); this.clearError(); this.actions.showSaved(); this.mode = 'shortlist'; this.shortlistIndex = 0; this.renderShortlist();
+    this.session.interrupt(); this.clearError(); this.actions.showSaved(); this.mode = 'shortlist'; this.shortlistIndex = 0; this.renderShortlist();
   }
   private renderShortlist(focus = true, read = true) {
     const jobs = this.actions.savedJobs(); this.shortlistIndex = Math.min(this.shortlistIndex, Math.max(0, jobs.length - 1));
@@ -418,50 +404,48 @@ export class CareerVoice {
 
   private run(value: string) {
     if (this.paused || this.draft || this.languageController) return;
-    this.speech.stop(); this.clearError();
-    const text = this.language === 'am' ? amharicCommand(value) : value.trim().toLowerCase().replace(/[.!?]+$/, '').replace(/\s+/g, ' ');
-    if (!text || value.length > 160) { this.fail('Enter one role or command, up to 160 characters.'); return; }
-    const language = ['amharic', 'switch to amharic', 'speak amharic', 'language amharic'].includes(text) ? 'am'
-      : ['english', 'switch to english', 'speak english', 'language english'].includes(text) ? 'en' : undefined;
+    this.session.interrupt(); this.clearError();
+    const command = parseCareerCommand(value, this.language);
+    const { kind } = command;
+    if (kind === 'empty') { this.fail('Enter one role or command, up to 160 characters.'); return; }
+    const language = kind === 'amharic' ? 'am' : kind === 'english' ? 'en' : undefined;
     if (language) {
-      if (language === this.language) { this.start(this.handsFree); return; }
+      if (language === this.language) { this.start(this.session.handsFree); return; }
       this.languageSelect.value = language; void this.changeLanguage(); return;
     }
-    if (['stop', 'cancel'].includes(text)) { this.stop(); return; }
-    if (['shortlist', 'open shortlist', 'saved jobs'].includes(text)) { this.openShortlist(); return; }
-    if (text === 'new search') { this.start(this.handsFree); return; }
-    if (text.startsWith('search ') || this.mode === 'role') {
-      const query = text.replace(/^search (?:for )?/, ''); this.search(query === 'all jobs' ? '' : query); return;
-    }
-    if (text === 'next') { this.move(1); return; }
-    if (text === 'previous') { this.move(-1); return; }
-    if (text === 'repeat') { this.repeat(); return; }
-    if (['back', 'back to results', 'results'].includes(text)) { this.backToResults(); return; }
-    if (['prepare draft', 'prepare fictional draft', 'draft'].includes(text) && this.mode === 'shortlist') {
-      const job = this.actions.savedJobs()[this.shortlistIndex];
-      if (job) this.openDraft(job, this.command); else this.fail('Save a job before preparing a draft.');
+    if (kind === 'stop') { this.stop(); return; }
+    if (kind === 'shortlist') { this.openShortlist(); return; }
+    if (kind === 'new search') { this.start(this.session.handsFree); return; }
+    if (kind === 'search' || (kind === 'role' && this.mode === 'role')) { this.search(command.query); return; }
+    if (kind === 'next') { this.move(1); return; }
+    if (kind === 'previous') { this.move(-1); return; }
+    if (kind === 'repeat') {
+      if (this.repeatButton.disabled) this.fail('Start a search before using Repeat.'); else this.repeat();
       return;
     }
-    if (text === 'save' && this.mode === 'details' && this.detailJob) { this.saveJobs([this.detailJob]); return; }
-    const numbered = /^(save|details)(?: (?:jobs?|results?))? (.+)$/.exec(text);
-    if (numbered && this.mode === 'results') {
+    if (kind === 'back') { this.backToResults(); return; }
+    if (kind === 'draft') {
+      const job = this.mode === 'shortlist' && this.actions.savedJobs()[this.shortlistIndex];
+      if (job) this.openDraft(job, this.command); else this.fail('Open the shortlist and select a saved job before preparing a draft.');
+      return;
+    }
+    if (kind === 'save current' && this.mode === 'details' && this.detailJob) { this.saveJobs([this.detailJob]); return; }
+    if (kind === 'save' || kind === 'details' || kind === 'invalid numbers' || kind === 'save current' || kind === 'details without number') {
+      if (this.mode !== 'results') { this.fail('Open search results to save or open a job by its result number.'); return; }
       if (!this.numbersReady) { this.fail('The search changed. Use Repeat to review the new numbers before saving or opening a numbered result.'); return; }
-      const tokens = numbered[2].split(/\s+and\s+|\s*,\s*/);
-      const selected = tokens.map(token => /^\d+$/.test(token) ? Number(token) : numbers.indexOf(token));
-      if (selected.length > 5 || (numbered[1] === 'details' && selected.length !== 1) || selected.some(number => !this.pageIds.has(number))) {
+      if ((kind !== 'save' && kind !== 'details') || command.numbers.some(number => !this.pageIds.has(number))) {
         this.fail('Use only the numbers on the current page, for example “save 3 and 4”. Nothing was changed.'); return;
       }
-      const jobs = [...new Set(selected)].map(number => this.pageIds.get(number)!);
-      if (numbered[1] === 'save') this.saveJobs(jobs); else this.details(jobs[0]);
+      const jobs = command.numbers.map(number => this.pageIds.get(number)!);
+      if (kind === 'save') this.saveJobs(jobs); else this.details(jobs[0]);
       return;
     }
-    this.fail('That command is ambiguous or unavailable here. Nothing was changed. Use the buttons, or say a command with a current result number.');
+    this.fail('That wording is not supported. Use a command listed below, or use the buttons.');
   }
 
   private openDraft(job: Job, opener: HTMLElement) {
     if (this.paused || this.languageController) return;
-    this.launchGeneration++; this.handsFree = false;
-    this.speech.stop(); this.actions.stopRecorded(); this.clearError();
+    this.session.stop(); this.actions.stopRecorded(); this.clearError();
     this.draft = { job, values: {} }; this.draftOpener = opener;
     this.draftField(0); this.dialog.showModal(); this.dialog.querySelector<HTMLElement>('input,textarea')?.focus();
   }

@@ -300,7 +300,10 @@ export class AccessibleLesson extends HTMLElement {
         },
         career: () => {
           const link = this.ownerDocument.getElementById(careerId);
-          if (!(link instanceof HTMLAnchorElement) || link.origin !== location.origin || link.pathname !== '/demo/careers') return false;
+          if (!(link instanceof HTMLAnchorElement) || link.username || link.password) return false;
+          const localCareer = link.origin === location.origin && link.pathname === '/demo/careers';
+          const hostedCareer = link.origin === 'https://access-career-gateway.vercel.app' && link.pathname === '/';
+          if (!localCareer && !hostedCareer) return false;
           link.click(); return true;
         },
       });

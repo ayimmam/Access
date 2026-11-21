@@ -39,6 +39,7 @@ test('Savanna selects a real described lesson by keyboard and preserves the sele
 });
 
 test('ask about jobs in both languages and continue from a completed lesson by keyboard', async ({ page }) => {
+  await page.route('https://access-career-gateway.vercel.app/**', route => route.fulfill({ contentType: 'text/html', body: '<h1>Career destination test</h1>' }));
   await page.goto('/demo/savanna?lesson=w3c-colors-with-good-contrast');
   const help = page.locator('.access-help');
   await help.locator('summary').first().press('Enter');
@@ -50,9 +51,12 @@ test('ask about jobs in both languages and continue from a completed lesson by k
   await page.getByRole('button', { name: 'Mark demo lesson complete' }).press('Enter');
   const next = page.getByRole('link', { name: 'Explore jobs in Career Gateway' });
   await expect(next).toBeFocused();
+  for (const link of await page.locator('[data-careers]').all()) {
+    await expect(link).toHaveAttribute('href', 'https://access-career-gateway.vercel.app/?lesson=w3c-colors-with-good-contrast');
+  }
   await next.press('Enter');
-  await expect(page.getByRole('heading', {name: 'Find your next opportunity'})).toBeVisible();
-  await page.getByRole('link', { name: 'Return to Savanna' }).press('Enter');
+  await expect(page).toHaveURL('https://access-career-gateway.vercel.app/?lesson=w3c-colors-with-good-contrast');
+  await page.goBack();
   await expect(page.locator('#demo-lesson')).toHaveValue('w3c-colors-with-good-contrast');
   await expect(page.locator('#mark-complete')).toBeDisabled();
 });

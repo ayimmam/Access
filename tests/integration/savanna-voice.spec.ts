@@ -75,8 +75,21 @@ test('Savanna voice uses lesson controls and cancels for video, reflection, comp
   await expect(guide).toBeVisible();
   await expectMic('off');
   expect(await page.evaluate(() => window.__careerSpeech.spoken.filter(text => text === 'Welcome to the Savanna learning demo.'))).toHaveLength(1);
+  await page.route('https://access-career-gateway.vercel.app/**', route => route.fulfill({ contentType: 'text/html', body: '<h1>Career destination test</h1>' }));
   await typeCommand(guide, 'Open Career Gateway');
-  await expect(page).toHaveURL(/\/demo\/careers\?lesson=w3c-colors-with-good-contrast$/);
+  await expect(page).toHaveURL('https://access-career-gateway.vercel.app/?lesson=w3c-colors-with-good-contrast');
+});
+
+test('Savanna career voice navigation rejects unapproved external destinations', async ({ page }) => {
+  await mockCareerSpeech(page);
+  await page.goto('/demo/savanna');
+  const guide = page.getByRole('region', { name: 'Lesson voice navigation' });
+  for (const destination of ['https://access-career-gateway.vercel.app.example.com/', 'https://access-career-gateway.vercel.app/other', 'https://username@access-career-gateway.vercel.app/']) {
+    await page.locator('#savanna-career-link').evaluate((link, destination) => { link.setAttribute('href', destination); }, destination);
+    await typeCommand(guide, 'Open Career Gateway');
+    await expect(guide.getByRole('alert')).toContainText('Career Gateway is unavailable');
+    await expect(page).toHaveURL(/\/demo\/savanna$/);
+  }
 });
 
 test('removing an active Savanna lesson aborts capture and drops late results', async ({ page }) => {

@@ -49,7 +49,7 @@ function renderCompletion() {
   document.querySelector('#completion-status').textContent = complete ? 'Completed in this demo session.' : 'Completion here applies to this demo session.';
   document.querySelector('#progress-text').textContent = (complete ? '1' : '0') + ' of 1 lessons completed in this demo';
   document.querySelector('.progress-fill').style.width = complete ? '100%' : '0%';
-  for (const link of document.querySelectorAll('[data-careers]')) link.href = '/demo/careers?lesson=' + encodeURIComponent(lessonSelect.value);
+  for (const link of document.querySelectorAll('[data-careers]')) link.href = 'https://access-career-gateway.vercel.app/?lesson=' + encodeURIComponent(lessonSelect.value);
 }
 completion.addEventListener('click', () => {
   completedLessons.add(lessonSelect.value);

@@ -13,7 +13,8 @@ test('language follows the demo links and translates lesson and career content i
   await expect(language).toBeFocused();
   await expect(page.locator('alx-accessible-lesson [data-caption-language]')).toHaveValue('am');
 
-  await page.locator('.demo-links a[data-careers]').click();
+  await expect(page.locator('.demo-links a[data-careers]')).toHaveAttribute('href', 'https://access-career-gateway.vercel.app/?lesson=alx-transforming-africa');
+  await page.goto('/demo/careers?lesson=alx-transforming-africa');
   await expect(page).toHaveURL(/\/demo\/careers\?lesson=alx-transforming-africa$/);
   await expect(language).toHaveValue('am');
   await expect(title).toContainText(/[\u1200-\u137f]/);

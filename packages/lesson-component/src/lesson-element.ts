@@ -1,4 +1,5 @@
 import { createMediaView, type LessonMedia, type TimedSegment } from './media-view';
+import type { LessonVoice } from './lesson-voice';
 
 interface Segment extends TimedSegment {}
 interface Lesson {
@@ -19,6 +20,13 @@ const styles = `
   .toolbar { display:flex; flex-wrap:wrap; gap:1rem; align-items:end; border-block:1px solid #d8e2df; padding:1rem 0; }
   .toolbar label { flex-basis:min(100%,14rem); min-width:0; }
   .toolbar input,.toolbar select { width:100%; min-width:0; }
+  .lesson-voice { margin-block:1rem; padding:1rem; background:#f5f9fa; border:1px solid #b4c6c2; border-radius:.55rem; }
+  .lesson-voice label { display:flex; flex-wrap:wrap; align-items:center; margin-block:.5rem; }
+  .lesson-voice input[type=checkbox] { min-height:auto; width:1.5rem; height:1.5rem; }
+  .lesson-voice form,.voice-actions { display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; }
+  .lesson-voice [role=alert] { color:#9c1837; }
+  .lesson-voice p:empty { margin:0; min-height:0; }
+  .lesson-voice audio { max-width:100%; }
   label { display:grid; gap:.35rem; font-weight:600; flex:1 1 14rem; }
   input,select,button { font:inherit; min-height:2.75rem; padding:.45rem .7rem; border:1px solid #718d90; border-radius:.3rem; background:white; color:inherit; max-width:100%; }
   button { cursor:pointer; } a { color:var(--access-link,#155e63); text-underline-offset:.2em; }
@@ -106,16 +114,26 @@ function node<K extends keyof HTMLElementTagNameMap>(tag: K, text?: string): HTM
 }
 
 export class AccessibleLesson extends HTMLElement {
-  static observedAttributes = ['api-base', 'lesson-id', 'content-version', 'lang', 'show-signing-preview', 'asl-demo-preview'];
+  static observedAttributes = ['api-base', 'lesson-id', 'content-version', 'lang', 'show-signing-preview', 'asl-demo-preview', 'voice-paused'];
   private root = this.attachShadow({ mode: 'open' });
   private controller?: AbortController;
   private sequence = 0;
   private disposeMedia?: () => void;
+  private voice?: LessonVoice;
+  private offeredVoiceGreeting = false;
   demoTranslation?: (source: string) => string;
 
   connectedCallback() { void this.load(); }
-  attributeChangedCallback() { if (this.isConnected) void this.load(); }
-  disconnectedCallback() { this.controller?.abort(); this.sequence++; this.disposeMedia?.(); this.disposeMedia = undefined; }
+  attributeChangedCallback(name: string) {
+    if (name === 'voice-paused') { this.voice?.setPaused(this.hasAttribute(name)); return; }
+    if (this.isConnected) void this.load();
+  }
+  disconnectedCallback() { this.controller?.abort(); this.sequence++; this.dispose(); }
+
+  private dispose() {
+    this.voice?.destroy(); this.voice = undefined;
+    this.disposeMedia?.(); this.disposeMedia = undefined;
+  }
 
   private emit(name: string, detail: Record<string, unknown>) {
     this.dispatchEvent(new CustomEvent(name, { bubbles: true, composed: true, detail }));
@@ -130,7 +148,7 @@ export class AccessibleLesson extends HTMLElement {
   }
 
   private async load(focusAfterLoad = false) {
-    this.disposeMedia?.(); this.disposeMedia = undefined;
+    this.dispose();
     this.emit('alx-caption-size', { size: '1' });
     this.controller?.abort();
     const controller = new AbortController();
@@ -164,6 +182,7 @@ export class AccessibleLesson extends HTMLElement {
       this.emit('alx-media-ready', { lessonId, contentVersion: Number(version) });
     } catch (error) {
       if (controller.signal.aborted || sequence !== this.sequence) return;
+      this.dispose();
       article.replaceChildren(node('h2', 'Lesson unavailable'));
       const message = node('p', 'Check your connection and try again. You can also use the download link below if available.');
       message.setAttribute('role', 'status');
@@ -249,6 +268,7 @@ export class AccessibleLesson extends HTMLElement {
     search.addEventListener('input', filterSections);
     size.addEventListener('change', () => { reading.style.setProperty('--reading-size', `${size.value}rem`); });
     const heading = node('h3', 'Save for offline reading');
+    heading.tabIndex = -1;
     const links = node('ul'); links.className = 'exports';
     for (const item of exports) {
       const url = new URL(item.href, base);
@@ -264,5 +284,30 @@ export class AccessibleLesson extends HTMLElement {
     for (const format of lesson.unavailable) list.append(node('li', format));
     availability.append(list);
     article.append(toolbar, status, reading, heading, links, availability);
+    const careerId = this.getAttribute('voice-career-link');
+    if (media && careerId) void this.mountVoice(base, media, search, heading, careerId);
+  }
+
+  private async mountVoice(base: URL, media: ReturnType<typeof createMediaView>, transcript: HTMLInputElement, offline: HTMLElement, careerId: string) {
+    try {
+      const { LessonVoice } = await import('./lesson-voice');
+      if (!media.view.isConnected) return;
+      this.voice = new LessonVoice(base, {
+        video: media.video, setCaptions: media.setCaptions, transcript, offline,
+        takeGreeting: () => {
+          if (this.offeredVoiceGreeting) return false;
+          this.offeredVoiceGreeting = true; return true;
+        },
+        career: () => {
+          const link = this.ownerDocument.getElementById(careerId);
+          if (!(link instanceof HTMLAnchorElement) || link.origin !== location.origin || link.pathname !== '/demo/careers') return false;
+          link.click(); return true;
+        },
+      });
+      media.view.before(this.voice.root);
+      this.voice.setPaused(this.hasAttribute('voice-paused'));
+    } catch {
+      if (media.view.isConnected) media.view.before(node('p', 'Lesson voice navigation is unavailable. Use the lesson controls below.'));
+    }
   }
 }

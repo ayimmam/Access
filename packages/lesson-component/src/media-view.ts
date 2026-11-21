@@ -406,7 +406,15 @@ export function createMediaView(media: LessonMedia, segments: TimedSegment[], ba
     notify({ mediaId: media.id, mode: 'hands-only', signLanguage: 'ethsl', status: 'preview' });
   });
   return {
-    view,
+    view, video,
+    setCaptions(language: 'en' | 'am' | 'off') {
+      const definition = definitions.find(item => item.language === language);
+      const value = language === 'off' ? 'off' : definition && optionValue(definition.language);
+      if (!value || !Array.from(captionSelect.options).some(option => option.value === value && !option.disabled)) return false;
+      captionSelect.value = value;
+      captionSelect.dispatchEvent(new Event('change'));
+      return true;
+    },
     seek(time: number) { video.currentTime = Math.max(0, time); update(); },
     dispose() {
       demoController?.abort();

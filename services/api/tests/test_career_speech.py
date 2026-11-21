@@ -88,6 +88,11 @@ def test_welcome_prompt_is_server_owned_and_contains_no_user_text():
     assert messages[1].startswith("ምን ዓይነት")
 
 
+def test_lesson_guide_uses_fixed_server_owned_copy():
+    messages = prompt_messages(SpeechPrompt(consent=True, kind="lesson-guide"))
+    assert len(messages) == 1 and "ግልባጩን ክፈት" in messages[0]
+
+
 @pytest.mark.parametrize("overrides", [
     {"consent": False}, {"consent": 1}, {"consent": "true"}, {"kind": "application"}, {"text": "private-draft-do-not-send"},
     {"job_ids": ["real-employer"]}, {"job_ids": [job.id for job in JOBS[:6]]},
@@ -96,6 +101,8 @@ def test_welcome_prompt_is_server_owned_and_contains_no_user_text():
     {"kind": "results", "job_ids": [JOBS[0].id], "total": 1, "start": 2},
     {"kind": "shortlist", "job_ids": [JOBS[0].id], "total": 0},
     {"kind": "changed", "total": "11"}, {"kind": "role", "total": 11},
+    {"kind": "lesson-guide", "text": "private-draft-do-not-send"}, {"kind": "lesson-guide", "job_ids": [JOBS[0].id]},
+    {"kind": "lesson-guide", "total": 1}, {"kind": "lesson-guide", "start": 2},
 ])
 def test_public_synthesis_rejects_unapproved_content(overrides, caplog):
     caplog.set_level(logging.INFO)

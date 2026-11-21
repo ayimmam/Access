@@ -1,7 +1,8 @@
 import type { Job } from './career-element';
+import { normalizeSpeechText } from './career-speech';
 
 export interface SpeechPrompt {
-  kind: 'welcome' | 'role' | 'results' | 'details' | 'saved' | 'shortlist' | 'changed';
+  kind: 'welcome' | 'role' | 'results' | 'details' | 'saved' | 'shortlist' | 'changed' | 'lesson-guide';
   job_ids?: string[];
   total?: number;
   start?: number;
@@ -59,11 +60,14 @@ const commandAliases: Record<string, string> = {
   'እንግሊዝኛ': 'language english', 'ወደ እንግሊዝኛ': 'language english',
   'አቁም': 'stop', 'ቁም': 'stop', 'ሰርዝ': 'cancel', 'ቀጣይ': 'next', 'ቀጥል': 'next', 'ቀዳሚ': 'previous', 'ያለፈው': 'previous',
   'ድገም': 'repeat', 'ደግመህ አንብብ': 'repeat', 'ዝርዝር': 'details', 'አስቀምጥ': 'save',
+  'ቀጣይ ገጽ': 'next', 'ወደ ቀጣዩ ገጽ ሂድ': 'next', 'ወደ ቀጣዩ ገጽ ይሂዱ': 'next',
+  'ቀዳሚ ገጽ': 'previous', 'ወደ ቀዳሚው ገጽ ተመለስ': 'previous',
   'የተቀመጡ ሥራዎች': 'shortlist', 'የተቀመጡ ስራዎች': 'shortlist', 'የተቀመጡ ሥራዎችን ክፈት': 'shortlist',
   'ወደ ውጤቶች ተመለስ': 'back to results', 'አዲስ ፍለጋ': 'new search', 'ረቂቅ አዘጋጅ': 'prepare draft',
 };
 const roleAliases: Record<string, string> = {
   'ሁሉም ሥራዎች': 'all jobs', 'ሁሉም ስራዎች': 'all jobs', 'ሁሉንም ሥራዎች': 'all jobs', 'ሁሉንም ስራዎች': 'all jobs',
+  'ሁሉንም ሥራዎች አሳይ': 'all jobs', 'ሁሉንም ስራዎች አሳይ': 'all jobs',
   'የማስታወቂያ ጽሑፍ አዘጋጅ': 'copywriter', 'ጽሑፍ አዘጋጅ': 'copywriter', 'ጽሁፍ አዘጋጅ': 'copywriter',
   'የትምህርት መረጃ ረዳት': 'learning data assistant', 'የመረጃ ረዳት': 'learning data assistant',
   'የሲኤንሲ ማጠፊያ ማሽን ኦፕሬተር': 'CNC bending operator', 'የማሽን ኦፕሬተር': 'CNC bending operator', 'ማሽን': 'machine',
@@ -81,7 +85,7 @@ const numberAliases: Record<string, string> = {
 };
 
 export function amharicCommand(value: string): string {
-  const text = value.trim().toLowerCase().replace(/[.!?።፧]+$/, '').replace(/፡/g, ' ').replace(/\s+/g, ' ');
+  const text = normalizeSpeechText(value).replace(/^(?:እባክህ|እባክዎ)\s+/, '');
   if (Object.hasOwn(commandAliases, text)) return commandAliases[text];
   const save = /^(?:አስቀምጥ|save) (.+)$/.exec(text) || /^(.+) አስቀምጥ$/.exec(text);
   const details = /^(?:ዝርዝር|details) (.+)$/.exec(text) || /^(.+) ዝርዝር$/.exec(text);

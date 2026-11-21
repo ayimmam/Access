@@ -1,8 +1,8 @@
 # Render setup for career voice navigation
 
-Updated 17 November 2026. This is **setup only**: it does not include local voice-navigation repairs, Vercel changes, dependency installation, service provisioning or deployment. Anteneh owns the release and the $100 Render credit; Biniyam and Hailemichael review backend and security settings.
+Updated 21 November 2026. Anteneh owns the release and the $100 Render credit. Biniyam and Hailemichael review backend and security settings.
 
-The root [Render Blueprint](../../render.yaml) describes the existing shared public-fixture API/component service, `access-plugin`, using the native Python setup already documented in [the deployment guide](DEPLOYMENT_AND_LOCAL_DEMO.md#create-the-render-web-service). It builds the component already in the reviewed source; it does not implement a new voice feature or publish the uncommitted repairs from another branch.
+The root [Render Blueprint](../../render.yaml) describes the shared public-fixture API/component service, `access-plugin`, using the native Python setup in [the deployment guide](DEPLOYMENT_AND_LOCAL_DEMO.md#create-the-render-web-service).
 
 ## Public service settings
 
@@ -21,6 +21,30 @@ The root [Render Blueprint](../../render.yaml) describes the existing shared pub
 Pushing this branch does not apply the Blueprint. Creating or syncing a Blueprint is a separate operational action; turning automatic deployments off does not prevent an initial deployment when a service is created. Do not create a duplicate service, trigger a deploy hook or apply changes under this push-only authorization. See [Render Blueprint configuration](https://render.com/docs/blueprint-spec) and [deployment behavior](https://render.com/docs/deploys).
 
 `ACCESS_ALLOWED_ORIGINS` is deliberately supplied through the Render dashboard, not replaced with a hardcoded list. Preserve every approved origin on the shared API. Include the exact career host origin, `https://access-career-gateway.vercel.app`, and the API-hosted demo origin, `https://access-plugin.onrender.com`, when those are the deployed addresses. Do not use wildcards or copy the local `.env` wholesale. No provider key or worker token belongs in the Blueprint or browser configuration.
+
+### Restore Amharic speech on the existing Render host
+
+Anteneh opens the existing **access-plugin** service in Render and selects **Environment**. Edit the comma-separated `ACCESS_ALLOWED_ORIGINS` value and append `https://access-plugin.onrender.com` if absent. Use the scheme and host only, without a trailing slash. Keep `https://access-career-gateway.vercel.app` and every other approved entry. Choose **Save only** to bundle the change with the next approved deploy, or **Save and deploy** to apply it to the existing build when that redeploy is authorized. [Render environment variables](https://render.com/docs/configure-environment-variables).
+
+The career speech POST routes require an explicit matching `Origin` even when the UI and API share a host. On 21 November 2026, the public preflights for `/speak` and `/transcribe` returned HTTP 400 `Disallowed CORS origin` for the Render origin. Both returned HTTP 200 and echoed the exact approved Vercel origin for Vercel. The catalog returned `speech_enabled: true`.
+
+After the environment update, verify both origins and routes without consuming provider quota:
+
+```sh
+for origin in https://access-plugin.onrender.com https://access-career-gateway.vercel.app; do
+  for operation in speak transcribe; do
+    curl -fsS -i -X OPTIONS \
+      -H "Origin: $origin" \
+      -H 'Access-Control-Request-Method: POST' \
+      -H 'Access-Control-Request-Headers: content-type' \
+      "https://access-plugin.onrender.com/api/v1/career-speech/$operation"
+  done
+done
+```
+
+Expect HTTP 200 and each caller's exact `Access-Control-Allow-Origin`. Then follow the [career voice testing checklist](CAREER_VOICE_TESTING.md) on both live hosts. With a consenting tester on the intended device and browser, play the Amharic role prompt, listen through to the end, record a short fictional command, and verify the resulting transcript is editable before confirming it. Record audible playback, recognition, the command outcome, and device/browser details for each host. A successful preflight or catalog request covers configuration only.
+
+Release Savanna voice navigation with a matching reviewed API, component and private speech worker. The Savanna Amharic help button uses the new fixed `lesson-guide` prompt. Once released, verify that prompt plays on `/demo/savanna`, then explicitly record and review an Amharic command. Repeat the [Savanna lesson journey](../../examples/savanna/README.md) on the intended device with real English and Amharic microphone input.
 
 The existing English guide uses browser recognition/synthesis and does not need Addis credentials. The career host loads its versioned component from Render, so a Vercel rebuild alone does not publish a different component. Test browser permission, available voices, keyboard activation, Stop and the typed fallback on the actual HTTPS origin; a successful API health check is not evidence of audible speech or microphone recognition.
 

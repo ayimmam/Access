@@ -1,4 +1,8 @@
 export type SpeechState = 'off' | 'starting' | 'listening' | 'speaking' | 'transcribing' | 'preparing';
+
+export function normalizeSpeechText(value: string) {
+  return value.toLowerCase().replace(/፡/g, ' ').replace(/\s+/g, ' ').trim().replace(/[.!?።፧。！？]+$/, '').trimEnd();
+}
 interface Alternative { transcript: string; confidence: number }
 interface RecognitionResult { isFinal: boolean; length: number; [index: number]: Alternative }
 interface Recognition {
@@ -47,7 +51,7 @@ export class CareerSpeech {
     this.state('off');
   }
 
-  listen(receive: (text: string) => void) {
+  listen(receive: (text: string) => void, commandKey = normalizeSpeechText) {
     this.stop();
     if (!this.recognitionType) {
       this.error('Speech recognition is unavailable. Type a role or command, or use the buttons.');
@@ -82,9 +86,9 @@ export class CareerSpeech {
         const first = result[0];
         const second = result[1];
         this.stop();
-        if (!first || first.transcript.length > 160 || (first.confidence > 0 && first.confidence < 0.55) ||
-          (second && first.transcript.trim().toLowerCase() !== second.transcript.trim().toLowerCase() && first.confidence - second.confidence < 0.15)) {
-          this.error('That speech was ambiguous. Nothing was changed. Please repeat one command or type it.');
+        if (!first || !normalizeSpeechText(first.transcript) || first.transcript.length > 160 || (first.confidence > 0 && first.confidence < 0.55) ||
+          (second && commandKey(first.transcript) !== commandKey(second.transcript) && first.confidence - second.confidence < 0.15)) {
+          this.error('Speech recognition was uncertain. Nothing was changed. Please repeat one command or type it.');
           return;
         }
         receive(first.transcript);

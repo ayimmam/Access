@@ -11,6 +11,8 @@ const files = document.querySelector<HTMLInputElement>('#assets')!;
 const load = document.querySelector<HTMLButtonElement>('#load')!;
 const status = document.querySelector<HTMLElement>('#status')!;
 const motion = document.querySelector<HTMLElement>('#motion')!;
+const stage = document.querySelector<HTMLElement>('#avatar')!;
+const play = document.querySelector<HTMLButtonElement>('#play')!;
 const video = document.querySelector<HTMLVideoElement>('#video')!;
 video.muted = true;
 const cue = document.querySelector<HTMLSelectElement>('#cue')!;
@@ -27,11 +29,13 @@ let animation = 0;
 let downloadUrl: string | undefined;
 let comparing = false;
 let currentPhraseId = '';
+let leaving = false;
 const reveal = document.querySelector<HTMLButtonElement>('#reveal')!;
 const hash = async (bytes: ArrayBuffer) => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)))
   .map(value => value.toString(16).padStart(2, '0')).join('');
 
 function update() {
+  if (!manifest) return;
   const current = avatar?.update(video.currentTime, true);
   const segment = manifest?.segments.find(item => video.currentTime >= item.start && video.currentTime < item.end);
   if (currentPhraseId !== (segment?.id || '')) {
@@ -50,6 +54,19 @@ function animate() {
   update();
   if (!video.paused && !document.hidden) animation = requestAnimationFrame(animate);
 }
+
+void import('./timing-avatar').then(({ TimingAvatar }) => {
+  if (leaving || avatar) return;
+  const preview = document.createElement('div');
+  stage.append(preview);
+  try { avatar = new TimingAvatar(preview); }
+  catch {
+    preview.remove();
+    motion.textContent = 'The neutral 3D preview could not load. A WebGL-capable browser is needed to review the avatar.';
+  }
+}).catch(() => {
+  if (!leaving && !avatar) motion.textContent = 'The neutral 3D preview could not load. Reload the page to retry.';
+});
 
 load.addEventListener('click', async () => {
   controller?.abort();
@@ -101,7 +118,6 @@ load.addEventListener('click', async () => {
       return file.arrayBuffer();
     };
     const candidateHost = document.createElement('div');
-    candidateHost.style.cssText = 'width:100%;height:100%;';
     const { TimingAvatar } = await import('./timing-avatar');
     candidateAvatar = new TimingAvatar(candidateHost);
     await candidateAvatar.setManifest(candidate, new URL('/api/v1/', location.href), signal, { reviewDrafts: true, readAsset });
@@ -109,7 +125,7 @@ load.addEventListener('click', async () => {
     const candidateHash = await hash(bytes);
     if (signal.aborted) { candidateAvatar.dispose(); return; }
     avatar?.dispose();
-    document.querySelector('#avatar')!.replaceChildren(candidateHost);
+    stage.replaceChildren(candidateHost);
     manifestHash = candidateHash;
     manifest = candidate;
     avatar = candidateAvatar;
@@ -123,7 +139,7 @@ load.addEventListener('click', async () => {
       option.textContent = `${segment.start.toFixed(1)}s · ${segment.id}`;
       return option;
     }));
-    save.disabled = cue.disabled = false;
+    save.disabled = cue.disabled = play.disabled = false;
     comparing = false; reveal.disabled = true; video.hidden = true; video.muted = true; video.playbackRate = 1;
     status.textContent = `Loaded hands rig · ${candidate.segments.filter(segment => segment.motion).length} draft clips · ${candidate.segments.length} phrase slots. EthSL review pending.`;
     animate();
@@ -167,7 +183,7 @@ document.querySelector('#feedback')!.addEventListener('submit', event => {
   reveal.disabled = false;
   feedbackStatus.textContent = `${observations.length} observations saved in this session.`;
 });
-document.querySelector('#play')!.addEventListener('click', () => {
+play.addEventListener('click', () => {
   if (video.paused) void video.play().catch(() => { status.textContent = 'Source video unavailable; use the caption comparison.'; });
   else video.pause();
 });
@@ -188,6 +204,7 @@ download.addEventListener('click', () => {
   link.click();
 });
 window.addEventListener('pagehide', () => {
+  leaving = true;
   controller?.abort();
   cancelAnimationFrame(animation);
   avatar?.dispose();

@@ -35,7 +35,7 @@ test('Amharic opt-in, first five, stable saves 3 and 4, paging, shortlist and pr
   await expect(page.getByRole('button', { name: 'Save job — CNC bending operator', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByRole('button', { name: 'Save job — Junior web developer', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(guide).toHaveAttribute('data-speech-state', 'off');
-  await recordAmharic(page, guide, 'ቀጣይ');
+  await recordAmharic(page, guide, 'እባክዎ ወደ ቀጣዩ ገጽ ይሂዱ።');
   await expect(guide.getByText('11 ሥራዎች ተገኝተዋል። ውጤቶች ከ6 እስከ 10።', { exact: true })).toBeVisible();
   await expect(guide).toHaveAttribute('data-speech-state', 'off');
   await typeAmharic(guide, 'ድገም');
@@ -71,6 +71,9 @@ test('Amharic opt-in, first five, stable saves 3 and 4, paging, shortlist and pr
   await draft.getByRole('button', { name: 'ዝጋና ረቂቁን አስወግድ' }).click();
   await expect(guide.getByRole('textbox')).toBeFocused();
   await expect(guide.getByText('ምሳሌ እጩ', { exact: true })).toHaveCount(0);
+  await typeAmharic(guide, 'ሁሉንም ሥራዎች አሳይ');
+  await expect(guide.getByText('11 ሥራዎች ተገኝተዋል። ውጤቶች ከ1 እስከ 5።', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('Show jobs')).toHaveValue('');
 });
 
 test('denied microphone, ambiguous numbers, no results and typed cancellation in Amharic', async ({ page }) => {

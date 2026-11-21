@@ -104,7 +104,7 @@ Set Health Check Path to `/healthz`. Render supplies `PORT`; binding to `0.0.0.0
 | `PYTHON_VERSION` | `3.11.18`, matching the verified local Python patch |
 | `NODE_VERSION` | `24`, the team/CI baseline |
 | `UV_VERSION` | `0.13.8`, matching the repository CI install |
-| `ACCESS_ALLOWED_ORIGINS` | Exact independent host origins that need to fetch public API/assets, comma-separated. Same-origin demos work without extra entries. |
+| `ACCESS_ALLOWED_ORIGINS` | Exact approved browser origins, comma-separated. The optional Amharic speech relay requires the Render origin as well as any independent career host. See [career speech origin setup](RENDER_CAREER_VOICE.md#restore-amharic-speech-on-the-existing-render-host). |
 | `ACCESS_SIGNING_DIR` | Optional absolute directory containing reviewed signing manifests/assets when those are provided |
 
 Render supports explicit Python, Node and uv version selection. Confirm the selected versions in build logs. [Python/uv versions](https://render.com/docs/python-version), [Node version](https://render.com/docs/node-version).

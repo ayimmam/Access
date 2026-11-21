@@ -17,6 +17,7 @@ WELCOME_PROMPT = "Welcome to the Access Career Gateway. Voice navigation is read
 ROLE_PROMPT = "What role would you like? Say or type a role, or “all jobs” to clear filters and explore every fictional listing."
 RESULT_HELP = "Use Next, Previous, Repeat, Details with a result number, Save with result numbers, Shortlist, or Stop. Press Listen for a command or use the typed controls."
 EMPTY_RESULTS = "0 jobs found. No results. Try Search followed by another role, or Search all jobs."
+LESSON_GUIDE = "Say or type Play video, Pause video, English captions, Amharic captions, Captions off, Open transcript, Offline formats, Open Career Gateway, or Stop."
 AMHARIC_JOBS = localized_jobs(JOBS)
 
 
@@ -38,7 +39,7 @@ class ConsentRequest(BaseModel):
 
 
 class SpeechPrompt(ConsentRequest):
-    kind: Literal["welcome", "role", "results", "details", "saved", "shortlist", "changed"]
+    kind: Literal["welcome", "role", "results", "details", "saved", "shortlist", "changed", "lesson-guide"]
     job_ids: list[str] = Field(default_factory=list, max_length=5)
     total: int = Field(default=0, ge=0, le=len(JOBS))
     start: int = Field(default=1, ge=1, le=len(JOBS))
@@ -47,9 +48,9 @@ class SpeechPrompt(ConsentRequest):
     def valid_prompt(self):
         if len(set(self.job_ids)) != len(self.job_ids) or any(identifier not in AMHARIC_JOBS for identifier in self.job_ids):
             raise ValueError("Unknown or duplicate fictional job")
-        if self.kind in {"welcome", "role", "changed"} and self.job_ids:
+        if self.kind in {"welcome", "role", "changed", "lesson-guide"} and self.job_ids:
             raise ValueError("This prompt has no jobs")
-        if self.kind in {"welcome", "role", "saved", "details"} and self.total != 0:
+        if self.kind in {"welcome", "role", "saved", "details", "lesson-guide"} and self.total != 0:
             raise ValueError("This prompt has no total")
         if self.kind not in {"results", "shortlist"} and self.start != 1:
             raise ValueError("This prompt has no position")
@@ -71,6 +72,8 @@ def text(key: str, **values) -> str:
 
 
 def prompt_messages(prompt: SpeechPrompt) -> list[str]:
+    if prompt.kind == "lesson-guide":
+        return [text(LESSON_GUIDE)]
     jobs = [AMHARIC_JOBS[identifier] for identifier in prompt.job_ids]
     if prompt.kind == "welcome":
         return [text(WELCOME_PROMPT), text(ROLE_PROMPT)]

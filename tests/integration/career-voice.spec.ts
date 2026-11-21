@@ -224,7 +224,7 @@ test('voice acceptance: five results, stable saves 3 and 4, paging, shortlist an
   await expect(gateway.getByText('Demo Candidate', { exact: true })).toHaveCount(0);
 });
 
-test('permission denial, ambiguous speech, no results and stop all preserve a usable typed path', async ({ page }) => {
+test('permission denial, uncertain speech, no results and stop all preserve a usable typed path', async ({ page }) => {
   await mockCareerSpeech(page);
   await page.goto('/demo/careers');
   const guide = page.getByRole('region', { name: 'Optional voice navigation' });
@@ -240,10 +240,10 @@ test('permission denial, ambiguous speech, no results and stop all preserve a us
   await expect(guide.getByRole('alert')).toContainText('Nothing was changed');
   await guide.getByRole('button', { name: 'Listen for a command', exact: true }).click();
   await respond(page, 'save three', 0.9, 'save four');
-  await expect(guide.getByRole('alert')).toContainText('ambiguous');
+  await expect(guide.getByRole('alert')).toContainText('Speech recognition was uncertain');
   await expect(page.locator('access-career-gateway .results [aria-pressed=true]')).toHaveCount(0);
   await typedCommand(guide, 'save');
-  await expect(guide.getByRole('alert')).toContainText('ambiguous');
+  await expect(guide.getByRole('alert')).toContainText('Use only the numbers on the current page');
   await guide.getByRole('button', { name: 'Listen for a command', exact: true }).click();
   await page.evaluate(() => window.__careerSpeech.capture());
   await guide.getByRole('button', { name: 'Stop', exact: true }).click();
@@ -253,6 +253,61 @@ test('permission denial, ambiguous speech, no results and stop all preserve a us
   expect(await page.evaluate(() => window.__careerSpeech.starts)).toBe(4);
   await typedCommand(guide, 'save three');
   await expect(page.getByRole('button', { name: 'Save job — CNC bending operator', exact: true })).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('equivalent alternatives keep hands-free listening and conflicting actions, numbers and low confidence stop it', async ({ page }) => {
+  await mockCareerSpeech(page, { permission: 'granted' });
+  await page.goto('/demo/careers');
+  const guide = page.getByRole('region', { name: 'Optional voice navigation' });
+  await automaticCommand(page, guide, 'all jobs');
+  const listening = () => expect(guide).toHaveAttribute('data-speech-state', 'listening');
+  await listening();
+  await respond(page, 'save three and four', .9, 'save 3 and 4');
+  await expect(guide.getByText(/Saved for this session: CNC bending operator; Junior web developer/)).toBeVisible();
+  await listening();
+  await respond(page, 'next', .9, 'Next.');
+  await expect(guide.getByText('11 jobs found. Results 6 to 10.', { exact: true })).toBeVisible();
+  await listening();
+  const starts = await page.evaluate(() => window.__careerSpeech.starts);
+  await respond(page, 'repeat', .9, 'Repeat!');
+  await expect.poll(() => page.evaluate(() => window.__careerSpeech.starts)).toBe(starts + 1);
+  await listening();
+  await automaticCommand(page, guide, 'Please go to the next page');
+  await expect(guide.getByText('11 jobs found. Results 11 to 11.', { exact: true })).toBeVisible();
+  await listening();
+  await respond(page, 'previous', .9, 'repeat');
+  await expect(guide.getByRole('alert')).toContainText('Speech recognition was uncertain');
+  await expect(guide).toHaveAttribute('data-speech-state', 'off');
+  await expect(guide.getByText('11 jobs found. Results 11 to 11.', { exact: true })).toBeVisible();
+  for (const [first, confidence, second] of [['save 11', .9, 'save twelve'], ['save 11', .5, 'Save eleven.']] as const) {
+    await guide.getByRole('button', { name: 'Listen for a command', exact: true }).click();
+    await respond(page, first, confidence, second);
+    await expect(guide.getByRole('alert')).toContainText('Speech recognition was uncertain');
+    await expect(guide.getByRole('button', { name: /Save result 11/ })).toHaveAttribute('aria-pressed', 'false');
+  }
+  expect(await page.evaluate(() => window.__careerSpeech.overlaps)).toEqual([]);
+});
+
+test('all jobs restarts searches from results, details and shortlist with specific recovery guidance', async ({ page }) => {
+  await mockCareerSpeech(page);
+  await page.goto('/demo/careers');
+  const guide = page.getByRole('region', { name: 'Optional voice navigation' });
+  await guide.getByRole('button', { name: 'Use typed search' }).click();
+  await typedCommand(guide, 'Please go to the next page');
+  await expect(guide.getByRole('alert')).toContainText('Open search results or the shortlist');
+  await typedCommand(guide, 'all jobs');
+  const first = guide.getByText('11 jobs found. Results 1 to 5.', { exact: true });
+  for (const command of ['next', 'details 3', 'shortlist']) {
+    await typedCommand(guide, command);
+    await expect(first).toHaveCount(0);
+    await typedCommand(guide, 'all jobs');
+    await expect(first).toBeVisible();
+  }
+  await typedCommand(guide, 'I guess you can move on now');
+  await expect(guide.getByRole('alert')).toContainText('That wording is not supported');
+  await typedCommand(guide, 'save 3');
+  await typedCommand(guide, 'shortlist');
+  await expect(guide.getByRole('heading', { name: /Shortlist 1 of 1/ })).toBeVisible();
 });
 
 test('number snapshots reject stale filtering and previous pages, and multi-save is atomic', async ({ page }) => {
